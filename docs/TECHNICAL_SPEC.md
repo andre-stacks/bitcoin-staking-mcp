@@ -27,7 +27,7 @@ The TypeScript core has no model dependency and is not a separately deployed ser
 
 ## Core schemas
 
-`BondManifest` contains identity, lifecycle, network, optional on-chain bond index, native-L1 participation path, timing, economics, capacity, requirements, compatibility claims, notes, sources, and verification time.
+`BondManifestV2` contains shared bond identity, lifecycle, network, optional on-chain bond index, timing, economics, protocol controls, sources, and exactly the owner-approved participation routes. Routes are a discriminated union of native-L1 direct participation and an approved sBTC pool; an LST is nested only as an optional pool capability. V1 manifests normalize to one unconfirmed native-L1 route.
 
 `ParticipantProfile` contains goal, liquidity requirement, Bitcoin/sBTC preference, key-control preference, optional wallet or custodian, BTC amount, and horizon.
 

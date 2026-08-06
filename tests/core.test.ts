@@ -34,6 +34,20 @@ test("v1 manifests normalize to one unconfirmed native-L1 v2 route", () => {
   assert.equal(normalized.participationRoutes.length, 1);
   assert.equal(normalized.participationRoutes[0]?.routeType, "native_l1_direct");
   assert.equal(normalized.productStatus, "unconfirmed");
+  assert.deepEqual(normalized.verification, []);
+  assert.deepEqual(normalized.participationRoutes[0]?.verification, []);
+});
+
+test("v1 normalization remains compatible when the legacy source is not an owner manifest", () => {
+  const old = {
+    schemaVersion: 1, id: "legacy-doc-bond", title: "Legacy docs", description: "Legacy fixture", network: "testnet", lifecycleStatus: "upcoming", participationPath: "native_l1_btc", dataStatus: "published",
+    timing: {}, economics: { rewardAsset: "unknown", rewardModel: "unknown" }, capacity: {},
+    requirements: { allowlistRequired: false, pairedStxRequired: false, btcLocation: "bitcoin_l1", keyControl: "unknown", borrowingAgainstPosition: "unknown", earlyExit: "unknown" },
+    compatibility: [], notes: ["Legacy."], sources: [{ id: "legacy-doc", title: "Legacy documentation", url: "https://example.com/docs", sourceType: "official_docs", dataStatus: "published" }], verifiedAt: "2026-08-06T00:00:00.000Z",
+  };
+  const normalized = normalizeBondManifest(old);
+  assert.deepEqual(normalized.verification, []);
+  assert.equal(routeEffectiveAvailability(normalized.participationRoutes[0]!, new Date("2026-08-06T12:00:00.000Z")), "unknown");
 });
 
 test("overdue owner attestation is needs_review and never available", async () => {
@@ -66,13 +80,13 @@ test("pool and optional LST fees are applied sequentially", async () => {
   assert.equal(result.netRewardSats, "2565000");
 });
 
-test("unknown pool fee preserves gross economics and leaves net unknown", async () => {
+test("unknown pool fee refuses incomplete economics", async () => {
   const bond = await bondFile("genesis-bond-cycle-142.json");
   const pool = bond.participationRoutes.find((route) => route.routeType === "sbtc_pool")!;
-  const result = simulateYield(bond, pool, { principalSats: "100000000" });
-  assert.equal(result.grossRewardDisplay, "0.014 BTC");
-  assert.equal(result.netRewardSats, undefined);
-  assert.equal(result.netRewardDisplay, "Pending applicable fees");
+  assert.throws(
+    () => simulateYield(bond, pool, { principalSats: "100000000" }),
+    (error: unknown) => error instanceof ServiceError && error.code === "INSUFFICIENT_DATA",
+  );
 });
 
 test("25 BTC Genesis public model returns a 174-day gross scenario and a 1.25 BTC-equivalent STX requirement", async () => {

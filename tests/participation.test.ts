@@ -79,4 +79,12 @@ test("diligence report includes bond, protocol, route, freshness, fit, and one a
   assert.equal(report.routeAssessments.length, 2);
   assert.ok(report.nextDiligenceAction.length > 10);
   assert.ok(report.sources.length > 0);
+  assert.ok(report.sources.some((source) => source.id === "custody-registry"));
+});
+
+test("compatibility returns custody-registry provenance instead of empty bond-source matches", async () => {
+  const result = await service().checkCompatibility({ bondId: "genesis-bond-cycle-142", provider: "Leather", keyControlPreference: "custodian" });
+  assert.equal(result.status, "supported");
+  assert.ok(result.sources.some((source) => source.id === "custody-registry"));
+  assert.ok(result.sources.some((source) => source.id === "stacks-q2-2026"));
 });

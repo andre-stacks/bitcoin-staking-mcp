@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { ServiceError } from "../src/core/errors.js";
 import { CONTRACT_VERSION, EXPECTED_TOOL_NAMES, SERVER_VERSION, createBitcoinStakingMcpServer } from "../src/mcp/server.js";
 import { StacksProvider } from "../src/providers/stacks.js";
 import { CoinGeckoPriceProvider } from "../src/providers/coingecko.js";
 import { BitcoinStakingService } from "../src/service.js";
-import { SuccessfulToolOutputSchemas } from "../src/mcp/output-schemas.js";
+import { SuccessfulToolOutputSchemas, YieldOutputSchema } from "../src/mcp/output-schemas.js";
 
 async function connectedClient(service?: BitcoinStakingService) { const server = createBitcoinStakingMcpServer(service); const client = new Client({ name: "tests", version: "0.1.0" }, { capabilities: {}, versionNegotiation: { mode: "legacy" } }); const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair(); await server.connect(serverTransport); await client.connect(clientTransport); return { client, server }; }
 
@@ -26,6 +28,8 @@ test("MCP exposes the complete 14-tool read-only production-beta contract", asyn
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const { tools } = await client.listTools(); assert.deepEqual(tools.map((tool) => tool.name), [...EXPECTED_TOOL_NAMES]);
   for (const tool of tools) { assert.equal(tool.annotations?.readOnlyHint, true); assert.equal(tool.annotations?.destructiveHint, false); assert.ok(tool.outputSchema); }
+  const liveRegistryReads = new Set(["get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "build_diligence_report", "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status", "check_compatibility", "simulate_yield", "compare_staking_paths", "build_participation_plan"]);
+  for (const tool of tools) assert.equal(tool.annotations?.openWorldHint, liveRegistryReads.has(tool.name), `${tool.name} openWorldHint`);
 });
 
 test("market snapshot grounds the first turn in two routes", async (context) => {
@@ -53,7 +57,7 @@ test("every tool validates structured output and exposes no transaction fields",
 
 test("yield uses live CoinGecko prices and three-decimal quantity displays", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalSats: "2500000000" } });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalSats: "2500000000", feeBps: 0 } });
   assert.equal(result.isError, undefined);
   const content = result.structuredContent as any;
   assert.equal(content.priceSnapshot.provider, "CoinGecko");
@@ -63,8 +67,40 @@ test("yield uses live CoinGecko prices and three-decimal quantity displays", asy
   assert.equal(content.pairedStxRequirement.scenarios[0].requiredStxUnits, 620_453.635);
   assert.equal(content.pairedStxRequirement.scenarios[0].requiredStxUnitsDisplay, "620453.635 STX");
   assert.equal(content.grossRewardDisplay, "0.358 BTC");
-  assert.equal(content.netRewardSats, undefined);
+  assert.equal(content.netRewardSats, content.grossRewardSats);
   assert.ok(content.sources.some((source: any) => source.id === "coingecko-simple-price"));
+});
+
+test("yield refuses incomplete route economics before attempting optional price enrichment", async (context) => {
+  let priceRequests = 0;
+  const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { priceRequests += 1; throw new Error("prices offline"); } });
+  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
+  const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-stackingdao-sbtc-pool", principalBtc: "1 sBTC" } });
+  assert.equal(result.isError, true);
+  assert.match(JSON.stringify(result.content), /INSUFFICIENT_DATA/);
+  assert.equal(priceRequests, 0);
+});
+
+test("optional price failure does not invalidate a complete deterministic sats calculation", async (context) => {
+  const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { throw new Error("prices offline"); } });
+  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
+  const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalBtc: "1 BTC", durationDays: 365, annualRateBps: 300, feeBps: 0 } });
+  assert.equal(result.isError, undefined);
+  const content = YieldOutputSchema.parse(result.structuredContent);
+  assert.equal(content.principalSats, "100000000");
+  assert.equal(content.netRewardSats, "3000000");
+  assert.equal(content.priceSnapshot.usage, "unavailable");
+  assert.ok(content.assumptions.some((item) => /price enrichment was unavailable/i.test(item)));
+});
+
+test("MCP schemas contain no passthrough or unknown output shortcuts", async () => {
+  const source = await readFile(resolve("src/mcp/output-schemas.ts"), "utf8");
+  assert.doesNotMatch(source, /z\.unknown\s*\(/);
+  assert.doesNotMatch(source, /z\.json\s*\(/);
+  assert.doesNotMatch(source, /\.passthrough\s*\(/);
+  assert.doesNotMatch(EXPECTED_TOOL_NAMES.join(" "), /transaction|psbt|sign|broadcast/i);
 });
 
 test("runtime failures stay explicit inside deterministic market snapshot", async (context) => {
@@ -92,8 +128,9 @@ test("capabilities expose server and contract versions and concierge uses one ro
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const resource = await client.readResource({ uri: "bitcoin-staking://capabilities" }); const text = (resource.contents[0] as any).text as string;
   assert.match(text, new RegExp(`Contract version: ${CONTRACT_VERSION}`)); assert.match(text, new RegExp(`Server version: ${SERVER_VERSION}`));
+  assert.match(text, /Skill version: 0\.3\.0/); assert.match(text, /Registry version: 2026-08-06\.1/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
   const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: {} }); const content = prompt.messages[0]?.content;
-  assert.equal(content?.type, "text"); if (content?.type === "text") { assert.match(content.text, /call get_market_snapshot first/i); assert.match(content.text, /exactly two routes/i); assert.match(content.text, /keeping BTC on L1, permissionless smaller-balance access, or liquidity/i); assert.match(content.text, /stBTC.*optional/i); assert.match(content.text, /current CoinGecko BTC and STX prices/i); assert.match(content.text, /paired STX units/i); assert.match(content.text, /three-decimal display fields/i); assert.match(content.text, /net yield unknown rather than refusing/i); assert.match(content.text, /not final configured bond terms/i); }
+  assert.equal(content?.type, "text"); if (content?.type === "text") { assert.match(content.text, /call get_market_snapshot first/i); assert.match(content.text, /exactly two routes/i); assert.match(content.text, /keeping BTC on L1, permissionless smaller-balance access, or liquidity/i); assert.match(content.text, /stBTC.*optional/i); assert.match(content.text, /economics are incomplete and do not calculate/i); assert.match(content.text, /prices may enrich a complete scenario, but do not cure missing economics/i); assert.match(content.text, /three-decimal display fields/i); assert.match(content.text, /not final configured bond terms/i); }
 });
 
 test("concierge prompt makes the current audit question override unrelated prior context", async (context) => {

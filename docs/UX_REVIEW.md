@@ -1,6 +1,6 @@
 # Bitcoin Staking Concierge — User Experience Review
 
-Status: implemented for the hackathon MVP.
+Status: implemented for the v0.3.0 production beta.
 
 ## Finding
 

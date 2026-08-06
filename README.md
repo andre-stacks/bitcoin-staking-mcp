@@ -58,7 +58,7 @@ To install only one host, use `--hosts codex` or `--hosts claude`. See [Installa
 
 Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, it loads the upcoming opportunity and the direct native-L1 and StackingDAO sBTC pool routes. stBTC is presented only as the pool's optional LST capability. It then asks which priority matters most.
 
-Choose a number or ask naturally. For example:
+Ask naturally. For example:
 
 ```text
 What is the current protocol status, and are any bonds available?
@@ -226,7 +226,7 @@ The default tests are offline. The mainnet and configured-testnet tests are opt-
 
 The offline suite invokes all fourteen tools through an in-process MCP client, validates complete output contracts, checks registry caching and freshness, exercises the two route journeys and upstream failures, and tests the shared prompt/skill evidence contract. Prompt controls materially reduce unsupported answers, but callers should treat returned provenance and explicit unknown states as the enforceable trust boundary.
 
-The custody registry is reviewed weekly. `npm run custody:review` validates its structure and review date; `npm run custody:review:live` also checks that its evidence URLs remain reachable. A scheduled GitHub Actions workflow runs the live review every Monday. The check intentionally does not promote a partner automatically: a changed or stale source requires product-owner confirmation before the registry is updated.
+The bond, route, LST, and custody registries use a seven-day owner-review cadence. `npm run registry:validate` validates schemas, references, formats, duplicates, status-specific fields, and freshness; `npm run registry:validate:live` also checks external evidence URLs. A nightly GitHub Actions workflow opens or updates one `registry-review-due` issue when validation fails. The check never promotes a partner automatically: changed or stale claims require product-owner confirmation through a reviewed registry PR.
 
 ## Documentation
 

@@ -56,7 +56,7 @@ For a material question, cover only the relevant parts of this order:
 5. Assumptions and primary sources.
 6. One useful next-step question.
 
-Never default to “wait” when a grounded preparation action exists. If no route meets every constraint, explain the conflict and the next diligence action. Keep the native-L1 direct route separate from the approved StackingDAO sBTC pool, and represent stBTC only as an optional pool capability. Separate protocol guarantees from application, wallet, custodian, and operational claims. A sourced rate can support gross reference economics; never invent a missing fee or net result. Never provide a transaction-ready instruction or imply that diligence is complete.`;
+Never default to “wait” when a grounded preparation action exists. If no route meets every constraint, explain the conflict and the next diligence action. Keep the native-L1 direct route separate from the approved StackingDAO sBTC pool, and represent stBTC only as an optional pool capability. Separate protocol guarantees from application, wallet, custodian, and operational claims. Calculate only when duration, rate, and every applicable route or selected-LST fee are complete; never invent a missing economic term. Never provide a transaction-ready instruction or imply that diligence is complete.`;
 
 export const SOURCE_METHODOLOGY = `# Source methodology
 

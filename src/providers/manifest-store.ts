@@ -18,17 +18,22 @@ export class ManifestStore {
   private readonly remoteManifestCache = new Map<string, BondManifest>();
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => Date;
+  private readonly remoteEnabled: boolean;
+  private readonly remoteRegistryUrl: string;
 
-  constructor(directory?: string, options: { now?: () => Date; fetchImpl?: typeof fetch } = {}) {
+  constructor(directory?: string, options: { now?: () => Date; fetchImpl?: typeof fetch; remoteEnabled?: boolean; remoteRegistryUrl?: string } = {}) {
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.now = options.now ?? (() => new Date());
+    this.remoteEnabled = options.remoteEnabled ?? process.env.BITCOIN_STAKING_DISABLE_REMOTE_REGISTRY !== "1";
+    this.remoteRegistryUrl = options.remoteRegistryUrl ?? process.env.BITCOIN_STAKING_BOND_REGISTRY_URL ?? "https://raw.githubusercontent.com/andre-stacks/bitcoin-staking-mcp/main/data/bond-registry.json";
     this.directory = directory ?? process.env.BITCOIN_STAKING_DATA_DIR ?? resolve(dataRoot(), "bonds");
     if (!directory && !process.env.BITCOIN_STAKING_DATA_DIR) {
       this.registry = new VersionedRegistryClient({
-        remoteUrl: process.env.BITCOIN_STAKING_BOND_REGISTRY_URL ?? "https://raw.githubusercontent.com/andre-stacks/bitcoin-staking-mcp/main/data/bond-registry.json",
+        remoteUrl: this.remoteRegistryUrl,
         fallbackPath: resolve(dataRoot(), "bond-registry.json"),
         parse: (value) => BondRegistrySchema.parse(value),
         ...(options.now ? { now: options.now } : {}), ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+        remoteEnabled: this.remoteEnabled,
       });
     }
   }
@@ -49,7 +54,7 @@ export class ManifestStore {
       if (registry.metadata.sourceMode === "bundled_snapshot") throw error;
       const fallbackRaw = await readFile(resolve(dataRoot(), "bond-registry.json"), "utf8").catch((reason: unknown) => { throw new ServiceError("REGISTRY_UNAVAILABLE", `Remote manifests and bundled registry are unavailable: ${reason instanceof Error ? reason.message : String(reason)}`, true); });
       const fallback = BondRegistrySchema.parse(JSON.parse(fallbackRaw));
-      const now = new Date();
+      const now = this.now();
       if (!isReviewCurrent(fallback.reviewedAt, now, fallback.reviewCadenceDays)) throw new ServiceError("REGISTRY_UNAVAILABLE", `Remote manifests failed and bundled registry expired at ${reviewDueAt(fallback.reviewedAt, fallback.reviewCadenceDays)}.`, true);
       bonds = await Promise.all(fallback.bondFiles.map((name) => this.readManifest(name, "bundled_snapshot")));
       metadata = { sourceMode: "bundled_snapshot", registryVersion: fallback.registryVersion, contentHash: registryHash(JSON.stringify(bonds)), fetchedAt: now.toISOString(), reviewedAt: fallback.reviewedAt, reviewDueAt: reviewDueAt(fallback.reviewedAt, fallback.reviewCadenceDays), reviewStatus: "current" };
@@ -82,8 +87,8 @@ export class ManifestStore {
       if (sourceMode === "runtime_cache" && this.remoteManifestCache.has(name)) {
         return this.remoteManifestCache.get(name)!;
       }
-      if (sourceMode === "live_registry" && process.env.BITCOIN_STAKING_DISABLE_REMOTE_REGISTRY !== "1") {
-        const base = (process.env.BITCOIN_STAKING_BOND_REGISTRY_URL ?? "https://raw.githubusercontent.com/andre-stacks/bitcoin-staking-mcp/main/data/bond-registry.json").replace(/\/[^/]+$/, "/");
+      if (sourceMode === "live_registry" && this.remoteEnabled) {
+        const base = this.remoteRegistryUrl.replace(/\/[^/]+$/, "/");
         const response = await this.fetchImpl(`${base}bonds/${name}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         raw = await response.text();

@@ -3,6 +3,7 @@ import { z } from "zod";
 const IdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*$/);
 const SatsSchema = z.string().regex(/^\d+$/);
 const BtcAmountSchema = z.string().trim().regex(/^\d+(?:\.\d{1,8})?\s*(?:s?btc)?$/i);
+const MAX_BITCOIN_SUPPLY_SATS = 2_100_000_000_000_000n;
 
 export function btcAmountToSats(value: string): string {
   const normalized = value.trim().replace(/\s*(?:s?btc)$/i, "");
@@ -41,13 +42,6 @@ export const SourceRefSchema = z.object({
   contentHashSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 }).strict();
 export type SourceRef = z.infer<typeof SourceRefSchema>;
-
-export const MetadataSchema = z.object({
-  dataStatus: DataStatusSchema,
-  sources: z.array(SourceRefSchema),
-  assumptions: z.array(z.string()),
-  verifiedAt: z.iso.datetime(),
-}).passthrough();
 
 export const OwnerAttestationSchema = z.object({
   scope: z.string().min(1),
@@ -245,19 +239,23 @@ export const BondManifestV2Schema = z.object({
     value.dataStatus === "demo"
       ? ["demo_manifest", "public_manifest"]
       : ["public_manifest"];
-  validateAttestation(value.attestation, value.sources, context, ["attestation"], attestationSourceTypes);
+  const allowedAttestationTypes = (status: z.infer<typeof ProductStatusSchema>, verification: Array<z.infer<typeof VerificationLevelSchema>>) =>
+    status === "unconfirmed" && !verification.includes("product_owner_confirmed")
+      ? SourceRefSchema.shape.sourceType.options
+      : attestationSourceTypes;
+  validateAttestation(value.attestation, value.sources, context, ["attestation"], allowedAttestationTypes(value.productStatus, value.verification));
   for (const sourceId of value.economics.referenceModel?.sourceIds ?? []) {
     if (!sourceIds.has(sourceId)) context.addIssue({ code: "custom", path: ["economics", "referenceModel", "sourceIds"], message: `Missing source ID: ${sourceId}` });
   }
   for (const [routeIndex, route] of value.participationRoutes.entries()) {
-    validateAttestation(route.attestation, value.sources, context, ["participationRoutes", routeIndex, "attestation"], attestationSourceTypes);
+    validateAttestation(route.attestation, value.sources, context, ["participationRoutes", routeIndex, "attestation"], allowedAttestationTypes(route.productStatus, route.verification));
     for (const sourceId of route.attestation.sourceIds) if (!sourceIds.has(sourceId)) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "attestation", "sourceIds"], message: `Missing source ID: ${sourceId}` });
     if (route.routeType === "native_l1_direct") {
       if (route.minimumSats && route.maximumSats && BigInt(route.minimumSats) > BigInt(route.maximumSats)) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "maximumSats"], message: "maximumSats must be at least minimumSats." });
       if (route.pairedStx.required && route.pairedStx.minimumValueRatioBps === undefined) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "pairedStx", "minimumValueRatioBps"], message: "A required paired-STX position must declare its minimum value ratio." });
     }
     if (route.routeType === "sbtc_pool" && route.lst) {
-      validateAttestation(route.lst.attestation, value.sources, context, ["participationRoutes", routeIndex, "lst", "attestation"], attestationSourceTypes);
+      validateAttestation(route.lst.attestation, value.sources, context, ["participationRoutes", routeIndex, "lst", "attestation"], allowedAttestationTypes(route.lst.productStatus, route.lst.verification));
       for (const sourceId of route.lst.sourceIds) if (!sourceIds.has(sourceId)) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "lst", "sourceIds"], message: `Missing source ID: ${sourceId}` });
       for (const [field, ids] of [["liquidityEvidence", route.lst.liquidityEvidence.sourceIds], ["oracleEvidence", route.lst.oracleEvidence.sourceIds]] as const) {
         for (const sourceId of ids) if (!sourceIds.has(sourceId)) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "lst", field, "sourceIds"], message: `Missing source ID: ${sourceId}` });
@@ -265,8 +263,20 @@ export const BondManifestV2Schema = z.object({
       route.lst.verifiedDefiIntegrations.forEach((integration, integrationIndex) => integration.sourceIds.forEach((sourceId) => {
         if (!sourceIds.has(sourceId)) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "lst", "verifiedDefiIntegrations", integrationIndex, "sourceIds"], message: `Missing source ID: ${sourceId}` });
       }));
+      if (route.lst.productStatus === "production" && !route.lst.tokenContract) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "lst", "tokenContract"], message: "A production LST requires a deployed token contract." });
     }
-    if (route.routeType === "sbtc_pool" && ["production", "tested"].includes(route.productStatus) && route.contracts.length === 0) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "contracts"], message: "Production or tested pools require at least one deployed contract." });
+    if (route.routeType === "sbtc_pool") {
+      if (route.minimumSats && route.capacitySats && BigInt(route.minimumSats) > BigInt(route.capacitySats)) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "capacitySats"], message: "capacitySats must be at least minimumSats." });
+      for (const [contractIndex, contract] of route.contracts.entries()) if (contract.network !== value.network) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "contracts", contractIndex, "network"], message: `Contract network ${contract.network} does not match bond network ${value.network}.` });
+      if (["production", "tested"].includes(route.productStatus) && route.contracts.length === 0) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "contracts"], message: "Production or tested pools require at least one deployed contract." });
+      if (route.enrollmentStatus === "open") {
+        if (route.feeBps === undefined) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "feeBps"], message: "An open pool must publish its fee." });
+        if (route.rewardAccounting.status !== "verified") context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "rewardAccounting", "status"], message: "An open pool requires verified reward accounting." });
+        if (route.withdrawalTerms.status !== "verified") context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "withdrawalTerms", "status"], message: "An open pool requires verified withdrawal terms." });
+        if (!route.enrollmentUrl) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "enrollmentUrl"], message: "An open pool requires an enrollment link." });
+      }
+    }
+    if (route.routeType === "native_l1_direct" && route.enrollmentStatus === "open" && !route.enrollment.url) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "enrollment", "url"], message: "An open direct route requires an enrollment link." });
     if (route.enrollmentStatus === "open" && route.productStatus !== "production") context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "productStatus"], message: "Open enrollment requires production product status." });
     if (route.enrollmentStatus === "open" && !route.verification.includes("product_owner_confirmed")) context.addIssue({ code: "custom", path: ["participationRoutes", routeIndex, "verification"], message: "Open enrollment requires product-owner confirmation." });
   }
@@ -274,6 +284,8 @@ export const BondManifestV2Schema = z.object({
   if (value.timing.startsRewardCycle !== undefined && value.timing.endsRewardCycle !== undefined && value.timing.startsRewardCycle > value.timing.endsRewardCycle) context.addIssue({ code: "custom", path: ["timing", "endsRewardCycle"], message: "endsRewardCycle must not precede startsRewardCycle." });
   if (value.economics.rewardModel === "fixed_reward_units" && value.economics.fixedRewardUnits === undefined) context.addIssue({ code: "custom", path: ["economics", "fixedRewardUnits"], message: "Fixed-unit reward models require fixedRewardUnits." });
   if (value.economics.rewardModel === "target_principal_rate" && value.economics.targetRateBps === undefined && value.economics.referenceModel === undefined) context.addIssue({ code: "custom", path: ["economics", "targetRateBps"], message: "Target-principal-rate models require a bond rate or sourced reference model." });
+  if (value.enrollmentStatus === "open" && value.productStatus !== "production") context.addIssue({ code: "custom", path: ["productStatus"], message: "Open bond enrollment requires production product status." });
+  if (value.enrollmentStatus === "open" && !value.verification.includes("product_owner_confirmed")) context.addIssue({ code: "custom", path: ["verification"], message: "Open bond enrollment requires product-owner confirmation." });
   const routeIds = value.participationRoutes.map((route) => route.id);
   if (new Set(routeIds).size !== routeIds.length) context.addIssue({ code: "custom", path: ["participationRoutes"], message: "Duplicate route ID." });
 });
@@ -290,19 +302,21 @@ export const BondManifestV1Schema = z.object({
 export type BondManifestV1 = z.infer<typeof BondManifestV1Schema>;
 
 export function normalizeBondManifest(value: unknown): BondManifestV2 {
-  const candidate = z.object({ schemaVersion: z.number() }).passthrough().parse(value);
-  if (candidate.schemaVersion === 2) return BondManifestV2Schema.parse(value);
+  if (typeof value !== "object" || value === null || !("schemaVersion" in value)) {
+    throw new Error("Bond manifest must be an object with a schemaVersion.");
+  }
+  if ((value as { schemaVersion?: unknown }).schemaVersion === 2) return BondManifestV2Schema.parse(value);
   const old = BondManifestV1Schema.parse(value);
   const sourceIds = old.sources.map((source) => source.id);
-  const attestation = { scope: `${old.id}:native-l1-direct`, ownerOrganization: "Unconfirmed v1 manifest owner", reviewedAt: old.verifiedAt, reviewCadenceDays: 7 as const, sourceIds };
+  const attestation = { scope: `${old.id}:native-l1-direct legacy source scope`, ownerOrganization: "Unconfirmed", reviewedAt: old.verifiedAt, reviewCadenceDays: 7 as const, sourceIds };
   return BondManifestV2Schema.parse({
     schemaVersion: 2, id: old.id, title: old.title, description: old.description, network: old.network,
     ...(old.onChainBondIndex === undefined ? {} : { onChainBondIndex: old.onChainBondIndex }),
     lifecycleStatus: old.lifecycleStatus, dataStatus: old.dataStatus, productStatus: "unconfirmed", enrollmentStatus: "unknown",
-    verification: ["product_owner_confirmed"], attestation, timing: old.timing, economics: old.economics,
+    verification: [], attestation, timing: old.timing, economics: old.economics,
     protocolTerms: { coverageBoundary: "Native L1 direct route only; normalized from a v1 manifest.", signerAndAdministrationControls: "Not specified by v1 manifest.", audits: [], unresolvedTerms: ["Owner scope and current product availability require v2 confirmation."] },
     participationRoutes: [{
-      id: "native-l1-direct", name: "Native L1 direct", routeType: "native_l1_direct", productStatus: "unconfirmed", enrollmentStatus: "unknown", verification: ["product_owner_confirmed"], attestation, sourceIds,
+      id: "native-l1-direct", name: "Native L1 direct", routeType: "native_l1_direct", productStatus: "unconfirmed", enrollmentStatus: "unknown", verification: [], attestation, sourceIds,
       summary: "Normalized legacy native-L1 route.", whitelist: { required: old.requirements.allowlistRequired, status: "unknown" }, participantTypes: ["institution", "individual"], custodyPathIds: [],
       ...(old.capacity.minSats ? { minimumSats: old.capacity.minSats } : {}), ...(old.capacity.maxSats ? { maximumSats: old.capacity.maxSats } : {}),
       pairedStx: { required: old.requirements.pairedStxRequired, ...(old.requirements.pairedStxMinimumValueRatioBps === undefined ? {} : { minimumValueRatioBps: old.requirements.pairedStxMinimumValueRatioBps }) },
@@ -332,11 +346,12 @@ export const ParticipantProfileSchema = z.object({
   keyControlPreference: z.enum(["self_controlled", "custodian", "either", "unknown"]),
   stxAvailable: z.enum(["yes", "no", "unknown"]).default("unknown"),
   walletOrCustodian: z.string().min(1).optional(),
-  amountSats: SatsSchema.refine((value) => BigInt(value) > 0n, "amountSats must be greater than zero").optional(),
+  amountSats: SatsSchema.refine((value) => BigInt(value) > 0n && BigInt(value) <= MAX_BITCOIN_SUPPLY_SATS, "amountSats must be positive and no greater than Bitcoin's maximum supply").optional(),
   amountBtc: BtcAmountSchema.optional(),
   timeHorizonDays: z.number().int().positive().optional(),
 }).strict().superRefine((value, context) => {
   if (value.amountBtc && BigInt(btcAmountToSats(value.amountBtc)) <= 0n) context.addIssue({ code: "custom", path: ["amountBtc"], message: "amountBtc must be greater than zero." });
+  if (value.amountBtc && BigInt(btcAmountToSats(value.amountBtc)) > MAX_BITCOIN_SUPPLY_SATS) context.addIssue({ code: "custom", path: ["amountBtc"], message: "amountBtc exceeds Bitcoin's maximum supply." });
   if (value.amountBtc && value.amountSats && btcAmountToSats(value.amountBtc) !== value.amountSats) context.addIssue({ code: "custom", path: ["amountBtc"], message: "amountBtc and amountSats disagree." });
 });
 export type ParticipantProfile = z.infer<typeof ParticipantProfileSchema>;
@@ -394,7 +409,10 @@ function validateAttestation(
 export function reviewDueAt(reviewedAt: string, cadenceDays = 7): string {
   return new Date(new Date(reviewedAt).getTime() + cadenceDays * 86_400_000).toISOString();
 }
-export function isReviewCurrent(reviewedAt: string, now: Date, cadenceDays = 7): boolean { return now.getTime() <= new Date(reviewDueAt(reviewedAt, cadenceDays)).getTime(); }
+export function isReviewCurrent(reviewedAt: string, now: Date, cadenceDays = 7): boolean {
+  const reviewed = new Date(reviewedAt).getTime();
+  return reviewed <= now.getTime() && now.getTime() <= new Date(reviewDueAt(reviewedAt, cadenceDays)).getTime();
+}
 export function routeEffectiveAvailability(route: ParticipationRoute, now: Date, conflict = false) {
   if (conflict) return "conflict" as const;
   if (!isReviewCurrent(route.attestation.reviewedAt, now, route.attestation.reviewCadenceDays)) return "needs_review" as const;

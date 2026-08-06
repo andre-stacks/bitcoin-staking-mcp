@@ -233,7 +233,13 @@ async function checkHostRegistration(
         return { target: host, status: "failed", message: `Registration does not match ${expectedSource.description}.` };
       }
     } catch {
-      // Older Codex builds may not return JSON despite accepting --json; existence is still reported.
+      return { target: host, status: "failed", message: "Codex registration could not be parsed for exact package verification." };
+    }
+  } else {
+    const normalized = `${checked.stdout}\n${checked.stderr}`;
+    const expectedTokens = [expectedSource.command, ...expectedSource.args];
+    if (!expectedTokens.every((token) => normalized.includes(token))) {
+      return { target: host, status: "failed", message: `Registration does not match ${expectedSource.description}.` };
     }
   }
   return {
@@ -452,7 +458,7 @@ export async function runInstaller(
           "Open the Bitcoin Staking Concierge in Codex with $bitcoin-staking-concierge, or in Claude Code with /mcp__bitcoin_staking__bitcoin_staking_concierge.",
           "Start with: What is the current protocol status, and are any bonds available?",
           "Or ask: What security evidence should I review before participating through Leather?",
-          "You can also invoke the concierge without a question to see the complete capability menu.",
+          "You can also invoke the concierge without a question for a guided overview of the two routes.",
           `Re-verify later with: ${checkCommand}`,
         ]
       : [];

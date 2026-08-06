@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createServer } from "node:http";
 import { once } from "node:events";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { ServiceError } from "../src/core/errors.js";
 import type { BondManifest } from "../src/core/schemas.js";
 import { ManifestStore } from "../src/providers/manifest-store.js";
@@ -39,6 +39,18 @@ class RecordingProvider extends StacksProvider {
       verifiedAt,
     };
   }
+}
+
+class SnapshotProvider extends RecordingProvider {
+  override async getProtocolStatus(): Promise<any> {
+    const verifiedAt = "2026-08-06T19:00:00.000Z";
+    return { network: this.networkName, chainId: this.chainId, contractId: this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78.pox-5" : "ST000000000000000000002AMW42H.pox-5", pox5Active: true, currentBurnchainBlockHeight: 1, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt };
+  }
+  override async listProtocolBonds(): Promise<any> {
+    const verifiedAt = "2026-08-06T19:00:00.000Z";
+    return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 1, scannedBondIndices: [0], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt };
+  }
+  override async getOnChainBond(): Promise<any> { return undefined; }
 }
 
 function publishedTestnetManifest() {
@@ -144,4 +156,48 @@ test("upstream HTTP failures return a typed retryable error", async (context) =>
     (error: unknown) =>
       error instanceof ServiceError && error.code === "UPSTREAM_ERROR" && error.retryable,
   );
+});
+
+test("participant network resolution rejects bond, request, and address conflicts plus invalid principals", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "bitcoin-staking-network-conflicts-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  await writeFile(join(directory, "published-testnet-bond.json"), JSON.stringify(publishedTestnetManifest()), "utf8");
+  const mainnet = new RecordingProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
+  const testnet = new RecordingProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
+  const service = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: mainnet, testnetStacks: testnet, now: () => new Date("2026-08-06T19:00:00.000Z") });
+
+  await assert.rejects(service.checkParticipantStatus("SP000000000000000000002Q6VF78", "published-testnet-bond"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /address-implied/.test(error.message));
+  await assert.rejects(service.checkParticipantStatus("SP000000000000000000002Q6VF78", undefined, "testnet"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /conflicts/.test(error.message));
+  await assert.rejects(service.checkParticipantStatus("ST000000000000000000002AMW42H", "published-testnet-bond", "mainnet"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /Bond network/.test(error.message));
+
+  const validating = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: new StacksProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: testnet, now: () => new Date("2026-08-06T19:00:00.000Z") });
+  await assert.rejects(validating.checkParticipantStatus("not-a-stacks-address"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT");
+});
+
+test("runtime conflict overrides a fresh owner claim in snapshot, bond detail, report, comparison, and plan", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "bitcoin-staking-runtime-conflict-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond-cycle-142.json"), "utf8"));
+  Object.assign(bond, { productStatus: "production", enrollmentStatus: "open" });
+  Object.assign(bond.participationRoutes[0], { productStatus: "production", enrollmentStatus: "open" });
+  bond.participationRoutes[0].enrollment.url = "https://example.com/enroll";
+  await writeFile(join(directory, "bond.json"), JSON.stringify(bond), "utf8");
+  const mainnet = new SnapshotProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
+  const testnet = new SnapshotProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
+  const service = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: mainnet, testnetStacks: testnet, now: () => new Date("2026-08-06T19:00:00.000Z") });
+  const profile = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000", stxAvailable: "yes" } as const;
+
+  const snapshot = await service.getMarketSnapshot();
+  assert.equal(snapshot.routes.find((route) => route.routeType === "native_l1_direct")?.effectiveAvailability, "conflict");
+  const detail = await service.getBond("genesis-bond-cycle-142");
+  assert.equal(detail.onChainReconciliation.status, "conflict");
+  assert.equal(detail.bond.participationRoutes[0]?.effectiveAvailability, "conflict");
+  assert.equal(detail.bond.participationRoutes[1]?.effectiveAvailability, "scheduled");
+  const comparison = await service.compareStakingPaths(profile);
+  assert.equal(comparison.recommendedRouteId, null);
+  const plan = await service.buildParticipationPlan("genesis-bond-cycle-142", profile);
+  assert.equal(plan.selectedRouteId, null);
+  const report = await service.buildDiligenceReport({ bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", profile });
+  assert.equal(report.operationalFit, "not_assessable");
+  assert.equal(report.bondAvailability.onChainReconciliation[0]?.status, "conflict");
 });

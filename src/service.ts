@@ -86,7 +86,10 @@ export class BitcoinStakingService {
     };
     const custody = custodyResult.status === "fulfilled" ? {
       status: "available" as const, current: custodyResult.value.metadata.reviewStatus === "current",
-      registry: custodyResult.value.metadata, availablePathIds: custodyResult.value.registry.paths.filter((path) => path.status === "available").map((path) => path.id),
+      registry: custodyResult.value.metadata,
+      availablePathIds: custodyResult.value.registry.paths.filter((path) =>
+        path.status === "available" && isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays)
+      ).map((path) => path.id),
     } : errorSummary(custodyResult.reason);
     const prices = priceResult.status === "fulfilled" ? priceResult.value : errorSummary(priceResult.reason);
     return {
@@ -160,7 +163,11 @@ export class BitcoinStakingService {
       }
     }
     const conflict = onChainVerification.status === "conflict";
-    const routes = bond.participationRoutes.map((route) => ({ ...route, effectiveAvailability: onChainVerification.status === "unavailable" && routeEffectiveAvailability(route, now) === "available" ? "unknown" as const : routeEffectiveAvailability(route, now, conflict) }));
+    const routes = bond.participationRoutes.map((route) => {
+      const registryAvailability = routeEffectiveAvailability(route, now);
+      const routeConflict = conflict && route.productStatus === "production" && route.enrollmentStatus === "open";
+      return { ...route, effectiveAvailability: onChainVerification.status === "unavailable" && registryAvailability === "available" ? "unknown" as const : routeEffectiveAvailability(route, now, routeConflict) };
+    });
     const runtimeSource = bond.onChainBondIndex === undefined ? [] : [provider.sourceRef(now.toISOString())];
     return { bond: { ...bond, participationRoutes: routes }, onChainReconciliation: onChainVerification,
       onChainVerification,
@@ -207,7 +214,7 @@ export class BitcoinStakingService {
       : `${bond.title} is published for diligence. Route availability and final economics must be confirmed from current product and on-chain state.`;
     const nextDiligenceSteps = [
       "Choose a currently supported custody path for direct native-L1 participation, or review the approved StackingDAO sBTC pool route.",
-      "Confirm the final bond duration and applicable fees before treating gross reference yield as a net payout.",
+      "Confirm the final bond duration and every applicable fee before calculating a route scenario.",
       "Reconcile enrollment and on-chain configuration before funding.",
     ];
     return {
@@ -262,7 +269,7 @@ export class BitcoinStakingService {
       missingEvidence: [...new Set(assessments.flatMap((item) => item.missingEvidence))],
       nextDiligenceAction: assessments.find((item) => item.fit !== "no_match")?.nextDiligenceAction ?? "Change a route-changing constraint or obtain evidence that resolves the no-match condition.",
       nextDiligenceSteps,
-      profile, dataStatus: "derived" as const, sources: bond.sources, assumptions: ["Claim-level sources are identified by each route sourceIds field.", "This is diligence support, not individualized advice."], verifiedAt: now.toISOString(),
+      profile, dataStatus: "derived" as const, sources: this.uniqueSources([...bond.sources, ...custody.sources, ...snapshot.sources]), assumptions: ["Claim-level sources are identified by each route and custody sourceIds field.", "This is diligence support, not individualized advice."], verifiedAt: now.toISOString(),
     };
   }
 
@@ -281,10 +288,10 @@ export class BitcoinStakingService {
   async checkCompatibility(input: { bondId: string; provider: string; keyControlPreference: ParticipantProfile["keyControlPreference"] }) {
     const bond = await this.manifests.get(input.bondId); const route = bond.participationRoutes.find((item) => item.routeType === "native_l1_direct");
     if (!route || route.routeType !== "native_l1_direct") throw new ServiceError("NOT_FOUND", "This bond has no direct native-L1 route.");
-    const { paths } = await this.custody.list({ provider: input.provider }); const path = paths[0];
+    const { paths, registry } = await this.custody.list({ provider: input.provider }); const path = paths[0];
     const supported = !!path && path.status === "available" && route.custodyPathIds.includes(path.id) && isReviewCurrent(route.attestation.reviewedAt, this.now()) && isReviewCurrent(path.attestation.reviewedAt, this.now(), path.attestation.reviewCadenceDays);
     return { bondId: bond.id, routeId: route.id, provider: input.provider, status: supported ? "supported" : path?.status === "not_currently_supported" ? "unsupported" : "unknown", keyControlPreference: input.keyControlPreference, evidence: path?.evidence ?? "No current custody evidence found.",
-      dataStatus: bond.dataStatus, sources: path ? bond.sources.filter((source) => path.sourceIds.includes(source.id)) : bond.sources, assumptions: ["Compatibility is a product claim, not a protocol guarantee."], verifiedAt: this.now().toISOString() };
+      dataStatus: bond.dataStatus, sources: path ? registry.sources.filter((source) => path.sourceIds.includes(source.id)) : registry.sources, assumptions: ["Compatibility is a product claim, not a protocol guarantee."], verifiedAt: this.now().toISOString() };
   }
 
   async simulateYield(input: YieldSimulationInput & { bondId: string; routeId?: string | undefined }) {
@@ -319,14 +326,14 @@ export class BitcoinStakingService {
   }
 
   async buildParticipationPlan(bondId: string, profileInput: ParticipantProfile, routeId?: string | undefined) {
-    const profile = normalizeParticipantProfileAmount(ParticipantProfileSchema.parse(profileInput)); const bond = await this.manifests.get(bondId); const { paths } = await this.custody.list();
+    const profile = normalizeParticipantProfileAmount(ParticipantProfileSchema.parse(profileInput)); const bond = await this.manifests.get(bondId); const { paths, registry } = await this.custody.list();
     const routes = routeId ? bond.participationRoutes.filter((route) => route.id === routeId) : bond.participationRoutes;
     if (!routes.length) throw new ServiceError("NOT_FOUND", `Route not found: ${routeId}`);
     const snapshot = await this.getMarketSnapshot({ network: bond.network });
     const availabilityByRoute = new Map(snapshot.routes.filter((route) => route.bondId === bond.id).map((route) => [route.routeId, route.effectiveAvailability]));
     const assessments = routes.map((route) => assessRoute(bond, route, profile, paths, this.now(), availabilityByRoute.get(route.id)));
     return { bondId, routeId: routeId ?? null, assessments, selectedRouteId: assessments.find((item) => item.effectiveAvailability === "available" && (item.fit === "strong" || item.fit === "conditional"))?.routeId ?? null,
-      dataStatus: "derived" as const, sources: bond.sources, assumptions: ["Read-only preparation plan; no transaction fields are produced."], verifiedAt: this.now().toISOString() };
+      dataStatus: "derived" as const, sources: this.uniqueSources([...bond.sources, ...registry.sources]), assumptions: ["Read-only preparation plan; no transaction fields are produced."], verifiedAt: this.now().toISOString() };
   }
 
   async getSource(sourceId: string) { const source = (await this.listSources()).find((item) => item.id === sourceId); if (!source) throw new ServiceError("NOT_FOUND", `Source not found: ${sourceId}`); return source; }
@@ -380,7 +387,14 @@ export class BitcoinStakingService {
       ...result,
       priceSnapshot,
       sources: this.uniqueSources([...result.sources, ...(livePrices?.sources ?? [])]),
-      assumptions: [...result.assumptions, ...(livePrices?.assumptions ?? priceError ? ["Live price enrichment was unavailable; deterministic reward sats remain valid without a price quote."] : ["Price inputs were explicitly supplied by the caller."])],
+      assumptions: [
+        ...result.assumptions,
+        ...(livePrices
+          ? livePrices.assumptions
+          : priceError
+            ? ["Live price enrichment was unavailable; deterministic reward sats remain valid without a price quote."]
+            : ["Price inputs were explicitly supplied by the caller."]),
+      ],
     };
   }
   private uniqueSources(sources: SourceRef[]) { return [...new Map(sources.map((source) => [source.id, source])).values()]; }

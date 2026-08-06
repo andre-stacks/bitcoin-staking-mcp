@@ -2,6 +2,8 @@ import { ServiceError } from "./errors.js";
 import { btcAmountToSats } from "./schemas.js";
 import type { BondManifest, ParticipationRoute } from "./schemas.js";
 
+const MAX_BITCOIN_SUPPLY_SATS = 2_100_000_000_000_000n;
+
 export interface YieldSimulationInput {
   principalSats?: string | undefined;
   principalBtc?: string | undefined;
@@ -24,10 +26,16 @@ function roundToThree(value: number): number {
   return Number(value.toFixed(3));
 }
 
+function btcToThreeDecimals(sats: bigint): string {
+  const roundedMilliBtc = (sats + 50_000n) / 100_000n;
+  const whole = roundedMilliBtc / 1_000n;
+  const fraction = (roundedMilliBtc % 1_000n).toString().padStart(3, "0");
+  return `${whole}.${fraction}`;
+}
+
 function btcDisplay(sats: bigint): string {
-  const btc = Number(sats) / 100_000_000;
-  if (btc > 0 && btc < 0.001) return "<0.001 BTC";
-  return `${roundToThree(btc).toFixed(3)} BTC`;
+  if (sats > 0n && sats < 100_000n) return "<0.001 BTC";
+  return `${btcToThreeDecimals(sats)} BTC`;
 }
 
 function defaultRoute(bond: BondManifest): ParticipationRoute {
@@ -55,12 +63,19 @@ export function simulateYield(
 }
 
 function calculateYield(bond: BondManifest, route: ParticipationRoute, input: YieldSimulationInput) {
+  if ((input.btcPriceUsd !== undefined && (!Number.isFinite(input.btcPriceUsd) || input.btcPriceUsd <= 0)) ||
+      input.stxPriceScenariosUsd?.some((price) => !Number.isFinite(price) || price <= 0)) {
+    throw new ServiceError("INVALID_INPUT", "Price inputs must be finite positive numbers.");
+  }
   if (input.principalSats && input.principalBtc && input.principalSats !== btcAmountToSats(input.principalBtc)) throw new ServiceError("INVALID_INPUT", "principalSats and principalBtc disagree.");
   const principalValue = input.principalSats ?? (input.principalBtc ? btcAmountToSats(input.principalBtc) : undefined);
   if (!principalValue || !/^\d+$/.test(principalValue)) throw new ServiceError("INVALID_INPUT", "Provide principalSats or a BTC/sBTC decimal amount with at most eight decimal places.");
   const principal = BigInt(principalValue);
   if (principal <= 0n) {
     throw new ServiceError("INVALID_INPUT", "principalSats must be greater than zero.");
+  }
+  if (principal > MAX_BITCOIN_SUPPLY_SATS) {
+    throw new ServiceError("INVALID_INPUT", "principal exceeds Bitcoin's maximum possible supply.");
   }
   const manifestDuration = bond.timing.lockDurationDays;
   const referenceModelDuration = bond.economics.referenceModel?.bondingPeriodDays;
@@ -83,10 +98,15 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
   if (input.includeLst && (route.routeType !== "sbtc_pool" || !route.lst)) throw new ServiceError("INVALID_INPUT", "includeLst requires an sBTC pool route with a published LST capability.");
   const lstFeeBps = route.routeType === "sbtc_pool" && input.includeLst ? input.lstFeeBps ?? route.lst?.feeBps : 0;
 
-  if (durationDays === undefined || annualRateBps === undefined) {
+  if (
+    durationDays === undefined ||
+    annualRateBps === undefined ||
+    routeFeeBps === undefined ||
+    lstFeeBps === undefined
+  ) {
     throw new ServiceError(
       "INSUFFICIENT_DATA",
-      "Route economics are incomplete: duration and annual rate must be sourced or explicitly supplied.",
+      "Route economics are incomplete: duration, annual rate, and every applicable route or LST fee must be sourced or explicitly supplied.",
     );
   }
   if (
@@ -94,10 +114,8 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
     durationDays <= 0 ||
     !Number.isSafeInteger(annualRateBps) ||
     annualRateBps < 0 || annualRateBps > 100_000 ||
-    (routeFeeBps !== undefined &&
-      (!Number.isSafeInteger(routeFeeBps) || routeFeeBps < 0 || routeFeeBps > 10_000)) ||
-    (lstFeeBps !== undefined &&
-      (!Number.isSafeInteger(lstFeeBps) || lstFeeBps < 0 || lstFeeBps > 10_000))
+    !Number.isSafeInteger(routeFeeBps) || routeFeeBps < 0 || routeFeeBps > 10_000 ||
+    !Number.isSafeInteger(lstFeeBps) || lstFeeBps < 0 || lstFeeBps > 10_000
   ) {
     throw new ServiceError("INVALID_INPUT", "Invalid duration, annual-rate, or fee input.");
   }
@@ -113,15 +131,10 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
 
   const gross =
     (principal * BigInt(annualRateBps) * BigInt(durationDays)) / (10_000n * 365n);
-  const routeFee = routeFeeBps === undefined ? undefined : (gross * BigInt(routeFeeBps)) / 10_000n;
-  const afterRouteFee = routeFee === undefined ? undefined : gross - routeFee;
-  const lstFeeKnown =
-    !input.includeLst || route.routeType !== "sbtc_pool" || !route.lst || lstFeeBps !== undefined;
-  const lstFee =
-    afterRouteFee === undefined || !lstFeeKnown
-      ? undefined
-      : (afterRouteFee * BigInt(lstFeeBps ?? 0)) / 10_000n;
-  const net = afterRouteFee === undefined || lstFee === undefined ? undefined : afterRouteFee - lstFee;
+  const routeFee = (gross * BigInt(routeFeeBps)) / 10_000n;
+  const afterRouteFee = gross - routeFee;
+  const lstFee = (afterRouteFee * BigInt(lstFeeBps)) / 10_000n;
+  const net = afterRouteFee - lstFee;
 
   const pairedRatioBps =
     route.routeType === "native_l1_direct" ? route.pairedStx.minimumValueRatioBps : undefined;
@@ -173,17 +186,11 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
   if (bond.dataStatus === "demo") {
     assumptions.push("The calculation uses illustrative demo data and is not an investable offer.");
   }
-  if (routeFeeBps === undefined || (input.includeLst && lstFeeBps === undefined)) {
-    assumptions.push("Gross reward is projected from the sourced rate and duration; net reward remains unknown until every applicable fee is published.");
-  }
-  if (routeFeeBps === undefined || (input.includeLst && lstFeeBps === undefined)) {
-  }
-
   const priceScenarios = (input.stxPriceScenariosUsd ?? []).map((stxPriceUsd) => ({
     btcPriceUsd: input.btcPriceUsd ?? null,
     stxPriceUsd,
     estimatedRewardValueUsd:
-      input.btcPriceUsd === undefined || net === undefined
+      input.btcPriceUsd === undefined
         ? null
         : (Number(net) / 100_000_000) * input.btcPriceUsd,
     note: "The STX price scenario affects the paired-STX token estimate; it does not change the sBTC-denominated reward.",
@@ -197,22 +204,22 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
     durationDays,
     projectionPeriod,
     annualRateBps,
-    feeBps: routeFeeBps ?? null,
-    routeFeeBps: routeFeeBps ?? null,
-    lstFeeBps: lstFeeBps ?? null,
+    feeBps: routeFeeBps,
+    routeFeeBps,
+    lstFeeBps,
     grossRewardSats: gross.toString(),
-    grossRewardBtc: roundToThree(Number(gross) / 100_000_000).toFixed(3),
+    grossRewardBtc: btcToThreeDecimals(gross),
     grossRewardBtcExact: satsToBtc(gross),
     grossRewardDisplay: btcDisplay(gross),
-    feeSats: routeFee?.toString(),
-    routeFeeSats: routeFee?.toString(),
-    lstFeeSats: lstFee?.toString(),
-    netRewardSats: net?.toString(),
-    netRewardBtc: net === undefined ? undefined : roundToThree(Number(net) / 100_000_000).toFixed(3),
-    netRewardBtcExact: net === undefined ? undefined : satsToBtc(net),
-    netRewardDisplay: net === undefined ? "Pending applicable fees" : btcDisplay(net),
+    feeSats: routeFee.toString(),
+    routeFeeSats: routeFee.toString(),
+    lstFeeSats: lstFee.toString(),
+    netRewardSats: net.toString(),
+    netRewardBtc: btcToThreeDecimals(net),
+    netRewardBtcExact: satsToBtc(net),
+    netRewardDisplay: btcDisplay(net),
     estimatedRewardValueUsd:
-      input.btcPriceUsd === undefined || net === undefined
+      input.btcPriceUsd === undefined
         ? null
         : (Number(net) / 100_000_000) * input.btcPriceUsd,
     priceScenarios,

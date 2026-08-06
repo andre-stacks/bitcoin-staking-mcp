@@ -36,7 +36,7 @@ Claude Code:
 /mcp__bitcoin_staking__bitcoin_staking_concierge
 ```
 
-The concierge introduces protocol status, bond discovery, participation fit, yield modeling, security diligence, compatibility and public-status checks, and native-L1 versus sBTC comparison. Choose a number or ask naturally, for example:
+The concierge introduces protocol status, bond discovery, participation fit, yield modeling, security diligence, compatibility and public-status checks, and native-L1 versus sBTC comparison. Ask naturally, for example:
 
 ```text
 What is the current protocol status, and are any bonds available?

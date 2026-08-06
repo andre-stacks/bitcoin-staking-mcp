@@ -5,6 +5,7 @@ import type {
   StacksNetworkName,
 } from "./schemas.js";
 import { simulateYield } from "./economics.js";
+import { ServiceError } from "./errors.js";
 
 const BPS_DENOMINATOR = 10_000n;
 const TARGET_CALCULATIONS_PER_YEAR = 50n;
@@ -208,9 +209,16 @@ export function buildInstitutionalDiligence(input: {
     if (!testnet && upcomingBond) {
       const launchDate = scheduledDateLabel(upcomingBond.timing.scheduledLaunchDate);
       const cycle = upcomingBond.timing.startsRewardCycle;
-      const referenceScenario = principalSats
-        ? simulateYield(upcomingBond, { principalSats: principalSats.toString() })
-        : null;
+      let referenceScenario: ReturnType<typeof simulateYield> | null = null;
+      let referenceScenarioError: string | null = null;
+      if (principalSats) {
+        try {
+          referenceScenario = simulateYield(upcomingBond, { principalSats: principalSats.toString() });
+        } catch (error) {
+          if (error instanceof ServiceError && error.code === "INSUFFICIENT_DATA") referenceScenarioError = error.message;
+          else throw error;
+        }
+      }
       return {
         network: input.network,
         assessmentStatus: "upcoming_bond_scheduled",
@@ -237,13 +245,13 @@ export function buildInstitutionalDiligence(input: {
                 "The target rate, duration, and STX value ratio are published reference-program inputs. The result uses complete supplied route economics but is not the final first-bond payout until configured terms, price snapshot, and on-chain state are verified.",
             }
           : {
-              status: "reference_model_available",
+              status: principalSats ? "incomplete_economics" : "reference_model_available",
               targetApyBps: upcomingBond.economics.targetRateBps ?? null,
               pairedStxMinimumValueRatioBps:
                 upcomingBond.participationRoutes.find(
                   (route) => route.routeType === "native_l1_direct",
                 )?.pairedStx.minimumValueRatioBps ?? null,
-              reason:
+              reason: referenceScenarioError ??
                 "Supply a BTC amount and every applicable route fee for a deterministic scenario; calculations are refused while required economics remain incomplete.",
             },
         materialRisks: [
@@ -254,7 +262,7 @@ export function buildInstitutionalDiligence(input: {
         nextDiligenceSteps: [
           "Choose a currently supported custody path and confirm the Bitcoin lock and maturity-recovery signing flow.",
           "Confirm allowlist eligibility and the amount and lock horizon you are prepared to use.",
-          "Compare the direct native-L1 bond with the announced community-pool and stBTC liquidity paths.",
+          "Compare the direct native-L1 bond with the approved StackingDAO sBTC pool and its optional stBTC capability.",
           "Refresh the final duration, manager fee, STX price snapshot, capacity, enrollment window, and on-chain configuration near launch.",
         ],
         dataStatus: "derived" as const,

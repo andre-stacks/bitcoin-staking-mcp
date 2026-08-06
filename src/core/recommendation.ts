@@ -76,6 +76,16 @@ export function assessRoute(
       if (fit === "strong") fit = "conditional";
     }
 
+    if (route.pairedStx.required) {
+      if (profile.stxAvailable === "no") {
+        unsupportedRequirements.push("The route requires a paired STX position, but the user does not have STX available.");
+        fit = "no_match";
+      } else if (profile.stxAvailable !== "yes") {
+        missingEvidence.push("STX availability is needed to satisfy the paired-STX requirement.");
+        if (fit === "strong") fit = "conditional";
+      } else reasons.push("The user reports STX is available for the paired-STX requirement.");
+    }
+
     const lockDuration = bond.timing.lockDurationDays ?? bond.economics.referenceModel?.bondingPeriodDays;
     if (profile.timeHorizonDays && lockDuration && profile.timeHorizonDays < lockDuration) {
       if (bond.timing.lockDurationDays !== undefined) {
@@ -112,6 +122,15 @@ export function assessRoute(
       fit = "no_match";
     }
 
+    const viableCustodyPaths = custodyPaths.filter((path) =>
+      path.status === "available" &&
+      route.custodyPathIds.includes(path.id) &&
+      isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays)
+    );
+    if (viableCustodyPaths.length === 0) {
+      missingEvidence.push("No current approved custody path is available for this direct route.");
+      if (fit !== "no_match") fit = "not_assessable";
+    }
     const requestedCustody = profile.walletOrCustodian?.toLowerCase();
     if (requestedCustody) {
       const path = custodyPaths.find((item) => item.id.toLowerCase() === requestedCustody || item.name.toLowerCase() === requestedCustody);
@@ -157,14 +176,21 @@ export function assessRoute(
     if (missingEvidence.length > 0 && fit === "strong") fit = "conditional";
 
     if (profile.liquidityNeed === "access_anytime") {
-      const liquid = route.lst?.redemption.status === "verified" && route.lst.liquidityEvidence.status === "verified" && isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays);
+      const liquid = route.lst?.productStatus === "production" &&
+        route.lst.verification.includes("product_owner_confirmed") &&
+        route.lst.redemption.status === "verified" &&
+        route.lst.liquidityEvidence.status === "verified" &&
+        isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays);
       if (!liquid) {
         missingEvidence.push("The optional LST does not have current verified redemption and market-liquidity evidence.");
         if (fit === "strong") fit = "conditional";
       }
     }
     if (profile.goal === "borrow_without_selling") {
-      const lender = route.lst?.verifiedDefiIntegrations.find((item) => (item.capability === "borrowing" || item.capability === "lending") && item.status === "live" && item.collateralTerms);
+      const lstCurrent = route.lst?.productStatus === "production" &&
+        route.lst.verification.includes("product_owner_confirmed") &&
+        isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays);
+      const lender = lstCurrent ? route.lst?.verifiedDefiIntegrations.find((item) => (item.capability === "borrowing" || item.capability === "lending") && item.status === "live" && item.collateralTerms) : undefined;
       if (!lender) {
         unsupportedRequirements.push("No named live lender with sourced collateral terms is verified.");
         fit = "no_match";
