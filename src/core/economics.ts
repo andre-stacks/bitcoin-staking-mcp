@@ -38,7 +38,7 @@ function btcDisplay(sats: bigint): string {
   return `${btcToThreeDecimals(sats)} BTC`;
 }
 
-function defaultRoute(bond: BondManifest): ParticipationRoute {
+export function selectDefaultRoute(bond: BondManifest): ParticipationRoute {
   const route =
     bond.participationRoutes.find((candidate) => candidate.routeType === "native_l1_direct") ??
     bond.participationRoutes[0];
@@ -57,7 +57,7 @@ export function simulateYield(
   routeOrInput: ParticipationRoute | YieldSimulationInput,
   maybeInput?: YieldSimulationInput,
 ) {
-  const route = maybeInput ? (routeOrInput as ParticipationRoute) : defaultRoute(bond);
+  const route = maybeInput ? (routeOrInput as ParticipationRoute) : selectDefaultRoute(bond);
   const input = maybeInput ?? (routeOrInput as YieldSimulationInput);
   return calculateYield(bond, route, input);
 }
@@ -67,8 +67,13 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
       input.stxPriceScenariosUsd?.some((price) => !Number.isFinite(price) || price <= 0)) {
     throw new ServiceError("INVALID_INPUT", "Price inputs must be finite positive numbers.");
   }
-  if (input.principalSats && input.principalBtc && input.principalSats !== btcAmountToSats(input.principalBtc)) throw new ServiceError("INVALID_INPUT", "principalSats and principalBtc disagree.");
-  const principalValue = input.principalSats ?? (input.principalBtc ? btcAmountToSats(input.principalBtc) : undefined);
+  let principalFromBtc: string | undefined;
+  if (input.principalBtc) {
+    try { principalFromBtc = btcAmountToSats(input.principalBtc); }
+    catch (error) { throw new ServiceError("INVALID_INPUT", error instanceof Error ? error.message : String(error)); }
+  }
+  if (input.principalSats && principalFromBtc && input.principalSats !== principalFromBtc) throw new ServiceError("INVALID_INPUT", "principalSats and principalBtc disagree.");
+  const principalValue = input.principalSats ?? principalFromBtc;
   if (!principalValue || !/^\d+$/.test(principalValue)) throw new ServiceError("INVALID_INPUT", "Provide principalSats or a BTC/sBTC decimal amount with at most eight decimal places.");
   const principal = BigInt(principalValue);
   if (principal <= 0n) {

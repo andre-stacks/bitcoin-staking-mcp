@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { VersionedRegistryClient } from "../src/providers/versioned-registry.js";
 import { ManifestStore } from "../src/providers/manifest-store.js";
+import { ServiceError } from "../src/core/errors.js";
 
 interface Fixture { registryVersion: string; reviewedAt: string; reviewCadenceDays: number; value: string }
 const parse = (value: unknown) => value as Fixture;
@@ -20,16 +21,43 @@ test("remote registry uses ETag and a 15-minute runtime cache", async (context) 
   now = new Date("2026-08-06T01:16:00.000Z"); const revalidated = await client.read(); assert.equal(revalidated.metadata.sourceMode, "runtime_cache"); assert.equal(ifNoneMatch, '"v1"');
 });
 
-test("bundled fallback remains readable and labels stale data needs_review", async (context) => {
+test("current bundled fallback is labeled and stale fallback is refused", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "btc-registry-")); context.after(() => rm(directory, { recursive: true, force: true }));
   const fallback = join(directory, "fallback.json"); await writeFile(fallback, JSON.stringify({ registryVersion: "fallback", reviewedAt: "2026-08-06T00:00:00.000Z", reviewCadenceDays: 7, value: "fallback" }));
   const failingFetch: typeof fetch = async () => { throw new Error("offline"); };
   const current = new VersionedRegistryClient({ remoteUrl: "https://example.com", fallbackPath: fallback, parse, now: () => new Date("2026-08-10T00:00:00.000Z"), fetchImpl: failingFetch, remoteEnabled: true });
-  assert.equal((await current.read()).metadata.sourceMode, "bundled_snapshot");
+  const currentResult = await current.read();
+  assert.equal(currentResult.metadata.sourceMode, "bundled_snapshot");
+  assert.match(currentResult.metadata.fallbackReason ?? "", /offline/);
   const stale = new VersionedRegistryClient({ remoteUrl: "https://example.com", fallbackPath: fallback, parse, now: () => new Date("2026-08-14T00:00:00.000Z"), fetchImpl: failingFetch, remoteEnabled: true });
-  const staleResult = await stale.read();
-  assert.equal(staleResult.metadata.sourceMode, "bundled_snapshot");
-  assert.equal(staleResult.metadata.reviewStatus, "needs_review");
+  await assert.rejects(stale.read(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE" && error.retryable && /offline/.test(error.message));
+});
+
+test("hung registry reads time out, expose the reason, and use only a current fallback", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "btc-registry-timeout-")); context.after(() => rm(directory, { recursive: true, force: true }));
+  const fallback = join(directory, "fallback.json");
+  await writeFile(fallback, JSON.stringify({ registryVersion: "fallback", reviewedAt: "2026-08-06T00:00:00.000Z", reviewCadenceDays: 7, value: "fallback" }));
+  const hungFetch: typeof fetch = async () => new Promise<Response>(() => {});
+  const client = new VersionedRegistryClient({ remoteUrl: "https://example.com", fallbackPath: fallback, parse, now: () => new Date("2026-08-10T00:00:00.000Z"), fetchImpl: hungFetch, remoteEnabled: true, timeoutMs: 5 });
+  const result = await client.read();
+  assert.equal(result.metadata.sourceMode, "bundled_snapshot");
+  assert.match(result.metadata.fallbackReason ?? "", /timed out after 5ms/);
+});
+
+test("registry timeout covers a stalled response body and aborts the request", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "btc-registry-body-timeout-")); context.after(() => rm(directory, { recursive: true, force: true }));
+  const fallback = join(directory, "fallback.json");
+  await writeFile(fallback, JSON.stringify({ registryVersion: "fallback", reviewedAt: "2026-08-06T00:00:00.000Z", reviewCadenceDays: 7, value: "fallback" }));
+  let signal: AbortSignal | null = null;
+  const fetchImpl: typeof fetch = async (_url, init) => {
+    signal = init?.signal ?? null;
+    return new Response(new ReadableStream({ start() {} }), { status: 200 });
+  };
+  const client = new VersionedRegistryClient({ remoteUrl: "https://example.com", fallbackPath: fallback, parse, now: () => new Date("2026-08-10T00:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5 });
+  const result = await client.read();
+  assert.equal(result.metadata.sourceMode, "bundled_snapshot");
+  assert.match(result.metadata.fallbackReason ?? "", /timed out after 5ms/);
+  assert.equal(signal?.aborted, true);
 });
 
 test("cache revalidation occurs at the exact 15-minute boundary", async (context) => {
@@ -45,7 +73,7 @@ test("cache revalidation occurs at the exact 15-minute boundary", async (context
   now = new Date("2026-08-06T01:15:00.000Z"); const result = await client.read(); assert.equal(requests, 2); assert.equal(result.metadata.sourceMode, "runtime_cache");
 });
 
-test("stale remote data degrades to needs_review while future-dated content falls back", async (context) => {
+test("stale remote 304 and future-dated remote content fall back only to a current bundled snapshot", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "btc-registry-stale-")); context.after(() => rm(directory, { recursive: true, force: true }));
   const fallback = join(directory, "fallback.json");
   await writeFile(fallback, JSON.stringify({ registryVersion: "fallback-current", reviewedAt: "2026-08-14T00:00:00.000Z", reviewCadenceDays: 7, value: "fallback" }));
@@ -56,10 +84,9 @@ test("stale remote data degrades to needs_review while future-dated content fall
   const client = new VersionedRegistryClient({ remoteUrl: "https://example.com/registry.json", fallbackPath: fallback, parse, now: () => now, fetchImpl, remoteEnabled: true });
   assert.equal((await client.read()).metadata.sourceMode, "live_registry");
   now = new Date("2026-08-14T01:00:00.000Z");
-  const staleResult = await client.read();
-  assert.equal(staleResult.metadata.sourceMode, "runtime_cache");
-  assert.equal(staleResult.value.registryVersion, "remote");
-  assert.equal(staleResult.metadata.reviewStatus, "needs_review");
+  const fallbackResult = await client.read();
+  assert.equal(fallbackResult.metadata.sourceMode, "bundled_snapshot");
+  assert.equal(fallbackResult.value.registryVersion, "fallback-current");
 
   const futureFetch: typeof fetch = async () => new Response(JSON.stringify({ registryVersion: "future", reviewedAt: "2026-08-20T00:00:00.000Z", reviewCadenceDays: 7, value: "future" }), { status: 200 });
   const future = new VersionedRegistryClient({ remoteUrl: "https://example.com/registry.json", fallbackPath: fallback, parse, now: () => now, fetchImpl: futureFetch, remoteEnabled: true });
@@ -96,4 +123,42 @@ test("remote manifest failure falls back to the current bundled registry and lab
   assert.equal(result.metadata.sourceMode, "bundled_snapshot");
   assert.equal(result.bonds.length, 2);
   assert.match(result.metadata.contentHash, /^sha256:/);
+  assert.match(result.metadata.fallbackReason ?? "", /HTTP 503/);
+});
+
+test("hung remote manifest reads time out and preserve the fallback reason", async () => {
+  const index = JSON.parse(await readFile(resolve("data/bond-registry.json"), "utf8"));
+  let requests = 0;
+  const fetchImpl: typeof fetch = async () => {
+    requests += 1;
+    if (requests === 1) return new Response(JSON.stringify(index), { status: 200 });
+    return new Promise<Response>(() => {});
+  };
+  const store = new ManifestStore(undefined, {
+    now: () => new Date("2026-08-06T12:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5,
+    remoteRegistryUrl: "https://example.com/data/bond-registry.json",
+  });
+  const result = await store.listWithMetadata();
+  assert.equal(result.metadata.sourceMode, "bundled_snapshot");
+  assert.match(result.metadata.fallbackReason ?? "", /Bond manifest .* timed out after 5ms/);
+});
+
+test("manifest timeout covers a stalled response body and aborts the request", async () => {
+  const index = JSON.parse(await readFile(resolve("data/bond-registry.json"), "utf8"));
+  let requests = 0;
+  let manifestSignal: AbortSignal | null = null;
+  const fetchImpl: typeof fetch = async (_url, init) => {
+    requests += 1;
+    if (requests === 1) return new Response(JSON.stringify(index), { status: 200 });
+    manifestSignal = init?.signal ?? null;
+    return new Response(new ReadableStream({ start() {} }), { status: 200 });
+  };
+  const store = new ManifestStore(undefined, {
+    now: () => new Date("2026-08-06T12:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5,
+    remoteRegistryUrl: "https://example.com/data/bond-registry.json",
+  });
+  const result = await store.listWithMetadata();
+  assert.equal(result.metadata.sourceMode, "bundled_snapshot");
+  assert.match(result.metadata.fallbackReason ?? "", /Bond manifest .* timed out after 5ms/);
+  assert.equal(manifestSignal?.aborted, true);
 });

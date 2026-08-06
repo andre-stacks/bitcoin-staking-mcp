@@ -1,14 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { BitcoinStakingService } from "../src/service.js";
 import { StacksProvider } from "../src/providers/stacks.js";
 import { CoinGeckoPriceProvider } from "../src/providers/coingecko.js";
+import { ManifestStore } from "../src/providers/manifest-store.js";
+import { CustodyStore } from "../src/providers/custody-store.js";
+import { ServiceError } from "../src/core/errors.js";
 import { assessRoute } from "../src/core/recommendation.js";
 import { ParticipantProfileSchema } from "../src/core/schemas.js";
 
 class OfflineProvider extends StacksProvider {
   override async getProtocolStatus(): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, chainId: this.chainId, contractId: "SP000000000000000000002Q6VF78.pox-5", pox5Active: true, currentBurnchainBlockHeight: 960000, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async listProtocolBonds(): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 960000, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
+}
+class FailingCustodyStore extends CustodyStore {
+  override async readWithMetadata(): Promise<never> { throw new ServiceError("REGISTRY_UNAVAILABLE", "Custody registry offline.", true); }
 }
 
 class CountingProvider extends OfflineProvider {
@@ -65,14 +74,10 @@ test("unknown whitelist and stale custody evidence cannot be recommended as curr
   assert.ok(assessment.missingEvidence.some((item) => /Allowlist/i.test(item)));
 });
 
-test("overdue bundled registries remain readable but every route is marked needs_review", async () => {
+test("overdue bundled registries fail closed when no current remote registry is available", async () => {
   const staleService = service(() => new Date("2026-08-15T00:00:00.000Z"));
-  const custody = await staleService.listCustodyPaths();
-  assert.equal(custody.reviewStatus, "review_due");
-  assert.ok(custody.paths.every((path) => path.effectiveStatus === "needs_review"));
-  const bonds = await staleService.listBonds();
-  assert.ok(bonds.bonds.length > 0);
-  assert.ok(bonds.bonds.flatMap((bond) => bond.routes).every((route) => route.effectiveAvailability === "needs_review"));
+  await assert.rejects(staleService.listCustodyPaths(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE");
+  await assert.rejects(staleService.listBonds(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE");
 });
 
 test("smaller sBTC holder is routed to StackingDAO while pool dependencies remain explicit", async () => {
@@ -80,6 +85,22 @@ test("smaller sBTC holder is routed to StackingDAO while pool dependencies remai
   assert.equal(result.assessments[0]?.routeType, "sbtc_pool");
   assert.ok(result.assessments[0]?.missingEvidence.some((item) => /pool fee/i.test(item)));
   assert.ok(result.assessments[0]?.tradeoffs.some((item) => /pool operator/i.test(item)));
+});
+
+test("pool diligence survives custody-registry failure while direct fit remains evidence-gated", async () => {
+  const svc = new BitcoinStakingService({
+    custody: new FailingCustodyStore(),
+    stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
+    testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }),
+    prices: new CoinGeckoPriceProvider({ now, fetchFn: async () => { throw new Error("prices offline"); } }),
+    now,
+  });
+  const pool = await svc.buildDiligenceReport({ bondId: "genesis-bond-cycle-142", routeId: "genesis-stackingdao-sbtc-pool", profile: { goal: "earn_yield", assetHeld: "sbtc", participantType: "individual", whitelistStatus: "not_approved", liquidityNeed: "unknown", bitcoinPathPreference: "open_to_sbtc", keyControlPreference: "self_controlled", amountSats: "1000000" } });
+  assert.equal(pool.routeAssessments[0]?.assessment.routeType, "sbtc_pool");
+  assert.notEqual(pool.routeAssessments[0]?.assessment.fit, "not_assessable");
+  const direct = await svc.buildDiligenceReport({ bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", profile: { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", amountSats: "2500000000", stxAvailable: "yes" } });
+  assert.equal(direct.routeAssessments[0]?.assessment.fit, "not_assessable");
+  assert.ok(direct.routeAssessments[0]?.assessment.missingEvidence.some((item) => /custody path/i.test(item)));
 });
 
 test("sBTC+STX input requirement changes the pool assessment", async () => {
@@ -130,6 +151,32 @@ test("diligence report includes bond, protocol, route, freshness, fit, and one a
   assert.ok(report.nextDiligenceAction.length > 10);
   assert.ok(report.sources.length > 0);
   assert.ok(report.sources.some((source) => source.id === "custody-registry"));
+  assert.equal(report.economics.status, "reference_model_projection");
+  assert.equal(report.economics.scenario?.netRewardSats, undefined);
+});
+
+test("service defaults to the native route and labels bond-specific economics from scenario provenance", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "btc-route-default-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond-cycle-142.json"), "utf8"));
+  bond.participationRoutes.reverse();
+  bond.economics.termsStatus = "bond_specific";
+  bond.economics.managerFeeBps = 0;
+  delete bond.economics.referenceModel;
+  bond.timing.lockDurationDays = 180;
+  await writeFile(join(directory, "bond.json"), JSON.stringify(bond));
+  const svc = new BitcoinStakingService({
+    manifests: new ManifestStore(directory, { now }),
+    stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
+    testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }),
+    prices: new CoinGeckoPriceProvider({ now, fetchFn: async () => { throw new Error("prices should not be fetched"); } }),
+    now,
+  });
+  const scenario = await svc.simulateYield({ bondId: bond.id, principalSats: "100000000", btcPriceUsd: 60_000, stxPriceScenariosUsd: [0.2] });
+  assert.equal(scenario.routeId, "genesis-native-l1-direct");
+  const report = await svc.buildDiligenceReport({ bondId: bond.id, routeId: "genesis-native-l1-direct", profile: { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "100000000", stxAvailable: "yes" } });
+  assert.equal(report.economics.status, "bond_specific_projection");
+  assert.equal(report.economics.scenario?.availability, "published_terms_scenario");
 });
 
 test("compatibility returns custody-registry provenance instead of empty bond-source matches", async () => {

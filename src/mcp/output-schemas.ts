@@ -130,10 +130,10 @@ export const YieldOutputSchema = output({
 });
 
 export const DiligenceOutputSchema = output({
-  assessmentStatus: z.enum(["upcoming_bond_scheduled", "published_bond_assessed"]), bottomLine: z.string(),
+  assessmentStatus: z.enum(["upcoming_bond_scheduled", "published_bond_assessed", "network_protocol_preview"]), bottomLine: z.string(),
   bondAvailability: z.object({ scheduled: z.iso.date().nullable(), lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]), productStatus: ProductStatusSchema, enrollmentStatus: EnrollmentStatusSchema, registration: z.array(z.object({ routeId: z.string(), enrollmentStatus: EnrollmentStatusSchema }).strict()), onChainConfigured: z.boolean(), onChainReconciliation: z.array(z.object({ routeId: z.string(), status: z.enum(["conflict", "configured", "unavailable", "not_configured"]) }).strict()), coverageBoundary: z.string() }).strict(),
   commonProtocolEconomics: EconomicsSchema.extend({ signerAndAdministrationControls: z.string(), audits: z.array(z.string()), unresolvedTerms: z.array(z.string()), coverageBoundary: z.string() }).strict(),
-  economics: z.object({ status: z.enum(["reference_model_projection", "incomplete_economics", "amount_required"]), scenario: YieldOutputSchema.nullable() }).strict(),
+  economics: z.object({ status: z.enum(["reference_model_projection", "bond_specific_projection", "incomplete_economics", "amount_required", "not_available"]), scenario: YieldOutputSchema.nullable() }).strict(),
   routeEconomicScenarios: z.array(z.union([z.object({ routeId: z.string(), status: z.literal("calculated"), scenario: YieldOutputSchema }).strict(), z.object({ routeId: z.string(), status: z.literal("incomplete_economics"), scenario: z.null(), reason: z.string() }).strict()])),
   routeAssessments: z.array(z.object({ assessment: RouteAssessmentSchema, details: z.union([NativeL1DirectRouteSchema, SbtcPoolRouteSchema]) }).strict()),
   riskSections: z.array(z.discriminatedUnion("routeType", [

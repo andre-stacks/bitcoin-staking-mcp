@@ -32,3 +32,23 @@ export async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, lab
     if (timer) clearTimeout(timer);
   }
 }
+
+export async function withAbortTimeout<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+  label: string,
+): Promise<T> {
+  const controller = new AbortController();
+  try {
+    return await withTimeout(
+      Promise.resolve().then(() => operation(controller.signal)),
+      timeoutMs,
+      label,
+    );
+  } catch (error) {
+    if (error instanceof ServiceError && error.code === "UPSTREAM_TIMEOUT") {
+      controller.abort(error);
+    }
+    throw error;
+  }
+}

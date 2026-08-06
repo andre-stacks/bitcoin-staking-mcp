@@ -86,12 +86,12 @@ Users do not need to choose a network. For a general opportunity or diligence qu
 
 1. checks verified mainnet state and published bond data;
 2. uses that data when an opportunity is available;
-3. otherwise checks the configured testnet automatically as the live demo/prototype environment for the intended mainnet journey;
+3. otherwise checks the configured testnet automatically for protocol-only pre-production evidence;
 4. uses demo data only when the user explicitly requests an illustration.
 
 This routing keeps the user experience stable: when a bond becomes published or available on mainnet, higher-precedence production data replaces the testnet preview without requiring different questions or prompts.
 
-The current live demo source is Hiro's dedicated PoX-5 testnet at `https://api.testnet-pox5.hiro.so`. Before activation, the server reports the activation schedule rather than inventing a bond. After activation, it returns only bonds proven on-chain and labels them `live_testnet_demo`. Testnet uses test assets and is not a mainnet opportunity, but the product leads with the experience it can actually demonstrate rather than presenting testnet as a fallback.
+The current live demo source is Hiro's dedicated PoX-5 testnet at `https://api.testnet-pox5.hiro.so`. Before activation, the server reports the activation schedule rather than inventing a bond. After activation, it returns only bonds proven on-chain and labels them `live_testnet_demo`. Testnet uses test assets and is not a mainnet opportunity. On-chain configuration alone never implies product routes, profile fit, custody support, enrollment, or usable economics; those require a current owner-reviewed product manifest.
 
 For a complete state-aware proof—current status, opportunity routing, security evidence, explicit demo data, no-match journey, and tool annotations—run:
 
@@ -181,7 +181,7 @@ Which Bitcoin staking opportunities are currently available or coming next? Sepa
 ```
 
 ```text
-Using the current public reference model, assess whether a 12-cycle reward scenario can be calculated for 25 BTC. Refuse the calculation if any applicable fee is missing, and separate model assumptions from final configured terms.
+Using the current public reference model, assess the 12-cycle gross reward scenario for 25 BTC. If an applicable fee is missing, keep net reward unknown, and separate model assumptions from final configured terms.
 ```
 
 ```text
@@ -226,7 +226,7 @@ The default tests are offline. The mainnet and configured-testnet tests are opt-
 
 The offline suite invokes all fourteen tools through an in-process MCP client, validates complete output contracts, checks registry caching and freshness, exercises the two route journeys and upstream failures, and tests the shared prompt/skill evidence contract. Prompt controls materially reduce unsupported answers, but callers should treat returned provenance and explicit unknown states as the enforceable trust boundary.
 
-The bond, route, LST, and custody registries use a seven-day owner-review cadence. `npm run registry:validate` validates schemas, references, formats, duplicates, and status-specific fields; overdue attestations are reported as `needs_review` without breaking offline builds. `npm run registry:validate:live` requires current attestations and also checks external evidence URLs. A nightly GitHub Actions workflow opens or updates one `registry-review-due` issue when live validation fails. The check never promotes a partner automatically: changed or stale claims require product-owner confirmation through a reviewed registry PR.
+The bond, route, LST, and custody registries use a deliberate hard seven-day owner-review cadence. `reviewDueAt` provides the warning boundary; immediately after that boundary, claims remain visible only as historical context and cannot support a current route or bundled fallback. There is no runtime grace period. `npm run registry:validate` validates schemas, references, formats, duplicates, and status-specific fields while reporting overdue attestations as `needs_review`; `npm run registry:validate:live` requires current attestations and also checks external evidence URLs. A nightly GitHub Actions workflow opens or updates one `registry-review-due` issue when live validation fails. The check never promotes a partner automatically: changed or stale claims require product-owner confirmation through a reviewed registry PR. Registry authenticity currently relies on GitHub transport, repository controls, review history, and the reported content hash; signed manifests are not yet implemented.
 
 ## Documentation
 
