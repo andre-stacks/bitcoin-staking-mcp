@@ -2,7 +2,7 @@
 
 The agent-readable interface for discovering, understanding, and planning native Bitcoin staking on Stacks.
 
-Bitcoin Staking MCP combines live mainnet and testnet PoX state, on-chain protocol-bond discovery, versioned bond manifests, deterministic yield scenarios, compatibility evidence, and a goal-first concierge. It is intentionally read-only: it cannot construct, sign, or broadcast transactions.
+Bitcoin Staking MCP combines live mainnet and testnet PoX state, on-chain protocol-bond discovery, versioned bond manifests, deterministic yield scenarios, sourced security diligence, compatibility evidence, and a goal-first concierge. It is intentionally read-only: it cannot construct, sign, or broadcast transactions.
 
 ## Why this exists
 
@@ -102,6 +102,7 @@ Use Inspector to review the instructions, all tool schemas and annotations, reso
 | --- | --- |
 | `get_protocol_status` | Read current PoX-5 and reward-cycle state. |
 | `list_protocol_bonds` | Discover configured on-chain bonds in the active mainnet or testnet window. |
+| `get_security_guidance` | Answer audit, timelock, Leather, validation, recovery, and early-exit questions with evidence boundaries. |
 | `list_bonds` | List public manifests and optionally separate demo records. |
 | `get_bond` | Read one normalized manifest and optional on-chain verification. |
 | `check_participant_status` | Read public Stacks staking and bond state. |
@@ -112,6 +113,8 @@ Use Inspector to review the instructions, all tool schemas and annotations, reso
 
 Resources expose the glossary, yield methodology, bond manifests, and source records under `bitcoin-staking://` URIs.
 
+`bitcoin-staking://security` exposes the complete security-diligence catalog. Security answers always distinguish published assurance, protocol/source behavior, SDK construction, wallet behavior, and end-to-end integration proof.
+
 ## Example prompts
 
 ```text
@@ -120,6 +123,10 @@ What is the current Bitcoin Staking protocol status, and are any public bonds av
 
 ```text
 On the configured testnet, which protocol bonds are currently open or approaching their start height? Make the testnet limitation explicit.
+```
+
+```text
+Has PoX-5 been audited, how is the Bitcoin timelock constructed, and what must I verify before signing the Leather transaction?
 ```
 
 ```text
@@ -158,6 +165,7 @@ The default tests are offline. The mainnet and configured-testnet tests are opt-
 - [Product requirements](docs/PRODUCT_REQUIREMENTS.md)
 - [Technical specification](docs/TECHNICAL_SPEC.md)
 - [Hackathon delivery plan](docs/HACKATHON_PLAN.md)
+- [Security question catalog](docs/SECURITY_QUESTION_CATALOG.md)
 
 ## Roadmap
 

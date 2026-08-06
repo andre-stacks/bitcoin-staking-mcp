@@ -32,6 +32,7 @@ test("MCP lists all read-only tools", async (context) => {
       "compare_staking_paths",
       "get_bond",
       "get_protocol_status",
+      "get_security_guidance",
       "list_bonds",
       "list_protocol_bonds",
       "simulate_yield",
@@ -79,6 +80,7 @@ test("MCP exposes resources and the concierge prompt", async (context) => {
 
   const resources = await client.listResources();
   assert.ok(resources.resources.some((resource) => resource.uri === "bitcoin-staking://glossary"));
+  assert.ok(resources.resources.some((resource) => resource.uri === "bitcoin-staking://security"));
   assert.ok(
     resources.resources.some((resource) => resource.uri === "bitcoin-staking://bonds/demo-native-bitcoin-bond"),
   );
@@ -92,6 +94,27 @@ test("MCP exposes resources and the concierge prompt", async (context) => {
   const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text");
   if (content?.type === "text") assert.match(content.text, /^What would you like your Bitcoin to do\?/);
+});
+
+test("security guidance separates audit assurance from wallet integration proof", async (context) => {
+  const { client, server } = await connectedClient();
+  context.after(async () => {
+    await client.close();
+    await server.close();
+  });
+
+  const result = await client.callTool({
+    name: "get_security_guidance",
+    arguments: { topic: "audit_status" },
+  });
+  assert.equal(result.isError, undefined);
+  const content = result.structuredContent as {
+    entries: Array<{ answer: string; whatIsNotProven: string[] }>;
+    sources: Array<{ id: string }>;
+  };
+  assert.match(content.entries[0]?.answer ?? "", /Trail of Bits/);
+  assert.ok(content.entries[0]?.whatIsNotProven.some((item) => /wallet|application/i.test(item)));
+  assert.ok(content.sources.some((source) => source.id === "stacks-pox5-audit-statement"));
 });
 
 test("invalid participant address fails before a network request", async (context) => {

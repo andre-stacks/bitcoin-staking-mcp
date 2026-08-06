@@ -15,6 +15,7 @@ The MCP should help them:
 - Find upcoming, open, or historical Bitcoin Staking bonds.
 - Understand timing, capacity, economics, eligibility, BTC location, key-control, early-exit, and compatibility requirements.
 - Inspect public PoX-5 and participant state.
+- Answer recurring investor security questions with sourced assurance, explicit unknowns, and component-specific verification steps.
 - Model yield scenarios with explicit assumptions.
 - Determine whether a native-L1 bond fits a stated goal.
 - Recognize when liquidity or borrowing goals require sBTC context or a future product rather than a native bond.
@@ -45,6 +46,10 @@ The user supplies a principal and any desired price or fee assumptions. The core
 
 The user supplies a public Stacks address. The server validates the address locally, then reads account, staking, bond membership, and applicable allowlist state. It never implies control of the address.
 
+### Answer security diligence
+
+The concierge classifies audit, timelock, Leather, pre-funding, recovery, and early-exit questions into deterministic security topics. Every answer states what is known, what remains unproven, and how to verify the exact wallet/application path. Sanitized investor questions guide coverage; private conversations are never returned or treated as evidence.
+
 ## Functional requirements
 
 - Return structured and human-readable MCP tool results.
@@ -55,6 +60,7 @@ The user supplies a public Stacks address. The server validates the address loca
 - Keep BTC location distinct from self-custody or custodial key control.
 - Return unknown compatibility when evidence is missing.
 - Treat product compatibility separately from PoX-5 protocol behavior.
+- Keep protocol audits, SDK construction, wallet behavior, and end-to-end integration proof as separate evidence layers.
 - Treat price inputs as scenarios rather than predictions.
 - Make every MCP tool read-only and non-destructive.
 

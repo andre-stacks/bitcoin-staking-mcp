@@ -56,10 +56,11 @@ The manifest provider reads and validates every JSON file in `data/bonds`. Dupli
 
 ## MCP interfaces
 
-Nine tools are registered:
+Ten tools are registered:
 
 - `get_protocol_status`
 - `list_protocol_bonds`
+- `get_security_guidance`
 - `list_bonds`
 - `get_bond`
 - `check_participant_status`
@@ -74,10 +75,13 @@ Resources:
 
 - `bitcoin-staking://glossary`
 - `bitcoin-staking://methodology/yield`
+- `bitcoin-staking://security`
 - `bitcoin-staking://bonds/{bondId}`
 - `bitcoin-staking://sources/{sourceId}`
 
 The `bitcoin-staking-concierge` prompt contains workflow instructions, not facts or math. Codex also discovers `.agents/skills/bitcoin-staking-concierge` and uses the same tool sequence.
+
+Security guidance is a versioned deterministic corpus in `src/security.ts`. Topics return an answer, evidence level, known facts, unproven claims, verification checklist, and pinned source IDs. The source set includes the official public audit statement, SIP-045, pinned PoX-5 and Stacks.js code, golden-vector tests, and pinned Leather RPC implementations. Investor chats affect topic coverage only; they are not stored as evidence.
 
 ## Economics
 

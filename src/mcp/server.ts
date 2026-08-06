@@ -9,6 +9,7 @@ import {
 } from "../core/schemas.js";
 import { GLOSSARY, YIELD_METHODOLOGY } from "../content.js";
 import { BitcoinStakingService } from "../service.js";
+import { SecurityTopicValues } from "../security.js";
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -71,7 +72,7 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
     { name: "bitcoin-staking-mcp", version: "0.1.0" },
     {
       instructions:
-        "Read-only Bitcoin Staking intelligence. Never imply that demo data is live or that testnet assets are investable. Use get_protocol_status, list_protocol_bonds, and list_bonds before recommending a bond. Keep native L1 BTC separate from sBTC, and treat wallet support as unknown unless cited product evidence says otherwise. Never construct, sign, or broadcast transactions.",
+        "Read-only Bitcoin Staking intelligence. Never imply that demo data is live or that testnet assets are investable. Use get_protocol_status, list_protocol_bonds, and list_bonds before recommending a bond. Use get_security_guidance for audit, timelock, wallet, pre-funding, recovery, or early-exit questions. Keep protocol assurance separate from wallet integration proof. Keep native L1 BTC separate from sBTC, and treat wallet support as unknown unless cited product evidence says otherwise. Never construct, sign, or broadcast transactions.",
     },
   );
 
@@ -104,6 +105,21 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
     },
     ({ network, lookbackPeriods, lookaheadPeriods }) =>
       tool(() => service.listProtocolBonds(network, { lookbackPeriods, lookaheadPeriods })),
+  );
+
+  server.registerTool(
+    "get_security_guidance",
+    {
+      title: "Get Bitcoin Staking security guidance",
+      description:
+        "Answer a sourced security-diligence topic about PoX-5 audits, native-L1 timelock construction, Leather transaction boundaries, pre-funding validation, maturity recovery, or early exit. Separates published assurance from what still requires integration proof.",
+      inputSchema: z.object({
+        topic: z.enum([...SecurityTopicValues, "all"]).default("all"),
+      }),
+      outputSchema: MetadataSchema,
+      annotations: readOnlyAnnotations,
+    },
+    ({ topic }) => tool(() => service.getSecurityGuidance(topic)),
   );
 
   server.registerTool(
@@ -237,6 +253,21 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
   );
 
   server.registerResource(
+    "bitcoin-staking-security",
+    "bitcoin-staking://security",
+    { title: "Bitcoin Staking security guidance", mimeType: "application/json" },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "application/json",
+          text: JSON.stringify(service.getSecurityGuidance("all"), null, 2),
+        },
+      ],
+    }),
+  );
+
+  server.registerResource(
     "bitcoin-staking-bond",
     new ResourceTemplate("bitcoin-staking://bonds/{bondId}", {
       list: async () => ({
@@ -274,7 +305,7 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
     "bitcoin-staking-source",
     new ResourceTemplate("bitcoin-staking://sources/{sourceId}", {
       list: async () => ({
-        resources: (await service.manifests.sources()).map((source) => ({
+        resources: (await service.listSources()).map((source) => ({
           uri: `bitcoin-staking://sources/${source.id}`,
           name: source.title,
           title: source.title,
@@ -284,7 +315,7 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
       }),
       complete: {
         sourceId: async (value) =>
-          (await service.manifests.sources())
+          (await service.listSources())
             .map((source) => source.id)
             .filter((id) => id.startsWith(value)),
       },
@@ -321,7 +352,7 @@ Act as a read-only Bitcoin Staking concierge. ${request ? `The user's initial re
 
 Ask no more than four goal-oriented questions before an initial assessment. Establish: primary goal, liquidity need, whether BTC must remain on Bitcoin L1 or the user is open to sBTC context, and who should control the keys. Ask amount, horizon, wallet, or custodian only when they change the result.
 
-Use get_protocol_status, list_protocol_bonds, and list_bonds before discussing availability. Use mainnet by default. Use testnet only when the user asks for a test, demonstration, or upcoming testnet bond, and label every testnet record as non-investable. Call build_participation_plan and simulate_yield rather than doing calculations yourself. Keep native L1 BTC separate from sBTC. Treat wallet support as unknown unless check_compatibility cites evidence. Present best fit, principal tradeoff, availability, assumptions, sources, and next step. If nothing matches, say so. Never construct, sign, or broadcast a transaction.`,
+Use get_protocol_status, list_protocol_bonds, and list_bonds before discussing availability. Use mainnet by default. Use testnet only when the user asks for a test, demonstration, or upcoming testnet bond, and label every testnet record as non-investable. For audit, timelock, Leather, pre-funding, recovery, or early-exit questions, call get_security_guidance. State what is known, what is not proven, and the relevant verification checklist; never treat a protocol audit as proof of a wallet integration. Call build_participation_plan and simulate_yield rather than doing calculations yourself. Keep native L1 BTC separate from sBTC. Treat wallet support as unknown unless check_compatibility cites evidence. Present best fit, principal tradeoff, availability, assumptions, sources, and next step. If nothing matches, say so. Never construct, sign, or broadcast a transaction.`,
           },
         },
       ],

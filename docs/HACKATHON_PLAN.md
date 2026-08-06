@@ -5,7 +5,7 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 ## Milestones
 
 - M1: Live mainnet PoX status, the dedicated testnet's scheduled/active PoX-5 state, and the explicitly labeled demo manifest are visible through MCP.
-- M2: All nine tools return validated structured output and the offline suite passes.
+- M2: All ten tools return validated structured output and the offline suite passes.
 - M3: The concierge completes the native-yield and liquidity/borrowing journeys in Codex and Claude.
 - M4: A clean clone installs, builds, runs, and supports the recorded demo.
 
@@ -36,11 +36,12 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 2. Show live mainnet PoX-5 state and the honest absence of configured public manifests if applicable.
 3. Switch explicitly to the dedicated PoX-5 testnet. Before activation, show its scheduled activation height and countdown; after activation, discover any configured upcoming on-chain bond.
 4. If a testnet bond exists, point out `testnet_only_not_investable`; then request demo opportunities and show the separate `[DEMO]` manifest.
-5. Invoke the concierge with a long-term, L1-only, self-controlled yield profile.
-6. Build the participation plan and run a 1 BTC yield scenario.
-7. Ask for continuous liquidity and borrowing without selling.
-8. Show a native-bond no-match and sBTC context without inventing a live DeFi product.
-9. End in Inspector on the tool schemas, read-only annotations, and structured output.
+5. Ask whether PoX-5 is audited and how Leather can safely sign the native-L1 lock transaction. Show known facts, unproven integration claims, and the pre-funding checklist.
+6. Invoke the concierge with a long-term, L1-only, self-controlled yield profile.
+7. Build the participation plan and run a 1 BTC yield scenario.
+8. Ask for continuous liquidity and borrowing without selling.
+9. Show a native-bond no-match and sBTC context without inventing a live DeFi product.
+10. End in Inspector on the tool schemas, read-only annotations, security sources, and structured output.
 
 ## Recording checklist
 

@@ -11,7 +11,14 @@ export const SourceRefSchema = z
     id: z.string().min(1),
     title: z.string().min(1),
     url: z.url(),
-    sourceType: z.enum(["chain_api", "official_docs", "public_manifest", "demo_manifest"]),
+    sourceType: z.enum([
+      "chain_api",
+      "official_docs",
+      "source_code",
+      "security_statement",
+      "public_manifest",
+      "demo_manifest",
+    ]),
     dataStatus: DataStatusSchema,
     retrievedAt: z.iso.datetime().optional(),
   })

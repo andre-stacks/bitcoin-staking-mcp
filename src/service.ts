@@ -14,6 +14,11 @@ import {
 } from "./core/schemas.js";
 import { ManifestStore } from "./providers/manifest-store.js";
 import { StacksProvider } from "./providers/stacks.js";
+import {
+  getSecurityGuidance,
+  listSecuritySources,
+  type SecurityTopic,
+} from "./security.js";
 
 export interface ServiceDependencies {
   manifests?: ManifestStore;
@@ -45,6 +50,10 @@ export class BitcoinStakingService {
     options: { lookbackPeriods?: number; lookaheadPeriods?: number } = {},
   ) {
     return this.provider(network).listProtocolBonds(options);
+  }
+
+  getSecurityGuidance(topic: SecurityTopic | "all" = "all") {
+    return getSecurityGuidance(topic);
   }
 
   async listBonds(
@@ -140,9 +149,13 @@ export class BitcoinStakingService {
   }
 
   async getSource(sourceId: string): Promise<SourceRef> {
-    const source = (await this.manifests.sources()).find((candidate) => candidate.id === sourceId);
+    const source = (await this.listSources()).find((candidate) => candidate.id === sourceId);
     if (!source) throw new ServiceError("NOT_FOUND", `Source not found: ${sourceId}`);
     return source;
+  }
+
+  async listSources(): Promise<SourceRef[]> {
+    return this.uniqueSources([...(await this.manifests.sources()), ...listSecuritySources()]);
   }
 
   private uniqueSources(sources: SourceRef[]): SourceRef[] {
