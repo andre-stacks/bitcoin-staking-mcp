@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "bitcoin-staking": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["dist/stdio.js"]
+    }
+  }
+}

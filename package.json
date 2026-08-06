@@ -1,0 +1,53 @@
+{
+  "name": "bitcoin-staking-mcp",
+  "version": "0.1.0",
+  "description": "A read-only, source-aware MCP server for Bitcoin Staking on Stacks.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Andre Serrano",
+  "engines": {
+    "node": "22.x"
+  },
+  "bin": {
+    "bitcoin-staking-mcp": "dist/stdio.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "data",
+    ".agents/skills/bitcoin-staking-concierge",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/stdio.ts",
+    "start": "node dist/stdio.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:live": "BITCOIN_STAKING_LIVE_TEST=1 tsx --test tests/live.test.ts",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "keywords": [
+    "bitcoin",
+    "stacks",
+    "staking",
+    "mcp",
+    "agents"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "@stacks/bitcoin-staking": "7.6.0",
+    "@stacks/network": "7.6.0",
+    "@stacks/transactions": "7.6.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
+    "@types/node": "22.20.1",
+    "tsx": "4.23.9",
+    "typescript": "5.9.3"
+  }
+}

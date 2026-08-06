@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "demo-native-bitcoin-bond",
+  "title": "Illustrative Native Bitcoin Bond",
+  "description": "A synthetic bond manifest used to demonstrate agent discovery, fit assessment, compatibility checks, and deterministic yield scenarios. It is not open for participation.",
+  "network": "mainnet",
+  "lifecycleStatus": "upcoming",
+  "participationPath": "native_l1_btc",
+  "dataStatus": "demo",
+  "timing": {
+    "lockDurationDays": 180
+  },
+  "economics": {
+    "targetRateBps": 500,
+    "managerFeeBps": 0,
+    "rewardAsset": "BTC",
+    "rewardModel": "target_principal_rate"
+  },
+  "capacity": {
+    "totalSats": "10000000000",
+    "minSats": "10000000",
+    "maxSats": "1000000000"
+  },
+  "requirements": {
+    "allowlistRequired": true,
+    "pairedStxRequired": true,
+    "btcLocation": "bitcoin_l1",
+    "keyControl": "custodian_or_participant",
+    "borrowingAgainstPosition": "unsupported",
+    "earlyExit": "unknown"
+  },
+  "compatibility": [
+    {
+      "kind": "wallet",
+      "name": "Leather",
+      "status": "unknown",
+      "evidence": "The public roadmap identifies native Bitcoin Staking support as a priority, but this demo manifest does not claim a completed end-to-end product flow.",
+      "sourceIds": ["stacks-2026-roadmap"]
+    },
+    {
+      "kind": "wallet",
+      "name": "Ledger",
+      "status": "unknown",
+      "evidence": "The public roadmap identifies continued Ledger integration work, which is not evidence that this illustrative bond is currently supported.",
+      "sourceIds": ["stacks-2026-roadmap"]
+    },
+    {
+      "kind": "custodian",
+      "name": "Fordefi",
+      "status": "unknown",
+      "evidence": "No public compatibility evidence is attached to this illustrative manifest.",
+      "sourceIds": ["demo-native-bitcoin-bond-manifest"]
+    }
+  ],
+  "notes": [
+    "DEMO ONLY: this is not a live, published, configured, or investable bond.",
+    "All capacity, rate, fee, duration, and eligibility values are synthetic hackathon inputs.",
+    "No on-chain bond index is declared, so the server will not treat this record as configured in PoX-5."
+  ],
+  "sources": [
+    {
+      "id": "demo-native-bitcoin-bond-manifest",
+      "title": "Illustrative Native Bitcoin Bond manifest",
+      "url": "https://github.com/andre-stacks/bitcoin-staking-mcp/blob/main/data/bonds/demo-native-bitcoin-bond.json",
+      "sourceType": "demo_manifest",
+      "dataStatus": "demo"
+    },
+    {
+      "id": "stacks-2026-roadmap",
+      "title": "Stacks 2026 roadmap",
+      "url": "https://www.stacks.co/roadmap",
+      "sourceType": "official_docs",
+      "dataStatus": "published"
+    },
+    {
+      "id": "sip-045",
+      "title": "SIP-045: PoX-5 Bitcoin Staking",
+      "url": "https://github.com/stacksgov/sips/blob/0b7cecaecdb6060a6fc19510f2e7dd8dde1d2fa1/sips/sip-045/sip-045-pox-5-bitcoin-staking.md",
+      "sourceType": "official_docs",
+      "dataStatus": "published"
+    }
+  ],
+  "verifiedAt": "2026-08-06T17:30:00.000Z"
+}
