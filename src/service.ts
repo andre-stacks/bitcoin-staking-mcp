@@ -10,6 +10,7 @@ import {
   ParticipantProfileSchema,
   type ParticipantProfile,
   type SourceRef,
+  type StacksNetworkName,
 } from "./core/schemas.js";
 import { ManifestStore } from "./providers/manifest-store.js";
 import { StacksProvider } from "./providers/stacks.js";
@@ -17,22 +18,33 @@ import { StacksProvider } from "./providers/stacks.js";
 export interface ServiceDependencies {
   manifests?: ManifestStore;
   stacks?: StacksProvider;
+  testnetStacks?: StacksProvider;
   now?: () => Date;
 }
 
 export class BitcoinStakingService {
   readonly manifests: ManifestStore;
   readonly stacks: StacksProvider;
+  readonly testnetStacks: StacksProvider;
   private readonly now: () => Date;
 
   constructor(dependencies: ServiceDependencies = {}) {
     this.manifests = dependencies.manifests ?? new ManifestStore();
     this.stacks = dependencies.stacks ?? new StacksProvider();
+    this.testnetStacks =
+      dependencies.testnetStacks ?? new StacksProvider({ network: "testnet" });
     this.now = dependencies.now ?? (() => new Date());
   }
 
-  getProtocolStatus() {
-    return this.stacks.getProtocolStatus();
+  getProtocolStatus(network: StacksNetworkName = "mainnet") {
+    return this.provider(network).getProtocolStatus();
+  }
+
+  listProtocolBonds(
+    network: StacksNetworkName = "mainnet",
+    options: { lookbackPeriods?: number; lookaheadPeriods?: number } = {},
+  ) {
+    return this.provider(network).listProtocolBonds(options);
   }
 
   async listBonds(
@@ -135,5 +147,9 @@ export class BitcoinStakingService {
 
   private uniqueSources(sources: SourceRef[]): SourceRef[] {
     return [...new Map(sources.map((source) => [source.id, source])).values()];
+  }
+
+  private provider(network: StacksNetworkName): StacksProvider {
+    return network === "testnet" ? this.testnetStacks : this.stacks;
   }
 }

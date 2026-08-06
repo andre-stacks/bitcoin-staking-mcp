@@ -2,7 +2,7 @@
 
 The agent-readable interface for discovering, understanding, and planning native Bitcoin staking on Stacks.
 
-Bitcoin Staking MCP combines live PoX-5 state, versioned bond manifests, deterministic yield scenarios, compatibility evidence, and a goal-first concierge. It is intentionally read-only: it cannot construct, sign, or broadcast transactions.
+Bitcoin Staking MCP combines live mainnet and testnet PoX state, on-chain protocol-bond discovery, versioned bond manifests, deterministic yield scenarios, compatibility evidence, and a goal-first concierge. It is intentionally read-only: it cannot construct, sign, or broadcast transactions.
 
 ## Why this exists
 
@@ -19,7 +19,8 @@ This server keeps four kinds of information separate:
 
 ```mermaid
 flowchart LR
-  A["Stacks / Hiro live data"] --> C["Bitcoin Staking intelligence core"]
+  A["Stacks mainnet"] --> C["Bitcoin Staking intelligence core"]
+  T["Configured PoX-5 testnet"] --> C
   B["Versioned bond manifests"] --> C
   C --> M["Read-only MCP server"]
   M --> X["Codex concierge skill"]
@@ -44,6 +45,18 @@ For development:
 ```bash
 npm run dev
 ```
+
+### PoX-5 testnet proof
+
+The default testnet target is Hiro's dedicated PoX-5 testnet at `https://api.testnet-pox5.hiro.so`. No additional configuration is needed:
+
+```bash
+npm start
+```
+
+Call `get_protocol_status` and `list_protocol_bonds` with `network: "testnet"`. Before PoX-5 activation, the server returns the published activation height, countdown, and an empty bond list. After activation, it scans only the active bond window and returns configured records labeled `testnet_only_not_investable`. It never infers a bond merely because the network is named PoX-5.
+
+The environment variables in `.env.example` can override the endpoint or chain ID for another compatible test network.
 
 ### Codex
 
@@ -88,6 +101,7 @@ Use Inspector to review the instructions, all tool schemas and annotations, reso
 | Tool | Purpose |
 | --- | --- |
 | `get_protocol_status` | Read current PoX-5 and reward-cycle state. |
+| `list_protocol_bonds` | Discover configured on-chain bonds in the active mainnet or testnet window. |
 | `list_bonds` | List public manifests and optionally separate demo records. |
 | `get_bond` | Read one normalized manifest and optional on-chain verification. |
 | `check_participant_status` | Read public Stacks staking and bond state. |
@@ -102,6 +116,10 @@ Resources expose the glossary, yield methodology, bond manifests, and source rec
 
 ```text
 What is the current Bitcoin Staking protocol status, and are any public bonds available?
+```
+
+```text
+On the configured testnet, which protocol bonds are currently open or approaching their start height? Make the testnet limitation explicit.
 ```
 
 ```text
@@ -130,9 +148,10 @@ npm run typecheck
 npm test
 npm run build
 npm run test:live
+npm run test:testnet
 ```
 
-The default tests are offline. The live test is opt-in and reads current public PoX state. The checked-in concierge skill also passes the `skill-creator` quick validator. No command constructs or broadcasts a transaction.
+The default tests are offline. The mainnet and configured-testnet tests are opt-in and read current public chain state. The checked-in concierge skill also passes the `skill-creator` quick validator. No command constructs or broadcasts a transaction.
 
 ## Documentation
 

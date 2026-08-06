@@ -4,8 +4,8 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 
 ## Milestones
 
-- M1: Live PoX status and explicitly labeled demo manifest are visible through MCP.
-- M2: All eight tools return validated structured output and the offline suite passes.
+- M1: Live mainnet PoX status, the dedicated testnet's scheduled/active PoX-5 state, and the explicitly labeled demo manifest are visible through MCP.
+- M2: All nine tools return validated structured output and the offline suite passes.
 - M3: The concierge completes the native-yield and liquidity/borrowing journeys in Codex and Claude.
 - M4: A clean clone installs, builds, runs, and supports the recorded demo.
 
@@ -32,14 +32,15 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 
 ## Demo script
 
-1. Ask for current Bitcoin Staking protocol status and upcoming bonds.
-2. Show live PoX-5 state and the honest absence of configured public manifests if applicable.
-3. Explicitly request demo opportunities and show the separate `[DEMO]` manifest.
-4. Invoke the concierge with a long-term, L1-only, self-controlled yield profile.
-5. Build the participation plan and run a 1 BTC yield scenario.
-6. Ask for continuous liquidity and borrowing without selling.
-7. Show a native-bond no-match and sBTC context without inventing a live DeFi product.
-8. End in Inspector on the tool schemas, read-only annotations, and structured output.
+1. Ask for current mainnet Bitcoin Staking protocol status and upcoming bonds.
+2. Show live mainnet PoX-5 state and the honest absence of configured public manifests if applicable.
+3. Switch explicitly to the dedicated PoX-5 testnet. Before activation, show its scheduled activation height and countdown; after activation, discover any configured upcoming on-chain bond.
+4. If a testnet bond exists, point out `testnet_only_not_investable`; then request demo opportunities and show the separate `[DEMO]` manifest.
+5. Invoke the concierge with a long-term, L1-only, self-controlled yield profile.
+6. Build the participation plan and run a 1 BTC yield scenario.
+7. Ask for continuous liquidity and borrowing without selling.
+8. Show a native-bond no-match and sBTC context without inventing a live DeFi product.
+9. End in Inspector on the tool schemas, read-only annotations, and structured output.
 
 ## Recording checklist
 
@@ -54,6 +55,7 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 
 - `npm ci && npm run check` passes from a clean clone.
 - `npm run test:live` passes immediately before recording.
+- `npm run test:testnet` passes against the configured PoX-5 testnet immediately before recording.
 - Skill validator passes.
 - Codex and Claude list the server.
 - Claude lists the concierge MCP prompt.

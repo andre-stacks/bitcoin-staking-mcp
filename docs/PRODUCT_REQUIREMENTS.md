@@ -31,7 +31,7 @@ The concierge is not a second backend. A future web app should consume the same 
 
 ### Discover a bond
 
-The agent reads live protocol status, lists public manifests, and optionally requests a separately grouped demo manifest. The agent can retrieve terms and on-chain verification for one bond.
+The agent reads live protocol status, scans the active on-chain PoX-5 bond window, lists public manifests, and optionally requests a separately grouped demo manifest. A testnet scan is opt-in and every result is explicitly non-investable. The agent can retrieve terms and on-chain verification for one manifest-backed bond.
 
 ### Evaluate fit
 
@@ -64,6 +64,7 @@ The user supplies a public Stacks address. The server validates the address loca
 - Connect through stdio in Codex and Claude Code.
 - Initialize and call every tool through MCP Inspector.
 - Read current PoX status from the live Stacks API.
+- Show scheduled PoX-5 activation on the dedicated testnet and discover configured bonds automatically once they exist, without conflating either state with mainnet availability.
 - Keep demo opportunities impossible to mistake for live bonds.
 - Reproduce yield outputs from automated tests.
 - Produce an initial concierge assessment after at most four goal-oriented questions.
@@ -76,6 +77,7 @@ Transactions, PSBTs, signatures, wallet connection, private partner data, indivi
 ## Risks and guardrails
 
 - Public APIs may be unavailable: return a typed, retryable upstream error without substituting stale demo data.
+- The dedicated PoX-5 testnet may still be before its scheduled activation height: report the schedule and countdown, and return no protocol bonds rather than treating a future contract version as active.
 - A public product document may lag chain state: label it published, not live.
 - Wallet support may change: require cited product evidence and preserve unknown as unknown.
 - A target APY may not define actual payout mechanics: refuse unsupported calculations.

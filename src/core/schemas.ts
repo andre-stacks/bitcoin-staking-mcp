@@ -3,6 +3,9 @@ import { z } from "zod";
 export const DataStatusSchema = z.enum(["live", "published", "derived", "demo"]);
 export type DataStatus = z.infer<typeof DataStatusSchema>;
 
+export const StacksNetworkSchema = z.enum(["mainnet", "testnet"]);
+export type StacksNetworkName = z.infer<typeof StacksNetworkSchema>;
+
 export const SourceRefSchema = z
   .object({
     id: z.string().min(1),

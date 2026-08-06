@@ -4,7 +4,8 @@
 
 ```mermaid
 flowchart LR
-  A["Stacks and Hiro APIs"] --> P["Live provider"]
+  A["Stacks mainnet API"] --> P["Live provider"]
+  T["Configured testnet API"] --> P
   B["Versioned bond manifests"] --> M["Manifest provider"]
   P --> C["Staking intelligence core"]
   M --> C
@@ -47,15 +48,18 @@ Precedence is live chain/API data, published public documentation, versioned pub
 
 ## Providers
 
-The Stacks provider uses the configured `STACKS_API_BASE_URL`, defaulting to Hiro mainnet. It reads PoX information, derives prepare and reward phase heights from returned cycle constants, checks optional bond indices, and reads participant state. Requests are bounded by `BITCOIN_STAKING_UPSTREAM_TIMEOUT_MS`.
+The Stacks provider uses `STACKS_API_BASE_URL` for mainnet and `BITCOIN_STAKING_TESTNET_API_BASE_URL` plus `BITCOIN_STAKING_TESTNET_CHAIN_ID` for the testnet target. Mainnet defaults to Hiro mainnet; testnet defaults to Hiro's dedicated PoX-5 testnet at `https://api.testnet-pox5.hiro.so`. It reads PoX information, derives prepare and reward phase heights from returned cycle constants, checks optional bond indices, scans a bounded active bond window, and reads participant state. Requests are bounded by `BITCOIN_STAKING_UPSTREAM_TIMEOUT_MS`.
+
+Testnet is never assumed to have activated PoX-5 merely because of its hostname. The provider reads `contract_versions` and exposes the scheduled PoX-5 activation height, first reward cycle, and blocks remaining. `list_protocol_bonds` requires `/v2/pox` to report an active `.pox-5` contract before reading bonds. It then derives the current bond period, scans the six-period active lookback plus two future periods by default, and returns only indices whose `get-protocol-bond` read proves on-chain configuration. Testnet records carry `availability: testnet_only_not_investable`.
 
 The manifest provider reads and validates every JSON file in `data/bonds`. Duplicate IDs, invalid URLs, invalid data-status combinations, and incomplete fixed-unit reward models fail closed.
 
 ## MCP interfaces
 
-Eight tools are registered:
+Nine tools are registered:
 
 - `get_protocol_status`
+- `list_protocol_bonds`
 - `list_bonds`
 - `get_bond`
 - `check_participant_status`
@@ -97,6 +101,6 @@ Claude exposes the MCP prompt as `/mcp__bitcoin_staking__bitcoin_staking_concier
 
 The default suite is offline. It covers manifest validation, demo isolation, BigInt conversion, math, fees, missing economics, compatibility, path classification, recommendations, timeout behavior, MCP discovery/calls, resources, prompts, annotations, and fail-fast address validation.
 
-`npm run test:live` performs the opt-in mainnet PoX smoke test. `npm run check` runs type checking, offline tests, and a production build.
+`npm run test:live` performs the opt-in mainnet PoX smoke test. `npm run test:testnet` verifies that the dedicated testnet publishes either scheduled or active PoX-5 state; after activation, any returned bonds must remain explicitly non-investable. `npm run check` runs type checking, offline tests, and a production build.
 
 No test constructs or broadcasts a transaction.

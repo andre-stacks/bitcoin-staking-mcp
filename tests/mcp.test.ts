@@ -33,6 +33,7 @@ test("MCP lists all read-only tools", async (context) => {
       "get_bond",
       "get_protocol_status",
       "list_bonds",
+      "list_protocol_bonds",
       "simulate_yield",
     ],
   );

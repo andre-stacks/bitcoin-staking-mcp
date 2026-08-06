@@ -4,6 +4,7 @@ import { ServiceError } from "../core/errors.js";
 import {
   MetadataSchema,
   ParticipantProfileSchema,
+  StacksNetworkSchema,
   toJsonSafe,
 } from "../core/schemas.js";
 import { GLOSSARY, YIELD_METHODOLOGY } from "../content.js";
@@ -70,7 +71,7 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
     { name: "bitcoin-staking-mcp", version: "0.1.0" },
     {
       instructions:
-        "Read-only Bitcoin Staking intelligence. Never imply that demo data is live. Use get_protocol_status and list_bonds before recommending a bond. Keep native L1 BTC separate from sBTC, and treat wallet support as unknown unless cited product evidence says otherwise. Never construct, sign, or broadcast transactions.",
+        "Read-only Bitcoin Staking intelligence. Never imply that demo data is live or that testnet assets are investable. Use get_protocol_status, list_protocol_bonds, and list_bonds before recommending a bond. Keep native L1 BTC separate from sBTC, and treat wallet support as unknown unless cited product evidence says otherwise. Never construct, sign, or broadcast transactions.",
     },
   );
 
@@ -79,12 +80,30 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
     {
       title: "Get Bitcoin Staking protocol status",
       description:
-        "Read the current Stacks PoX contract, burn height, current and next reward cycles, and derived prepare/reward phase heights from the live mainnet API.",
-      inputSchema: z.object({}),
+        "Read the current Stacks PoX contract, burn height, current and next reward cycles, and derived prepare/reward phase heights from mainnet or a configured testnet API.",
+      inputSchema: z.object({ network: StacksNetworkSchema.default("mainnet") }),
       outputSchema: MetadataSchema,
       annotations: liveReadAnnotations,
     },
-    () => tool(() => service.getProtocolStatus()),
+    ({ network }) => tool(() => service.getProtocolStatus(network)),
+  );
+
+  server.registerTool(
+    "list_protocol_bonds",
+    {
+      title: "List live PoX-5 protocol bonds",
+      description:
+        "Scan the active PoX-5 bond window on mainnet or a configured testnet and return only bonds proven to be configured on-chain, with phase, timing, terms, and explicit testnet availability.",
+      inputSchema: z.object({
+        network: StacksNetworkSchema.default("mainnet"),
+        lookbackPeriods: z.number().int().min(0).max(24).default(6),
+        lookaheadPeriods: z.number().int().min(0).max(12).default(2),
+      }),
+      outputSchema: MetadataSchema,
+      annotations: liveReadAnnotations,
+    },
+    ({ network, lookbackPeriods, lookaheadPeriods }) =>
+      tool(() => service.listProtocolBonds(network, { lookbackPeriods, lookaheadPeriods })),
   );
 
   server.registerTool(
@@ -302,7 +321,7 @@ Act as a read-only Bitcoin Staking concierge. ${request ? `The user's initial re
 
 Ask no more than four goal-oriented questions before an initial assessment. Establish: primary goal, liquidity need, whether BTC must remain on Bitcoin L1 or the user is open to sBTC context, and who should control the keys. Ask amount, horizon, wallet, or custodian only when they change the result.
 
-Use get_protocol_status and list_bonds before discussing availability. Call build_participation_plan and simulate_yield rather than doing calculations yourself. Keep native L1 BTC separate from sBTC. Treat wallet support as unknown unless check_compatibility cites evidence. Present best fit, principal tradeoff, availability, assumptions, sources, and next step. If nothing matches, say so. Never construct, sign, or broadcast a transaction.`,
+Use get_protocol_status, list_protocol_bonds, and list_bonds before discussing availability. Use mainnet by default. Use testnet only when the user asks for a test, demonstration, or upcoming testnet bond, and label every testnet record as non-investable. Call build_participation_plan and simulate_yield rather than doing calculations yourself. Keep native L1 BTC separate from sBTC. Treat wallet support as unknown unless check_compatibility cites evidence. Present best fit, principal tradeoff, availability, assumptions, sources, and next step. If nothing matches, say so. Never construct, sign, or broadcast a transaction.`,
           },
         },
       ],

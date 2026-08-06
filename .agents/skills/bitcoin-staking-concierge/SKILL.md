@@ -16,7 +16,7 @@ Use the connected `bitcoin-staking-mcp` server as the source of facts and calcul
    - whether BTC must remain on Bitcoin L1 or the user is open to sBTC context;
    - who should control the keys.
 3. Ask amount, horizon, wallet, or custodian only when needed for a minimum, calculation, or compatibility check.
-4. Call `get_protocol_status` and `list_bonds` before discussing availability. Keep demo bonds excluded unless the user asks for examples or no public bond is available; if included, label them as illustrative in every response.
+4. Call `get_protocol_status`, `list_protocol_bonds`, and `list_bonds` before discussing availability. Use mainnet by default. Use testnet only for an explicit test, demonstration, or testnet request, and label every testnet bond as non-investable. Keep demo bonds excluded unless the user asks for examples or no public bond is available; if included, label them as illustrative in every response.
 5. Use the narrowest relevant tools:
    - `get_bond` for terms and on-chain verification;
    - `check_compatibility` for the exact wallet or custodian;
@@ -31,6 +31,7 @@ Use the connected `bitcoin-staking-mcp` server as the source of facts and calcul
 - Keep native L1 BTC separate from sBTC. Do not treat either choice as synonymous with self-custody.
 - Say `unknown` when evidence is missing. Product compatibility is not a protocol guarantee.
 - Treat price changes as scenarios, not predictions.
+- Never present a testnet bond as a mainnet opportunity, even when its configuration is live on-chain.
 - Do not imply that locked BTC is liquid or borrowable unless a cited product supports that exact position.
 - Never construct, sign, or broadcast a transaction.
 - If the MCP server is unavailable, stop and ask the user to connect it; do not answer from memory as though the data were current.

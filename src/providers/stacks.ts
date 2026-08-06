@@ -1,42 +1,75 @@
 import {
+  BOND_END_OFFSET_PERIODS,
+  bondPeriodToBurnHeight,
+  bondPeriodToRewardCycle,
+  bondPhaseRanges,
+  bondStatus,
   fetchAccountStatus,
   fetchBondAllowance,
   fetchBondMembership,
   fetchPoxInfo,
   fetchProtocolBond,
   fetchStakerInfo,
+  firstPox5RewardCycle,
+  isInPreparePhase,
 } from "@stacks/bitcoin-staking";
-import { createNetwork, STACKS_MAINNET } from "@stacks/network";
+import { createNetwork, STACKS_MAINNET, STACKS_TESTNET } from "@stacks/network";
 import { validateStacksAddress } from "@stacks/transactions";
 import { ServiceError, withTimeout } from "../core/errors.js";
-import { toJsonSafe, type BondManifest, type SourceRef } from "../core/schemas.js";
+import {
+  toJsonSafe,
+  type BondManifest,
+  type SourceRef,
+  type StacksNetworkName,
+} from "../core/schemas.js";
 
-const DEFAULT_API_BASE = "https://api.mainnet.hiro.so";
+const DEFAULT_MAINNET_API_BASE = "https://api.mainnet.hiro.so";
+const DEFAULT_TESTNET_API_BASE = "https://api.testnet-pox5.hiro.so";
 
 export interface StacksProviderOptions {
+  network?: StacksNetworkName;
   apiBaseUrl?: string;
+  chainId?: number;
   timeoutMs?: number;
 }
 
 export class StacksProvider {
+  readonly networkName: StacksNetworkName;
   readonly apiBaseUrl: string;
+  readonly chainId: number;
   readonly timeoutMs: number;
   private readonly network;
 
   constructor(options: StacksProviderOptions = {}) {
-    this.apiBaseUrl = options.apiBaseUrl ?? process.env.STACKS_API_BASE_URL ?? DEFAULT_API_BASE;
+    this.networkName = options.network ?? "mainnet";
+    const baseNetwork = this.networkName === "mainnet" ? STACKS_MAINNET : STACKS_TESTNET;
+    const configuredApiBase =
+      this.networkName === "mainnet"
+        ? process.env.STACKS_API_BASE_URL
+        : process.env.BITCOIN_STAKING_TESTNET_API_BASE_URL;
+    const configuredChainId =
+      this.networkName === "testnet" ? process.env.BITCOIN_STAKING_TESTNET_CHAIN_ID : undefined;
+    this.apiBaseUrl =
+      options.apiBaseUrl ??
+      configuredApiBase ??
+      (this.networkName === "mainnet" ? DEFAULT_MAINNET_API_BASE : DEFAULT_TESTNET_API_BASE);
+    this.chainId = options.chainId ?? (configuredChainId ? Number(configuredChainId) : baseNetwork.chainId);
+    if (!Number.isSafeInteger(this.chainId) || this.chainId < 0) {
+      throw new ServiceError("INVALID_INPUT", "Stacks chain ID must be a non-negative safe integer.");
+    }
     this.timeoutMs =
       options.timeoutMs ?? Number(process.env.BITCOIN_STAKING_UPSTREAM_TIMEOUT_MS ?? "8000");
     this.network = createNetwork({
-      network: STACKS_MAINNET,
+      network: { ...baseNetwork, chainId: this.chainId },
       client: { baseUrl: this.apiBaseUrl },
     });
   }
 
   private source(retrievedAt: string): SourceRef {
+    const label = this.networkName === "mainnet" ? "Mainnet" : "Testnet";
     return {
-      id: "hiro-mainnet-pox-api",
-      title: "Hiro Stacks Mainnet PoX API",
+      id: `hiro-${this.networkName}-pox-api`,
+      title: `Hiro Stacks ${label} PoX API`,
       url: `${this.apiBaseUrl}/v2/pox`,
       sourceType: "chain_api",
       dataStatus: "live",
@@ -51,9 +84,24 @@ export class StacksProvider {
       const nextRewardPhaseStartHeight =
         info.firstBurnchainBlockHeight + info.nextCycle.id * info.rewardCycleLength;
       const nextPreparePhaseStartHeight = nextRewardPhaseStartHeight - info.prepareCycleLength;
+      const pox5Version = info.contractVersions.find((version) =>
+        version.contractId.endsWith(".pox-5"),
+      );
+      const pox5Active = info.contractId.endsWith(".pox-5");
       return toJsonSafe({
-        network: "mainnet",
+        network: this.networkName,
+        chainId: this.chainId,
+        apiBaseUrl: this.apiBaseUrl,
         contractId: info.contractId,
+        pox5Active,
+        pox5Scheduled: Boolean(
+          pox5Version && info.currentBurnchainBlockHeight < pox5Version.activationBurnchainBlockHeight,
+        ),
+        pox5ActivationBurnchainBlockHeight: pox5Version?.activationBurnchainBlockHeight ?? null,
+        blocksUntilPox5Activation: pox5Version
+          ? Math.max(0, pox5Version.activationBurnchainBlockHeight - info.currentBurnchainBlockHeight)
+          : null,
+        firstPox5RewardCycle: pox5Version?.firstRewardCycleId ?? null,
         currentBurnchainBlockHeight: info.currentBurnchainBlockHeight,
         rewardCycleLength: info.rewardCycleLength,
         prepareCycleLength: info.prepareCycleLength,
@@ -99,6 +147,162 @@ export class StacksProvider {
       throw new ServiceError(
         "UPSTREAM_ERROR",
         `Unable to read PoX-5 bond ${bondIndex}: ${error instanceof Error ? error.message : String(error)}`,
+        true,
+      );
+    }
+  }
+
+  async listProtocolBonds(options: { lookbackPeriods?: number; lookaheadPeriods?: number } = {}) {
+    const verifiedAt = new Date().toISOString();
+    const lookbackPeriods = options.lookbackPeriods ?? BOND_END_OFFSET_PERIODS;
+    const lookaheadPeriods = options.lookaheadPeriods ?? 2;
+    if (!Number.isInteger(lookbackPeriods) || lookbackPeriods < 0 || lookbackPeriods > 24) {
+      throw new ServiceError("INVALID_INPUT", "lookbackPeriods must be an integer from 0 through 24.");
+    }
+    if (!Number.isInteger(lookaheadPeriods) || lookaheadPeriods < 0 || lookaheadPeriods > 12) {
+      throw new ServiceError("INVALID_INPUT", "lookaheadPeriods must be an integer from 0 through 12.");
+    }
+
+    try {
+      const info = await withTimeout(
+        fetchPoxInfo({ network: this.network }),
+        this.timeoutMs,
+        `${this.networkName} PoX API`,
+      );
+      const firstCycle = firstPox5RewardCycle(info);
+      const pox5Version = info.contractVersions.find((version) =>
+        version.contractId.endsWith(".pox-5"),
+      );
+      const pox5Active = info.contractId.endsWith(".pox-5");
+      if (!pox5Active || firstCycle === undefined) {
+        return toJsonSafe({
+          network: this.networkName,
+          chainId: this.chainId,
+          apiBaseUrl: this.apiBaseUrl,
+          contractId: info.contractId,
+          pox5Active: false,
+          pox5Scheduled: Boolean(
+            pox5Version &&
+              info.currentBurnchainBlockHeight < pox5Version.activationBurnchainBlockHeight,
+          ),
+          pox5ActivationBurnchainBlockHeight: pox5Version?.activationBurnchainBlockHeight ?? null,
+          blocksUntilPox5Activation: pox5Version
+            ? Math.max(
+                0,
+                pox5Version.activationBurnchainBlockHeight - info.currentBurnchainBlockHeight,
+              )
+            : null,
+          firstPox5RewardCycle: pox5Version?.firstRewardCycleId ?? null,
+          currentBurnchainBlockHeight: info.currentBurnchainBlockHeight,
+          scannedBondIndices: [],
+          bonds: [],
+          dataStatus: "live" as const,
+          sources: [this.source(verifiedAt)],
+          assumptions: [
+            pox5Version
+              ? "PoX-5 is present in the network schedule but is not active at the current burn height; protocol bond reads begin after activation."
+              : "Protocol bonds are a PoX-5 feature; this network does not currently publish a PoX-5 activation.",
+            "No bond entries were inferred or synthesized.",
+          ],
+          verifiedAt,
+        });
+      }
+
+      const currentBondIndex = Math.max(
+        0,
+        Math.floor(
+          (info.currentCycle.id - firstCycle) /
+            (bondPeriodToRewardCycle({ bondIndex: 1, poxInfo: info }) - firstCycle),
+        ),
+      );
+      const firstIndex = Math.max(0, currentBondIndex - lookbackPeriods);
+      const lastIndex = currentBondIndex + lookaheadPeriods;
+      const scannedBondIndices = Array.from(
+        { length: lastIndex - firstIndex + 1 },
+        (_value, offset) => firstIndex + offset,
+      );
+      const records = await withTimeout(
+        Promise.all(
+          scannedBondIndices.map(async (bondIndex) => ({
+            bondIndex,
+            bond: await fetchProtocolBond({ network: this.network, bondIndex }),
+          })),
+        ),
+        this.timeoutMs,
+        `${this.networkName} PoX-5 bond scan`,
+      );
+      const inPreparePhase = isInPreparePhase({
+        burnHeight: info.currentBurnchainBlockHeight,
+        poxInfo: info,
+      });
+      const bonds = records.flatMap(({ bondIndex, bond }) => {
+        if (!bond) return [];
+        const status = bondStatus({ bondIndex, poxInfo: info, isBondSetup: true });
+        const startBurnHeight = bondPeriodToBurnHeight({ bondIndex, poxInfo: info });
+        const startRewardCycle = bondPeriodToRewardCycle({ bondIndex, poxInfo: info });
+        return [
+          {
+            id: `protocol-${this.networkName}-bond-${bondIndex}`,
+            network: this.networkName,
+            chainId: this.chainId,
+            onChainBondIndex: bondIndex,
+            contractId: info.contractId,
+            protocolStatus: status,
+            registrationStatus:
+              status === "open"
+                ? inPreparePhase
+                  ? "temporarily_blocked_prepare_phase"
+                  : "open"
+                : "closed",
+            currentBurnchainBlockHeight: info.currentBurnchainBlockHeight,
+            startBurnHeight,
+            blocksUntilStart: Math.max(0, startBurnHeight - info.currentBurnchainBlockHeight),
+            startRewardCycle,
+            phases: bondPhaseRanges({ bondIndex, poxInfo: info }),
+            targetRateBps: bond.targetRateBps,
+            stxValueRatio: bond.stxValueRatio,
+            minUstxRatioBps: bond.minUstxRatioBps,
+            earlyUnlockBytes: bond.earlyUnlockBytes,
+            availability:
+              this.networkName === "testnet" ? "testnet_only_not_investable" : "mainnet_on_chain",
+            dataStatus: "live" as const,
+            sources: [this.source(verifiedAt)],
+            assumptions: [
+              "This record proves on-chain bond configuration and timing, not wallet compatibility or participant eligibility.",
+              this.networkName === "testnet"
+                ? "Testnet bonds use test assets and are not investable mainnet opportunities."
+                : "Mainnet availability still depends on allowance, compatibility, custody, and participant requirements.",
+            ],
+            verifiedAt,
+          },
+        ];
+      });
+
+      return toJsonSafe({
+        network: this.networkName,
+        chainId: this.chainId,
+        apiBaseUrl: this.apiBaseUrl,
+        contractId: info.contractId,
+        pox5Active: true,
+        currentBurnchainBlockHeight: info.currentBurnchainBlockHeight,
+        currentRewardCycle: info.currentCycle.id,
+        firstPox5RewardCycle: firstCycle,
+        currentBondIndex,
+        scannedBondIndices,
+        bonds,
+        dataStatus: "live" as const,
+        sources: [this.source(verifiedAt)],
+        assumptions: [
+          "The scan covers the active lookback window plus the requested future bond periods; it is not an exhaustive historical index.",
+          "Only configured on-chain records are returned.",
+        ],
+        verifiedAt,
+      });
+    } catch (error) {
+      if (error instanceof ServiceError) throw error;
+      throw new ServiceError(
+        "UPSTREAM_ERROR",
+        `Unable to scan ${this.networkName} PoX-5 bonds: ${error instanceof Error ? error.message : String(error)}`,
         true,
       );
     }
