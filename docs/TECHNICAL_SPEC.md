@@ -56,6 +56,8 @@ Testnet is never assumed to have activated PoX-5 merely because of its hostname.
 
 The manifest provider reads and validates every JSON file in `data/bonds`. Duplicate IDs, invalid URLs, invalid data-status combinations, and incomplete fixed-unit reward models fail closed.
 
+Each compatibility claim must cite at least one source ID contained in the same manifest. Manifest-backed on-chain and participant reads route through the provider for that manifest's network; a testnet manifest cannot silently query mainnet. Live verification sources are appended without overwriting manifest provenance.
+
 ## MCP interfaces
 
 Eleven tools are registered:
@@ -88,6 +90,8 @@ The `bitcoin-staking-concierge` prompt contains workflow instructions, not facts
 
 The prompt, MCP server instructions, and skill share one institutional response contract. CFO/investment questions lead with availability, custody, liquidity, economics, and material risk. Technical/security/custody questions lead with mechanisms, component boundaries, deterministic verification, and pinned sources. Mixed questions receive a short executive conclusion followed by compact technical evidence.
 
+That response contract is evidence-gated. Current MCP structured output and resources are the only factual input. Missing evidence produces the fixed abstention “This MCP does not currently verify that,” plus the evidence required to answer. Live-read failure cannot be replaced with demo, stale, or remembered state. Unknown and empty results remain unknown and empty. This policy is duplicated deliberately in server instructions, the MCP prompt, the response-standard resource, and the repo skill, and is guarded by contract tests.
+
 Security guidance is a versioned deterministic corpus in `src/security.ts`. Topics return an answer, evidence level, known facts, unproven claims, verification checklist, and pinned source IDs. The source set includes the official public audit statement, SIP-045, pinned PoX-5 and Stacks.js code, golden-vector tests, and pinned Leather RPC implementations. Investor chats affect topic coverage only; they are not stored as evidence.
 
 `build_diligence_report` is a deterministic composition layer. It has scheduled-activation, no-configured-bond, and configured-bond branches. The configured branch derives the minimum paired uSTX and target sBTC reward from the live bond tuple, preserves wallet compatibility as unknown, and states that the reward pool can cap actual payout.
@@ -114,8 +118,10 @@ Claude exposes the MCP prompt as `/mcp__bitcoin_staking__bitcoin_staking_concier
 
 ## Testing
 
-The default suite is offline. It covers manifest validation, demo isolation, BigInt conversion, math, fees, missing economics, compatibility, path classification, recommendations, timeout behavior, MCP discovery/calls, resources, prompts, annotations, and fail-fast address validation.
+The default suite is offline. It covers manifest validation and cited-source integrity, demo isolation and provenance preservation, BigInt conversion, zero-rate and invalid-input cases, math, fees, missing economics, compatibility, path classification, recommendations, network-specific manifest routing, timeout and unavailable-upstream behavior, MCP discovery and invocation of all eleven tools, resource and prompt contracts, read-only annotations, institutional voice and abstention policy, and fail-fast address validation.
 
 `npm run test:live` performs the opt-in mainnet PoX smoke test. `npm run test:testnet` verifies that the dedicated testnet publishes either scheduled or active PoX-5 state; after activation, any returned bonds must remain explicitly non-investable. `npm run check` runs type checking, offline tests, and a production build.
 
 No test constructs or broadcasts a transaction.
+
+The deterministic server can enforce schemas, provenance, failure behavior, and absence of transaction capabilities. It cannot guarantee that an arbitrary host model will always obey a natural-language instruction. Host acceptance therefore includes adversarial prompts that request guessing, unsupported safety claims, and demo fallback; expected behavior is explicit abstention or a sourced, bounded answer.

@@ -124,7 +124,12 @@ export class BitcoinStakingService {
         demo: demoBonds.length,
       },
       demoIncluded: input.includeDemo ?? false,
-      dataStatus: publishedBonds.length > 0 ? ("published" as const) : ("derived" as const),
+      dataStatus:
+        publishedBonds.length > 0
+          ? ("published" as const)
+          : demoBonds.length > 0
+            ? ("demo" as const)
+            : ("derived" as const),
       sources,
       assumptions: [
         "This tool lists versioned public manifests; it does not infer undisclosed future bonds from bond indices.",
@@ -138,35 +143,43 @@ export class BitcoinStakingService {
 
   async getBond(bondId: string) {
     const bond = await this.manifests.get(bondId);
+    const verifiedAt = this.now().toISOString();
+    const provider = this.provider(bond.network);
     const onChainVerification =
       bond.onChainBondIndex === undefined
         ? {
             status: "not_attempted" as const,
             reason: "This manifest has no on-chain bond index.",
           }
-        : await this.stacks.getOnChainBond(bond.onChainBondIndex).then((record) => ({
+        : await provider.getOnChainBond(bond.onChainBondIndex).then((record) => ({
             status: record ? ("found" as const) : ("not_found" as const),
             bondIndex: bond.onChainBondIndex,
             record: record ?? null,
+            network: bond.network,
+            dataStatus: "live" as const,
+            sources: [provider.sourceRef(verifiedAt)],
+            verifiedAt,
           }));
+    const verificationSources =
+      "sources" in onChainVerification ? onChainVerification.sources : [];
 
     return {
       bond,
       onChainVerification,
       dataStatus: bond.dataStatus,
-      sources: bond.sources,
+      sources: this.uniqueSources([...bond.sources, ...verificationSources]),
       assumptions: [
         bond.dataStatus === "demo"
           ? "This is an illustrative demo manifest and not an available bond."
           : "Published metadata is not treated as live chain state unless onChainVerification is found.",
       ],
-      verifiedAt: this.now().toISOString(),
+      verifiedAt,
     };
   }
 
   async checkParticipantStatus(address: string, bondId?: string) {
     const bond = bondId ? await this.manifests.get(bondId) : undefined;
-    return this.stacks.getParticipantStatus(address, bond);
+    return this.provider(bond?.network ?? "mainnet").getParticipantStatus(address, bond);
   }
 
   async checkCompatibility(input: {
@@ -185,7 +198,14 @@ export class BitcoinStakingService {
 
   async compareStakingPaths(profileInput: ParticipantProfile) {
     const profile = ParticipantProfileSchema.parse(profileInput);
-    const sources = this.uniqueSources((await this.manifests.list()).flatMap((bond) => bond.sources));
+    const contextSourceIds = new Set([
+      "sip-045",
+      "pox5-release-contract",
+      "pox5-pools-guide",
+    ]);
+    const sources = (await this.listSources()).filter(
+      (source) => contextSourceIds.has(source.id) && source.dataStatus !== "demo",
+    );
     return compareStakingPaths(profile, sources);
   }
 

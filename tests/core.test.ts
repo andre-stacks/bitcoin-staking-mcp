@@ -38,6 +38,24 @@ test("demo manifest without a demo source is rejected", async () => {
   );
 });
 
+test("manifest compatibility claims cannot cite missing sources", async () => {
+  const bond = await demoBond();
+  assert.throws(() =>
+    BondManifestSchema.parse({
+      ...bond,
+      compatibility: [
+        {
+          kind: "wallet",
+          name: "Imaginary Wallet",
+          status: "supported",
+          evidence: "Unsupported assertion",
+          sourceIds: ["source-that-does-not-exist"],
+        },
+      ],
+    }),
+  );
+});
+
 test("yield calculation is deterministic and rounds down", async () => {
   const bond = await demoBond();
   assert.equal(bond.economics.rewardAsset, "sBTC");
@@ -49,9 +67,35 @@ test("yield calculation is deterministic and rounds down", async () => {
   assert.equal(result.grossRewardSats, "2465753");
   assert.equal(result.feeSats, "0");
   assert.equal(result.netRewardSats, "2465753");
+  assert.equal(result.dataStatus, "demo");
+  assert.equal(result.inputDataStatus, "demo");
+  assert.equal(result.availability, "demo_only_not_investable");
+  assert.ok(result.assumptions.some((assumption) => /illustrative demo data/i.test(assumption)));
   assert.equal(result.priceScenarios.length, 2);
   assert.equal(result.priceScenarios[0]?.estimatedRewardValueUsd, 2465.753);
   assert.match(result.priceScenarios[1]?.note ?? "", /does not change sBTC-denominated/);
+});
+
+test("zero-rate scenario is valid and returns zero rewards", async () => {
+  const bond = await demoBond();
+  const result = simulateYield(bond, {
+    principalSats: "100000000",
+    annualRateBps: 0,
+  });
+  assert.equal(result.grossRewardSats, "0");
+  assert.equal(result.netRewardSats, "0");
+});
+
+test("participant amount must be positive", () => {
+  assert.throws(() =>
+    ParticipantProfileSchema.parse({
+      goal: "earn_yield",
+      liquidityNeed: "lock_until_maturity",
+      bitcoinPathPreference: "bitcoin_l1_only",
+      keyControlPreference: "self_controlled",
+      amountSats: "0",
+    }),
+  );
 });
 
 test("explicit fee assumption reduces net reward", async () => {

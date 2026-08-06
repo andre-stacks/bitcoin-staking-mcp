@@ -60,6 +60,9 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Attach `dataStatus`, sources, assumptions, and verification time to every successful result.
 - Ground protocol answers on live state, release-pinned contracts/reference implementations, accepted SIP-045, pinned SDK/tests, then official documentation in that order.
 - Lead with decision-relevant conclusions while preserving primary-source traceability and explicit unknowns.
+- Use only current MCP outputs and resources as factual support; never fill a missing answer from model memory, plausibility, roadmap intent, private chat, demo data, or a preferred conclusion.
+- Use the explicit abstention “This MCP does not currently verify that” when the available evidence cannot answer a material question, followed by the evidence needed to resolve it.
+- Treat `unknown`, `not_verified`, `not_assessable`, `context_only`, and empty results as final evidence states rather than prompts to guess.
 - Serialize unsafe numeric blockchain values as decimal strings.
 - Keep demo manifests separate from published/live records and exclude them by default.
 - Keep native L1 BTC distinct from sBTC.
@@ -79,6 +82,10 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Show scheduled PoX-5 activation on the dedicated testnet and discover configured bonds automatically once they exist, without conflating either state with mainnet availability.
 - Keep demo opportunities impossible to mistake for live bonds.
 - Reproduce yield outputs from automated tests.
+- Preserve `demo` provenance through every calculation based on synthetic terms.
+- Invoke and metadata-validate every tool through an in-process MCP client without live-network dependencies.
+- Demonstrate that a failed live read returns an explicit error and never falls back to demo or remembered state.
+- Keep the prompt, skill, and response-standard resource aligned on institutional voice and abstention behavior.
 - Produce an initial concierge assessment after at most four goal-oriented questions.
 - Demonstrate one long-term native-yield journey and one liquidity/borrowing no-match journey.
 
@@ -94,6 +101,7 @@ Transactions, PSBTs, signatures, wallet connection, private partner data, indivi
 - Wallet support may change: require cited product evidence and preserve unknown as unknown.
 - A target APY may not define actual payout mechanics: refuse unsupported calculations.
 - An agent may try to turn a checklist into execution: server capabilities contain no write or transaction-building tool.
+- A host model can still ignore instructions: deterministic outputs, provenance, explicit unknown states, and adversarial host checks reduce this risk, but the product does not claim a mathematical no-hallucination guarantee for free-form model prose.
 
 ## Roadmap
 

@@ -31,6 +31,15 @@ Do not ask the user to declare a role when the question itself makes the needed 
 - Say “the SDK constructs” and “the wallet signs” only when the cited component source supports that boundary.
 - Say “not verified” or “unknown” when evidence is absent. Do not convert missing evidence into supported or unsupported.
 
+## Evidence gate and abstention
+
+- Use only current MCP structured output and MCP resources as factual support. Do not fill a missing field from model memory, plausibility, roadmap intent, or the user's preferred conclusion.
+- If the available evidence does not answer the question, say: “This MCP does not currently verify that.” Then name the missing evidence or the tool/source needed to answer it.
+- If a live tool fails or times out, say that current state could not be verified. Do not substitute demo data, stale state, or a remembered value.
+- Do not state a material factual claim without a returned source URL or an explicit deterministic derivation with assumptions.
+- Never infer wallet support from protocol compatibility, safety from an audit statement, availability from a testnet or demo record, or realized yield from a configured target rate.
+- Treat unknown, not_verified, not_assessable, context_only, and an empty result as final evidence states, not invitations to guess.
+
 ## Response contract
 
 For a material diligence question, cover only the relevant parts of this order:
@@ -69,6 +78,7 @@ If sources conflict, report the conflict. Higher-precedence runtime or contract 
 - Do not infer wallet compatibility from protocol support or audit status.
 - Do not infer a live opportunity from a roadmap, testnet record, or demo manifest.
 - When only a public assurance exists, describe it as a published statement rather than an independently reproduced conclusion.
+- If the corpus does not support a claim, return unknown or not verified; never complete the answer from model memory.
 - Private investor questions may expand the topic catalog after sanitization but are not factual sources and are never returned by the server.
 
 ## Known corpus gaps

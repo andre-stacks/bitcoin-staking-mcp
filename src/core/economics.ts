@@ -1,5 +1,5 @@
 import { ServiceError } from "./errors.js";
-import type { BondManifest, SourceRef } from "./schemas.js";
+import type { BondManifest, DataStatus, SourceRef } from "./schemas.js";
 
 export interface YieldSimulationInput {
   principalSats: string;
@@ -29,7 +29,9 @@ export interface YieldSimulation {
     estimatedRewardValueUsd?: number;
     note: string;
   }>;
-  dataStatus: "derived";
+  dataStatus: Extract<DataStatus, "derived" | "demo">;
+  inputDataStatus: BondManifest["dataStatus"];
+  availability: "demo_only_not_investable" | "published_terms_scenario";
   sources: SourceRef[];
   assumptions: string[];
   verifiedAt: string;
@@ -50,7 +52,7 @@ export function simulateYield(bond: BondManifest, input: YieldSimulationInput): 
   const annualRateBps = input.annualRateBps ?? bond.economics.targetRateBps;
   const feeBps = input.feeBps ?? bond.economics.managerFeeBps ?? 0;
 
-  if (!durationDays || !annualRateBps) {
+  if (durationDays === undefined || annualRateBps === undefined) {
     throw new ServiceError(
       "INSUFFICIENT_DATA",
       "A duration and annual rate are required. Supply explicit assumptions or use a bond that publishes them.",
@@ -81,6 +83,11 @@ export function simulateYield(bond: BondManifest, input: YieldSimulationInput): 
       "USD estimates use the supplied BTC price and assume one sBTC sat tracks one BTC sat; they do not model peg, liquidity, or redemption risk.",
     );
   }
+  if (bond.dataStatus === "demo") {
+    assumptions.push(
+      "Every term used by this scenario is illustrative demo data and is not a live or investable opportunity.",
+    );
+  }
 
   const result: YieldSimulation = {
     bondId: bond.id,
@@ -91,7 +98,10 @@ export function simulateYield(bond: BondManifest, input: YieldSimulationInput): 
     rewardAsset: bond.economics.rewardAsset,
     rewardModel: bond.economics.rewardModel,
     priceScenarios: [],
-    dataStatus: "derived",
+    dataStatus: bond.dataStatus === "demo" ? "demo" : "derived",
+    inputDataStatus: bond.dataStatus,
+    availability:
+      bond.dataStatus === "demo" ? "demo_only_not_investable" : "published_terms_scenario",
     sources: bond.sources,
     assumptions,
     verifiedAt: new Date().toISOString(),

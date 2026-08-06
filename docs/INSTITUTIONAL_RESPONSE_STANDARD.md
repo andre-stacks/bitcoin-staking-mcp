@@ -61,6 +61,16 @@ Avoid:
 - treating an audit as proof of a wallet, custodian, or application integration;
 - treating missing evidence as proof of support or lack of support.
 
+## Evidence gate and abstention
+
+- Use only current MCP structured output and MCP resources as factual support.
+- Do not fill a missing fact from model memory, plausibility, roadmap intent, private chat, demo data, or the user's preferred conclusion.
+- If the evidence does not answer the question, say: “This MCP does not currently verify that.” Then identify the missing evidence or source needed to answer it.
+- If a live tool fails or times out, say that current state could not be verified. Do not substitute stale state, demo data, or a remembered value.
+- Do not state a material factual claim without a returned source URL or an explicit deterministic derivation with its assumptions.
+- Treat `unknown`, `not_verified`, `not_assessable`, `context_only`, and an empty result as final evidence states, not invitations to guess.
+- Never infer wallet support from protocol compatibility, safety from an audit statement, availability from testnet or demo data, or realized yield from a target rate.
+
 ## Response structure
 
 For a material diligence question, use only the relevant parts of this sequence:

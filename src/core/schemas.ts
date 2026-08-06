@@ -31,7 +31,7 @@ export const CompatibilityClaimSchema = z
     name: z.string().min(1),
     status: z.enum(["supported", "unsupported", "unknown"]),
     evidence: z.string().min(1),
-    sourceIds: z.array(z.string().min(1)),
+    sourceIds: z.array(z.string().min(1)).min(1),
   })
   .strict();
 export type CompatibilityClaim = z.infer<typeof CompatibilityClaimSchema>;
@@ -104,6 +104,18 @@ export const BondManifestSchema = z
         message: "fixedRewardUnits is required for fixed_reward_units.",
       });
     }
+    const sourceIds = new Set(value.sources.map((source) => source.id));
+    for (const [claimIndex, claim] of value.compatibility.entries()) {
+      for (const sourceId of claim.sourceIds) {
+        if (!sourceIds.has(sourceId)) {
+          context.addIssue({
+            code: "custom",
+            path: ["compatibility", claimIndex, "sourceIds"],
+            message: `Compatibility claim cites missing source ID: ${sourceId}`,
+          });
+        }
+      }
+    }
   });
 export type BondManifest = z.infer<typeof BondManifestSchema>;
 
@@ -120,7 +132,11 @@ export const ParticipantProfileSchema = z
     bitcoinPathPreference: z.enum(["bitcoin_l1_only", "open_to_sbtc", "compare_both", "unknown"]),
     keyControlPreference: z.enum(["self_controlled", "custodian", "either", "unknown"]),
     walletOrCustodian: z.string().min(1).optional(),
-    amountSats: z.string().regex(/^\d+$/).optional(),
+    amountSats: z
+      .string()
+      .regex(/^\d+$/)
+      .refine((value) => BigInt(value) > 0n, "amountSats must be greater than zero")
+      .optional(),
     timeHorizonDays: z.number().int().positive().optional(),
   })
   .strict();

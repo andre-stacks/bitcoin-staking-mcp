@@ -32,6 +32,8 @@ The intelligence core contains schemas, provenance, economics, compatibility, an
 
 The concierge uses an institutional diligence voice: decision-first for CFO and investment audiences, mechanism-first for technical and custody teams, neutral rather than promotional, and explicit about uncertainty and the next verification step.
 
+The answer policy is evidence-gated. The concierge may use only current MCP structured output and MCP resources for factual claims. It does not complete missing answers from model memory, infer wallet support from protocol behavior, treat an audit statement as end-to-end wallet proof, or substitute demo data after a live-read failure. When the corpus cannot answer a question, it says: “This MCP does not currently verify that,” and identifies the missing evidence.
+
 ## Quick start
 
 Requires Node 22.
@@ -176,6 +178,8 @@ npm run demo:proof
 
 The default tests are offline. The mainnet and configured-testnet tests are opt-in and read current public chain state. The checked-in concierge skill also passes the `skill-creator` quick validator. No command constructs or broadcasts a transaction.
 
+The offline suite invokes all eleven tools through an in-process MCP client, validates successful result metadata, checks network-specific manifest routing, exercises upstream failure behavior, and tests the shared prompt/skill abstention and voice contract. Prompt controls materially reduce unsupported answers, but no free-form host model can be guaranteed never to produce one; callers should treat returned provenance and explicit unknown states as the enforceable trust boundary.
+
 ## Documentation
 
 - [Product requirements](docs/PRODUCT_REQUIREMENTS.md)
@@ -185,6 +189,7 @@ The default tests are offline. The mainnet and configured-testnet tests are opt-
 - [Institutional response standard](docs/INSTITUTIONAL_RESPONSE_STANDARD.md)
 - [Canonical source corpus](docs/SOURCE_CORPUS.md)
 - [Hackathon demo runbook](docs/DEMO_RUNBOOK.md)
+- [Implementation audit](docs/IMPLEMENTATION_AUDIT.md)
 
 ## Roadmap
 

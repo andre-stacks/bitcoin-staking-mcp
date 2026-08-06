@@ -59,3 +59,5 @@ When sources conflict, the answer reports the conflict. Runtime and contract evi
 - A canonical public product manifest for every upcoming bond.
 
 These gaps must appear as unknown or not verified. They must not be filled from private chat, roadmap intent, or demo data.
+
+When the current corpus and tool output do not support a requested claim, the concierge must say “This MCP does not currently verify that,” name the missing evidence, and stop. Model memory, plausibility, and user prompting are not fallback sources.

@@ -78,7 +78,7 @@ export function compareStakingPaths(profile: ParticipantProfile, sources: BondMa
         availability: "context_only",
         fit: l1Only ? "excluded_by_preference" : wantsBorrowing || needsLiquidity ? "investigate" : "optional",
         bitcoinLocation: "sBTC on Stacks",
-        custody: "sBTC can be self-custodied, but introduces the sBTC system and application-specific assumptions.",
+        custody: "Custody, redemption, and application assumptions require separate verification for the selected sBTC path.",
         strengths: ["Programmable in Stacks applications", "May support lending or other DeFi uses"],
         constraints: [
           "This MCP does not verify or rank a live DeFi product in the MVP",

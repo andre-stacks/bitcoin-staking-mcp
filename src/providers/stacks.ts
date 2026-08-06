@@ -65,7 +65,7 @@ export class StacksProvider {
     });
   }
 
-  private source(retrievedAt: string): SourceRef {
+  sourceRef(retrievedAt = new Date().toISOString()): SourceRef {
     const label = this.networkName === "mainnet" ? "Mainnet" : "Testnet";
     return {
       id: `hiro-${this.networkName}-pox-api`,
@@ -119,7 +119,7 @@ export class StacksProvider {
         ),
         sbtcContract: info.sbtcContract,
         dataStatus: "live" as const,
-        sources: [this.source(startedAt)],
+        sources: [this.sourceRef(startedAt)],
         assumptions: [
           "Prepare and reward phase heights are derived from the live PoX cycle constants returned by the API.",
         ],
@@ -197,7 +197,7 @@ export class StacksProvider {
           scannedBondIndices: [],
           bonds: [],
           dataStatus: "live" as const,
-          sources: [this.source(verifiedAt)],
+          sources: [this.sourceRef(verifiedAt)],
           assumptions: [
             pox5Version
               ? "PoX-5 is present in the network schedule but is not active at the current burn height; protocol bond reads begin after activation."
@@ -266,7 +266,7 @@ export class StacksProvider {
             availability:
               this.networkName === "testnet" ? "testnet_only_not_investable" : "mainnet_on_chain",
             dataStatus: "live" as const,
-            sources: [this.source(verifiedAt)],
+            sources: [this.sourceRef(verifiedAt)],
             assumptions: [
               "This record proves on-chain bond configuration and timing, not wallet compatibility or participant eligibility.",
               this.networkName === "testnet"
@@ -291,7 +291,7 @@ export class StacksProvider {
         scannedBondIndices,
         bonds,
         dataStatus: "live" as const,
-        sources: [this.source(verifiedAt)],
+        sources: [this.sourceRef(verifiedAt)],
         assumptions: [
           "The scan covers the active lookback window plus the requested future bond periods; it is not an exhaustive historical index.",
           "Only configured on-chain records are returned.",
@@ -341,7 +341,7 @@ export class StacksProvider {
         requestedBondId: bond?.id ?? null,
         requestedBondDataStatus: bond?.dataStatus ?? null,
         dataStatus: "live" as const,
-        sources: [this.source(verifiedAt)],
+        sources: [this.sourceRef(verifiedAt)],
         assumptions: [
           "This reports public Stacks state only and does not prove control of the address.",
           bond?.onChainBondIndex === undefined
