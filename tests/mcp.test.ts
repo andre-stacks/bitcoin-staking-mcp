@@ -13,8 +13,10 @@ import { SuccessfulToolOutputSchemas, YieldOutputSchema } from "../src/mcp/outpu
 async function connectedClient(service?: BitcoinStakingService) { const server = createBitcoinStakingMcpServer(service); const client = new Client({ name: "tests", version: "0.1.0" }, { capabilities: {}, versionNegotiation: { mode: "legacy" } }); const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair(); await server.connect(serverTransport); await client.connect(clientTransport); return { client, server }; }
 
 class OfflineProvider extends StacksProvider {
-  override async getProtocolStatus(): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, chainId: this.chainId, contractId: this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78.pox-5" : "ST000000000000000000002AMW42H.pox-5", pox5Active: true, pox5Scheduled: false, currentBurnchainBlockHeight: 10, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
-  override async listProtocolBonds(): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 10, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
+  statusReads = 0;
+  bondScanReads = 0;
+  override async getProtocolStatus(): Promise<any> { this.statusReads += 1; const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, chainId: this.chainId, contractId: this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78.pox-5" : "ST000000000000000000002AMW42H.pox-5", pox5Active: true, pox5Scheduled: false, currentBurnchainBlockHeight: 10, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
+  override async listProtocolBonds(): Promise<any> { this.bondScanReads += 1; const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 10, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async getOnChainBond(): Promise<any> { return undefined; }
   override async getParticipantStatus(address: string): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { address, network: this.networkName, accountStatus: null, stakerInfo: null, bondMembership: null, bondAllowanceSats: null, requestedBondId: null, requestedBondDataStatus: null, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
 }
@@ -39,6 +41,28 @@ test("market snapshot grounds the first turn in two routes", async (context) => 
   assert.deepEqual(content.routes.map((route: any) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   assert.equal(content.routes.find((route: any) => route.routeType === "sbtc_pool")?.poolOperator, "StackingDAO");
   assert.match(content.precedence, /on-chain.*outranks owner/i);
+  assert.ok(content.sources.some((source: any) => source.id === "custody-registry"));
+});
+
+test("testnet diligence returns a protocol-only preview through MCP without duplicate chain reads", async (context) => {
+  const testnet = new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
+  const service = new BitcoinStakingService({
+    stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
+    testnetStacks: testnet,
+    prices: offlinePrices(),
+    now: offlineNow,
+  });
+  const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
+  const result = await client.callTool({ name: "build_diligence_report", arguments: { network: "testnet", profile } });
+  assert.equal(result.isError, undefined, JSON.stringify(result.content));
+  const content = SuccessfulToolOutputSchemas.build_diligence_report.parse(result.structuredContent);
+  assert.equal(content.assessmentStatus, "network_protocol_preview");
+  assert.equal(content.economics.status, "not_available");
+  assert.equal(content.operationalFit, "not_assessable");
+  assert.deepEqual(content.routeAssessments, []);
+  assert.match(content.bondAvailability.coverageBoundary, /does not establish product availability/i);
+  assert.equal(testnet.statusReads, 1);
+  assert.equal(testnet.bondScanReads, 1);
 });
 
 test("every tool validates structured output and exposes no transaction fields", async (context) => {

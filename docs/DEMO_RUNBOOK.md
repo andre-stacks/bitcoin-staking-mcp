@@ -36,11 +36,11 @@ For a 25 BTC scenario, use the sourced public-model duration, 3% reference targe
 Build an institutional Bitcoin staking diligence report using the best currently available data. I want yield, must keep 1 BTC on Bitcoin L1, want to control the maturity key, use Leather, and can lock for six months.
 ```
 
-Expected behavior: use verified mainnet or published opportunity data when available. Otherwise call `build_diligence_report` with `network: testnet` and disclose that the result is a pre-production preview.
+Expected behavior: use verified mainnet or published opportunity data when available. Otherwise call `build_diligence_report` with `network: testnet` and disclose that the result is a protocol-only, non-investable preview unless a current owner-reviewed testnet product manifest exists.
 
 - Before activation: show the live activation height/countdown and state that no bond can yet be assessed.
 - Active without a bond: show the scanned indices and state that no configured bond was verified.
-- Active with a bond: show `live_testnet_demo`, the mainnet-like experience it demonstrates, profile fit, paired-STX minimum, configured sBTC target, risks, and next verification step.
+- Active with a bond: show the configured on-chain protocol evidence and exact provenance, but do not infer product routes, profile fit, custody support, enrollment, or usable economics from contract state alone. Those require a current owner-reviewed product manifest.
 
 ### 3. Security committee
 

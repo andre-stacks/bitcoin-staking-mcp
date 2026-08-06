@@ -68,3 +68,14 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /newest user request controls the response scope/i);
   assert.match(standard, /Do not introduce BitGo or any other named integration/i);
 });
+
+test("nightly registry validation preserves pipeline failures", async () => {
+  const workflow = await readFile(resolve(".github/workflows/custody-registry-review.yml"), "utf8");
+  assert.match(workflow, /id: registry\n\s+continue-on-error: true\n\s+shell: bash\n\s+run: npm run registry:validate:live \| tee registry-review\.md/);
+  assert.match(workflow, /steps\.registry\.outcome == 'failure'/);
+});
+
+test("legacy diligence implementation is absent from source and packaged build output", async () => {
+  await assert.rejects(readFile(resolve("src/core/diligence.ts"), "utf8"), { code: "ENOENT" });
+  await assert.rejects(readFile(resolve("dist/core/diligence.js"), "utf8"), { code: "ENOENT" });
+});

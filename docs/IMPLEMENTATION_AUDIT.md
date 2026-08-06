@@ -46,7 +46,7 @@ The automated suite proves the requested journeys and the failure boundaries aro
 - exact freshness and 15-minute cache boundaries;
 - min/max amount boundaries, paired-STX requirements, horizon and early-exit constraints, key-control and custody gaps;
 - v1 normalization, duplicate IDs/sources, missing references, invalid attestation sources, impossible timing, invalid contract networks, and incomplete open-route fields;
-- missing duration/rate/route fee/LST fee refusal, invalid LST selection, sequential fees, zero/full fees, maximum-supply principal, decimal conversion, conflicting principal forms, and non-finite/out-of-range inputs;
+- missing duration/rate refusal, unknown route/LST fees producing no net result, invalid LST selection, sequential fees, zero/full fees, maximum-supply principal, decimal conversion, conflicting principal forms, and non-finite/out-of-range inputs;
 - runtime conflict propagation to all decision tools while a non-current scheduled route retains its correct status;
 - ETag/cache, stale remote, stale fallback, future review, remote manifest failure, content hash changes, and typed registry failure;
 - bond/request/address network conflicts, invalid principals, and source provenance;
@@ -56,7 +56,7 @@ The automated suite proves the requested journeys and the failure boundaries aro
 
 ## Verification record
 
-- `npm run check`: passed. 72 tests discovered; 70 passed and the two opt-in live tests were skipped as designed. Type checking, registry validation, build, packaged stdio initialization, and all offline tests passed.
+- `npm run check`: passed. 86 tests discovered; 84 passed and the two opt-in live tests were skipped as designed. Type checking, registry validation, build, packaged stdio initialization, and all offline tests passed.
 - `npm run registry:validate:live`: passed. Registry version `2026-08-06.1`, two bond manifests, six custody paths, 13 registered source entries, and current freshness were validated; external evidence was reachable.
 - `npm run test:live`: passed against the current mainnet PoX API.
 - `npm run test:testnet`: passed against the dedicated PoX-5 testnet API.
