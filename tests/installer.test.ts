@@ -48,7 +48,7 @@ test("setup registers both hosts, installs the global skill, and verifies regist
       return { code: 0, stdout: JSON.stringify({ command: "npx", args: ["-y", DEFAULT_PACKAGE_SPEC, "serve"] }), stderr: "" };
     }
     if (command === "claude" && args.join(" ") === "mcp get bitcoin-staking") {
-      return { code: 0, stdout: `command: npx\nargs: -y ${DEFAULT_PACKAGE_SPEC} serve`, stderr: "" };
+      return { code: 0, stdout: `bitcoin-staking:\n  Command: npx\n  Args: -y ${DEFAULT_PACKAGE_SPEC} serve\n`, stderr: "" };
     }
     return { code: 0, stdout: "ok", stderr: "" };
   };
@@ -103,7 +103,7 @@ test("setup fails closed before registration when the MCP handshake is incomplet
   assert.equal(result.steps[0]?.status, "failed");
 });
 
-test("check reports missing host registration and skill", async (context) => {
+test("check reports a missing explicitly selected host registration", async (context) => {
   const fakeHome = await mkdtemp(join(tmpdir(), "bitcoin-staking-installer-check-"));
   context.after(() => rm(fakeHome, { recursive: true, force: true }));
   const result = await runInstaller(parseInstallerOptions("check", ["--hosts", "codex"]), {
@@ -113,7 +113,6 @@ test("check reports missing host registration and skill", async (context) => {
   });
 
   assert.equal(result.ok, false);
-  assert.ok(result.steps.some((step) => step.target === "codex" && step.status === "failed"));
   assert.ok(result.steps.some((step) => step.target === "codex" && step.status === "failed"));
 });
 
@@ -199,13 +198,47 @@ test("update repeats verified replacement and a tampered concierge skill fails c
   assert.equal(checked.steps.find((step) => step.target === "codex-skill")?.status, "failed");
 });
 
-test("setup refuses version, skill, registry, or exact tool-contract mismatches before host mutation", async () => {
+test("setup refuses version or exact tool-contract mismatches before host mutation", async () => {
   const calls: string[] = [];
   const result = await runInstaller(parseInstallerOptions("setup", []), {
     runCommand: async (command, args) => { calls.push(`${command} ${args.join(" ")}`); return { code: 0, stdout: "", stderr: "" }; },
-    verifyServer: async () => ({ ...completeVerification, contractVersion: "1.0.0", registryReviewStatus: "needs_review" }),
+    verifyServer: async () => ({ ...completeVerification, contractVersion: "1.0.0" }),
   });
   assert.equal(result.ok, false);
   assert.ok(!calls.some((call) => /mcp add/.test(call)));
   assert.match(result.steps.find((step) => step.target === "mcp-server")?.message ?? "", /contract=1\.0\.0/);
+});
+
+test("setup accepts an overdue registry in needs_review mode", async () => {
+  const absent: CommandRunner = async () => ({ code: 127, stdout: "", stderr: "not installed" });
+  const result = await runInstaller(parseInstallerOptions("setup", []), {
+    runCommand: absent,
+    verifyServer: async () => ({ ...completeVerification, registryReviewStatus: "needs_review" }),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.steps.find((step) => step.target === "mcp-server")?.status, "verified");
+});
+
+test("Claude registration verification rejects a mismatched command", async () => {
+  const result = await runInstaller(parseInstallerOptions("check", ["--hosts", "claude"]), {
+    runCommand: async (_command, args) => args.join(" ") === "--version"
+      ? { code: 0, stdout: "Claude", stderr: "" }
+      : { code: 0, stdout: "bitcoin-staking:\n  Command: node\n  Args: wrong.js\n", stderr: "" },
+    verifyServer: async () => 14,
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.steps.some((step) => step.target === "claude" && step.status === "failed" && /does not match/i.test(step.message)));
+});
+
+test("uninstall attempts removal even when the host CLI probe would fail", async () => {
+  const calls: string[] = [];
+  const result = await runInstaller(parseInstallerOptions("uninstall", ["--hosts", "claude", "--keep-skill"]), {
+    runCommand: async (command, args) => {
+      calls.push(`${command} ${args.join(" ")}`);
+      return { code: 127, stdout: "", stderr: "command not found" };
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.deepEqual(calls, ["claude mcp remove --scope user bitcoin-staking"]);
+  assert.ok(result.steps.some((step) => step.target === "claude" && step.status === "failed"));
 });

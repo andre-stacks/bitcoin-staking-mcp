@@ -63,32 +63,37 @@ export class VersionedRegistryClient<T extends VersionedValue> {
           this.cached?.etag ? { headers: { "If-None-Match": this.cached.etag } } : {},
         );
         if (response.status === 304 && this.cached) {
-          if (!isReviewCurrent(this.cached.value.reviewedAt, now, this.cached.value.reviewCadenceDays)) throw new Error("Remote registry review is overdue.");
+          this.assertNotFutureDated(this.cached.value, now);
           this.cached.fetchedAt = now;
           return this.envelope(this.cached.value, this.cached.raw, "runtime_cache", now);
         }
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const raw = await response.text();
         const value = this.options.parse(JSON.parse(raw));
-        if (!isReviewCurrent(value.reviewedAt, now, value.reviewCadenceDays)) throw new Error("Remote registry review is overdue.");
+        this.assertNotFutureDated(value, now);
         const etag = response.headers.get("etag") ?? undefined;
         this.cached = { value, raw, fetchedAt: now, ...(etag ? { etag } : {}) };
         return this.envelope(value, raw, "live_registry", now);
       } catch {
-        // A current reviewed snapshot is the only permitted fallback.
+        // Fall back to the bundled snapshot; freshness is preserved in metadata.
       }
     }
 
     try {
       const raw = await readFile(this.options.fallbackPath, "utf8");
       const value = this.options.parse(JSON.parse(raw));
-      if (!isReviewCurrent(value.reviewedAt, now, value.reviewCadenceDays)) {
-        throw new ServiceError("REGISTRY_UNAVAILABLE", `Bundled registry expired at ${reviewDueAt(value.reviewedAt, value.reviewCadenceDays)}.`, true);
-      }
+      this.assertNotFutureDated(value, now);
       return this.envelope(value, raw, "bundled_snapshot", now);
     } catch (error) {
       if (error instanceof ServiceError) throw error;
       throw new ServiceError("REGISTRY_UNAVAILABLE", `Remote registry and bundled snapshot are unavailable: ${error instanceof Error ? error.message : String(error)}`, true);
+    }
+  }
+
+  private assertNotFutureDated(value: T, now: Date): void {
+    const reviewedAt = new Date(value.reviewedAt);
+    if (Number.isNaN(reviewedAt.getTime()) || reviewedAt.getTime() > now.getTime()) {
+      throw new Error(`Registry review timestamp is invalid or future-dated: ${value.reviewedAt}`);
     }
   }
 

@@ -11,6 +11,13 @@ class OfflineProvider extends StacksProvider {
   override async listProtocolBonds(): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 960000, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
 }
 
+class CountingProvider extends OfflineProvider {
+  statusCalls = 0;
+  bondCalls = 0;
+  override async getProtocolStatus(): Promise<any> { this.statusCalls += 1; return super.getProtocolStatus(); }
+  override async listProtocolBonds(): Promise<any> { this.bondCalls += 1; return super.listProtocolBonds(); }
+}
+
 const now = () => new Date("2026-08-06T12:00:00.000Z");
 function service(date = now) { return new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices: new CoinGeckoPriceProvider({ now: date, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200, headers: { "content-type": "application/json" } }) }), now: date }); }
 
@@ -21,6 +28,25 @@ test("Genesis exposes exactly the two approved routes and StackingDAO is the onl
   assert.equal(pools.length, 1);
   assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].poolOperator.name : null, "StackingDAO");
   assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].lst?.tokenSymbol : null, "stBTC");
+});
+
+test("testnet snapshot reuses its live reads and route-only flows avoid a full snapshot", async () => {
+  const mainnet = new CountingProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
+  const testnet = new CountingProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
+  const svc = new BitcoinStakingService({
+    stacks: mainnet,
+    testnetStacks: testnet,
+    prices: new CoinGeckoPriceProvider({ now, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200 }) }),
+    now,
+  });
+  await svc.getMarketSnapshot({ network: "testnet" });
+  assert.equal(testnet.statusCalls, 1);
+  assert.equal(testnet.bondCalls, 1);
+  assert.equal(mainnet.statusCalls, 0);
+  assert.equal(mainnet.bondCalls, 0);
+  await svc.compareStakingPaths({ goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000" });
+  assert.equal(mainnet.statusCalls, 0);
+  assert.equal(mainnet.bondCalls, 1);
 });
 
 test("large allowlisted BTC holder with approved custody is routed to direct L1", async () => {
@@ -37,6 +63,16 @@ test("unknown whitelist and stale custody evidence cannot be recommended as curr
   assert.equal(assessment.effectiveAvailability, "needs_review");
   assert.equal(assessment.fit, "not_assessable");
   assert.ok(assessment.missingEvidence.some((item) => /Allowlist/i.test(item)));
+});
+
+test("overdue bundled registries remain readable but every route is marked needs_review", async () => {
+  const staleService = service(() => new Date("2026-08-15T00:00:00.000Z"));
+  const custody = await staleService.listCustodyPaths();
+  assert.equal(custody.reviewStatus, "review_due");
+  assert.ok(custody.paths.every((path) => path.effectiveStatus === "needs_review"));
+  const bonds = await staleService.listBonds();
+  assert.ok(bonds.bonds.length > 0);
+  assert.ok(bonds.bonds.flatMap((bond) => bond.routes).every((route) => route.effectiveAvailability === "needs_review"));
 });
 
 test("smaller sBTC holder is routed to StackingDAO while pool dependencies remain explicit", async () => {
@@ -70,6 +106,20 @@ test("L1-only plus borrowing returns no match", async () => {
   const result = await service().compareStakingPaths({ goal: "borrow_without_selling", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "access_anytime", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Fireblocks" });
   assert.equal(result.recommendedRouteId, null);
   assert.ok(result.assessments.every((item) => item.fit === "no_match"));
+});
+
+test("confirmed BitGo non-support is a no-match rather than missing evidence", async () => {
+  const result = await service().compareStakingPaths({ goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "BitGo", amountSats: "2500000000" });
+  const direct = result.assessments.find((item) => item.routeType === "native_l1_direct")!;
+  assert.equal(direct.fit, "no_match");
+  assert.ok(direct.unsupportedRequirements.some((item) => /BitGo.*unsupported/i.test(item)));
+  assert.ok(direct.missingEvidence.every((item) => !/BitGo/i.test(item)));
+});
+
+test("diligence never substitutes a different bond for an explicit identifier", async () => {
+  const profile = { goal: "earn_yield" as const, assetHeld: "btc_l1" as const, participantType: "institution" as const, whitelistStatus: "approved" as const, liquidityNeed: "lock_until_maturity" as const, bitcoinPathPreference: "bitcoin_l1_only" as const, keyControlPreference: "custodian" as const };
+  await assert.rejects(service().buildDiligenceReport({ bondId: "demo-native-bitcoin-bond", profile }), (error: unknown) => error instanceof Error && "code" in error && error.code === "NOT_FOUND");
+  await assert.rejects(service().buildDiligenceReport({ bondIndex: 99, profile }), (error: unknown) => error instanceof Error && "code" in error && error.code === "NOT_FOUND");
 });
 
 test("diligence report includes bond, protocol, route, freshness, fit, and one action", async () => {

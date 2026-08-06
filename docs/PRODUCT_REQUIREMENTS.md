@@ -45,7 +45,7 @@ For a live protocol opportunity, `build_diligence_report` combines current netwo
 
 ### Model yield
 
-The user supplies a BTC/sBTC principal naturally and the service converts it to sats. A calculation is returned only when duration, rate, and every applicable route or selected-LST fee are sourced or explicitly supplied. CoinGecko BTC and STX prices are optional enrichment for paired-STX units; price failure does not block an otherwise complete sats-denominated scenario. Public-model inputs remain distinct from final configured bond terms.
+The user supplies a BTC/sBTC principal naturally and the service converts it to sats. A gross calculation is returned when duration and rate are sourced or explicitly supplied. Missing route or selected-LST fees leave net yield unknown. CoinGecko BTC and STX prices are the default source for paired-STX units; price failure does not block an otherwise complete sats-denominated scenario. Public-model inputs remain distinct from final configured bond terms.
 
 ### Check public state
 
@@ -77,7 +77,7 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Keep protocol audits, SDK construction, wallet behavior, and end-to-end integration proof as separate evidence layers.
 - Treat price inputs as scenarios rather than predictions.
 - Separate reference-program economics from final bond-specific and on-chain terms.
-- Refuse a yield calculation unless duration, rate, and every applicable bond, pool, or selected-LST fee are sourced or explicitly supplied.
+- Refuse a gross yield calculation unless duration and rate are sourced or explicitly supplied; leave net yield unknown until every applicable bond, pool, or selected-LST fee is known.
 - Make every MCP tool read-only and non-destructive.
 
 ## Success criteria
@@ -110,7 +110,7 @@ Transactions, PSBTs, signatures, wallet connection, private partner data, indivi
 - The dedicated PoX-5 testnet may still be before its scheduled activation height: report the schedule and countdown, and return no protocol bonds rather than treating a future contract version as active.
 - A public product document may lag chain state: label it published, not live.
 - Wallet support may change: require cited product evidence and preserve unknown as unknown.
-- A target APY may not define actual payout mechanics: refuse unsupported calculations.
+- A target APY may support a labeled gross scenario without defining actual payout mechanics; never infer fees or present an unknown net payout.
 - An agent may try to turn a checklist into execution: server capabilities contain no write or transaction-building tool.
 - A host model can still ignore instructions: deterministic outputs, provenance, explicit unknown states, and adversarial host checks reduce this risk, but the product does not claim a mathematical no-hallucination guarantee for free-form model prose.
 

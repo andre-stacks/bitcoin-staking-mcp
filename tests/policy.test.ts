@@ -46,10 +46,10 @@ test("concierge skill remains orchestration-only", async () => {
 
   assert.doesNotMatch(skill, /targetRateBps|stxValueRatio|minUstxRatioBps/);
   assert.match(skill, /public model/i);
-  assert.match(skill, /CoinGecko prices may enrich a complete scenario/i);
+  assert.match(skill, /CoinGecko prices may enrich the scenario/i);
   assert.match(skill, /three-decimal display fields/i);
-  assert.match(skill, /economics are incomplete and do not calculate/i);
-  assert.match(skill, /prices may enrich a complete scenario, but do not cure missing economics/i);
+  assert.match(skill, /show the gross reward.*net reward as unknown/i);
+  assert.match(skill, /prices may enrich the scenario but do not replace missing rate or duration inputs/i);
   assert.doesNotMatch(skill, /api\.(?:mainnet|testnet)[^\s]+\/v2\/pox/i);
 });
 

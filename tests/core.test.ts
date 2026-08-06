@@ -80,13 +80,14 @@ test("pool and optional LST fees are applied sequentially", async () => {
   assert.equal(result.netRewardSats, "2565000");
 });
 
-test("unknown pool fee refuses incomplete economics", async () => {
+test("unknown pool fee preserves gross economics while leaving net reward pending", async () => {
   const bond = await bondFile("genesis-bond-cycle-142.json");
   const pool = bond.participationRoutes.find((route) => route.routeType === "sbtc_pool")!;
-  assert.throws(
-    () => simulateYield(bond, pool, { principalSats: "100000000" }),
-    (error: unknown) => error instanceof ServiceError && error.code === "INSUFFICIENT_DATA",
-  );
+  const result = simulateYield(bond, pool, { principalSats: "100000000" });
+  assert.ok(result.grossRewardSats);
+  assert.equal(result.routeFeeBps, null);
+  assert.equal(result.netRewardSats, undefined);
+  assert.match(result.netRewardDisplay, /pending applicable fees/i);
 });
 
 test("25 BTC Genesis public model returns a 174-day gross scenario and a 1.25 BTC-equivalent STX requirement", async () => {

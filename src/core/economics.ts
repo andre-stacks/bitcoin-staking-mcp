@@ -98,15 +98,10 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
   if (input.includeLst && (route.routeType !== "sbtc_pool" || !route.lst)) throw new ServiceError("INVALID_INPUT", "includeLst requires an sBTC pool route with a published LST capability.");
   const lstFeeBps = route.routeType === "sbtc_pool" && input.includeLst ? input.lstFeeBps ?? route.lst?.feeBps : 0;
 
-  if (
-    durationDays === undefined ||
-    annualRateBps === undefined ||
-    routeFeeBps === undefined ||
-    lstFeeBps === undefined
-  ) {
+  if (durationDays === undefined || annualRateBps === undefined) {
     throw new ServiceError(
       "INSUFFICIENT_DATA",
-      "Route economics are incomplete: duration, annual rate, and every applicable route or LST fee must be sourced or explicitly supplied.",
+      "Route economics are incomplete: duration and annual rate must be sourced or explicitly supplied.",
     );
   }
   if (
@@ -114,8 +109,10 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
     durationDays <= 0 ||
     !Number.isSafeInteger(annualRateBps) ||
     annualRateBps < 0 || annualRateBps > 100_000 ||
-    !Number.isSafeInteger(routeFeeBps) || routeFeeBps < 0 || routeFeeBps > 10_000 ||
-    !Number.isSafeInteger(lstFeeBps) || lstFeeBps < 0 || lstFeeBps > 10_000
+    (routeFeeBps !== undefined &&
+      (!Number.isSafeInteger(routeFeeBps) || routeFeeBps < 0 || routeFeeBps > 10_000)) ||
+    (lstFeeBps !== undefined &&
+      (!Number.isSafeInteger(lstFeeBps) || lstFeeBps < 0 || lstFeeBps > 10_000))
   ) {
     throw new ServiceError("INVALID_INPUT", "Invalid duration, annual-rate, or fee input.");
   }
@@ -131,10 +128,15 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
 
   const gross =
     (principal * BigInt(annualRateBps) * BigInt(durationDays)) / (10_000n * 365n);
-  const routeFee = (gross * BigInt(routeFeeBps)) / 10_000n;
-  const afterRouteFee = gross - routeFee;
-  const lstFee = (afterRouteFee * BigInt(lstFeeBps)) / 10_000n;
-  const net = afterRouteFee - lstFee;
+  const routeFee = routeFeeBps === undefined ? undefined : (gross * BigInt(routeFeeBps)) / 10_000n;
+  const afterRouteFee = routeFee === undefined ? undefined : gross - routeFee;
+  const lstFeeKnown =
+    !input.includeLst || route.routeType !== "sbtc_pool" || !route.lst || lstFeeBps !== undefined;
+  const lstFee =
+    afterRouteFee === undefined || !lstFeeKnown
+      ? undefined
+      : (afterRouteFee * BigInt(lstFeeBps ?? 0)) / 10_000n;
+  const net = afterRouteFee === undefined || lstFee === undefined ? undefined : afterRouteFee - lstFee;
 
   const pairedRatioBps =
     route.routeType === "native_l1_direct" ? route.pairedStx.minimumValueRatioBps : undefined;
@@ -186,11 +188,14 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
   if (bond.dataStatus === "demo") {
     assumptions.push("The calculation uses illustrative demo data and is not an investable offer.");
   }
+  if (routeFeeBps === undefined || (input.includeLst && lstFeeBps === undefined)) {
+    assumptions.push("Gross reward is projected from the sourced rate and duration; net reward remains unknown until every applicable fee is published.");
+  }
   const priceScenarios = (input.stxPriceScenariosUsd ?? []).map((stxPriceUsd) => ({
     btcPriceUsd: input.btcPriceUsd ?? null,
     stxPriceUsd,
     estimatedRewardValueUsd:
-      input.btcPriceUsd === undefined
+      input.btcPriceUsd === undefined || net === undefined
         ? null
         : (Number(net) / 100_000_000) * input.btcPriceUsd,
     note: "The STX price scenario affects the paired-STX token estimate; it does not change the sBTC-denominated reward.",
@@ -204,22 +209,22 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
     durationDays,
     projectionPeriod,
     annualRateBps,
-    feeBps: routeFeeBps,
-    routeFeeBps,
-    lstFeeBps,
+    feeBps: routeFeeBps ?? null,
+    routeFeeBps: routeFeeBps ?? null,
+    lstFeeBps: lstFeeBps ?? null,
     grossRewardSats: gross.toString(),
     grossRewardBtc: btcToThreeDecimals(gross),
     grossRewardBtcExact: satsToBtc(gross),
     grossRewardDisplay: btcDisplay(gross),
-    feeSats: routeFee.toString(),
-    routeFeeSats: routeFee.toString(),
-    lstFeeSats: lstFee.toString(),
-    netRewardSats: net.toString(),
-    netRewardBtc: btcToThreeDecimals(net),
-    netRewardBtcExact: satsToBtc(net),
-    netRewardDisplay: btcDisplay(net),
+    feeSats: routeFee?.toString(),
+    routeFeeSats: routeFee?.toString(),
+    lstFeeSats: lstFee?.toString(),
+    netRewardSats: net?.toString(),
+    netRewardBtc: net === undefined ? undefined : btcToThreeDecimals(net),
+    netRewardBtcExact: net === undefined ? undefined : satsToBtc(net),
+    netRewardDisplay: net === undefined ? "Pending applicable fees" : btcDisplay(net),
     estimatedRewardValueUsd:
-      input.btcPriceUsd === undefined
+      input.btcPriceUsd === undefined || net === undefined
         ? null
         : (Number(net) / 100_000_000) * input.btcPriceUsd,
     priceScenarios,

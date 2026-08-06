@@ -5,7 +5,6 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { VersionedRegistryClient } from "../src/providers/versioned-registry.js";
 import { ManifestStore } from "../src/providers/manifest-store.js";
-import { ServiceError } from "../src/core/errors.js";
 
 interface Fixture { registryVersion: string; reviewedAt: string; reviewCadenceDays: number; value: string }
 const parse = (value: unknown) => value as Fixture;
@@ -21,14 +20,16 @@ test("remote registry uses ETag and a 15-minute runtime cache", async (context) 
   now = new Date("2026-08-06T01:16:00.000Z"); const revalidated = await client.read(); assert.equal(revalidated.metadata.sourceMode, "runtime_cache"); assert.equal(ifNoneMatch, '"v1"');
 });
 
-test("current bundled fallback is labeled and stale fallback is refused", async (context) => {
+test("bundled fallback remains readable and labels stale data needs_review", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "btc-registry-")); context.after(() => rm(directory, { recursive: true, force: true }));
   const fallback = join(directory, "fallback.json"); await writeFile(fallback, JSON.stringify({ registryVersion: "fallback", reviewedAt: "2026-08-06T00:00:00.000Z", reviewCadenceDays: 7, value: "fallback" }));
   const failingFetch: typeof fetch = async () => { throw new Error("offline"); };
   const current = new VersionedRegistryClient({ remoteUrl: "https://example.com", fallbackPath: fallback, parse, now: () => new Date("2026-08-10T00:00:00.000Z"), fetchImpl: failingFetch, remoteEnabled: true });
   assert.equal((await current.read()).metadata.sourceMode, "bundled_snapshot");
   const stale = new VersionedRegistryClient({ remoteUrl: "https://example.com", fallbackPath: fallback, parse, now: () => new Date("2026-08-14T00:00:00.000Z"), fetchImpl: failingFetch, remoteEnabled: true });
-  await assert.rejects(stale.read(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE" && error.retryable);
+  const staleResult = await stale.read();
+  assert.equal(staleResult.metadata.sourceMode, "bundled_snapshot");
+  assert.equal(staleResult.metadata.reviewStatus, "needs_review");
 });
 
 test("cache revalidation occurs at the exact 15-minute boundary", async (context) => {
@@ -44,7 +45,7 @@ test("cache revalidation occurs at the exact 15-minute boundary", async (context
   now = new Date("2026-08-06T01:15:00.000Z"); const result = await client.read(); assert.equal(requests, 2); assert.equal(result.metadata.sourceMode, "runtime_cache");
 });
 
-test("stale remote 304 and future-dated remote content fall back only to a current bundled snapshot", async (context) => {
+test("stale remote data degrades to needs_review while future-dated content falls back", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "btc-registry-stale-")); context.after(() => rm(directory, { recursive: true, force: true }));
   const fallback = join(directory, "fallback.json");
   await writeFile(fallback, JSON.stringify({ registryVersion: "fallback-current", reviewedAt: "2026-08-14T00:00:00.000Z", reviewCadenceDays: 7, value: "fallback" }));
@@ -55,9 +56,10 @@ test("stale remote 304 and future-dated remote content fall back only to a curre
   const client = new VersionedRegistryClient({ remoteUrl: "https://example.com/registry.json", fallbackPath: fallback, parse, now: () => now, fetchImpl, remoteEnabled: true });
   assert.equal((await client.read()).metadata.sourceMode, "live_registry");
   now = new Date("2026-08-14T01:00:00.000Z");
-  const fallbackResult = await client.read();
-  assert.equal(fallbackResult.metadata.sourceMode, "bundled_snapshot");
-  assert.equal(fallbackResult.value.registryVersion, "fallback-current");
+  const staleResult = await client.read();
+  assert.equal(staleResult.metadata.sourceMode, "runtime_cache");
+  assert.equal(staleResult.value.registryVersion, "remote");
+  assert.equal(staleResult.metadata.reviewStatus, "needs_review");
 
   const futureFetch: typeof fetch = async () => new Response(JSON.stringify({ registryVersion: "future", reviewedAt: "2026-08-20T00:00:00.000Z", reviewCadenceDays: 7, value: "future" }), { status: 200 });
   const future = new VersionedRegistryClient({ remoteUrl: "https://example.com/registry.json", fallbackPath: fallback, parse, now: () => now, fetchImpl: futureFetch, remoteEnabled: true });

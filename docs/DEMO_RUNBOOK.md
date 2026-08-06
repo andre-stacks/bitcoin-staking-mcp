@@ -28,7 +28,7 @@ Expected behavior: check mainnet state and published manifests first. If neither
 
 Current expected product result: show the Genesis Bond as slated for August 26, 2026 in Cycle 142, distinguish that schedule from on-chain configuration, and explain what a participant can prepare now.
 
-For a 25 BTC scenario, explicitly supply a duration and fee assumption before showing the 3% reference target and 5% paired-STX value ratio. If an applicable fee remains unknown, show the missing economics and do not calculate the route.
+For a 25 BTC scenario, use the sourced public-model duration, 3% reference target, and 5% paired-STX value ratio. If an applicable fee remains unknown, show the gross reward and label net reward as pending rather than assuming a zero fee.
 
 ### 2. Generic institutional diligence
 

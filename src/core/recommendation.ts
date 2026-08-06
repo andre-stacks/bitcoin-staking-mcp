@@ -135,7 +135,10 @@ export function assessRoute(
     if (requestedCustody) {
       const path = custodyPaths.find((item) => item.id.toLowerCase() === requestedCustody || item.name.toLowerCase() === requestedCustody);
       const current = path && isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays);
-      if (!path || path.status !== "available" || !route.custodyPathIds.includes(path.id) || !current) {
+      if (path && current && path.status === "not_currently_supported") {
+        unsupportedRequirements.push(`${path.name} is currently confirmed as unsupported for this route.`);
+        fit = "no_match";
+      } else if (!path || path.status !== "available" || !route.custodyPathIds.includes(path.id) || !current) {
         missingEvidence.push(`${profile.walletOrCustodian} is not a current approved custody path for this route.`);
         if (fit === "strong") fit = "conditional";
       } else reasons.push(`${path.name} is a current approved custody path.`);

@@ -62,5 +62,5 @@ For the initial PoX-5 reference model, target APY is applied to BTC principal ov
 
 required STX value = BTC principal value × minimum STX ratio
 
-The user-facing answer may report current BTC and STX prices and required STX units when live price enrichment succeeds. Exact reward sats remain available for deterministic verification. The calculation is refused when duration, rate, or any applicable route or selected-LST fee is incomplete; optional price failure alone does not invalidate a complete sats-denominated scenario.
+The user-facing answer reports current BTC and STX prices and required STX units when live price enrichment succeeds. Exact reward sats remain available for deterministic verification. Missing duration or rate blocks the projection; a missing applicable route or selected-LST fee leaves net yield unknown while preserving the sourced gross scenario. Price failure alone does not invalidate deterministic reward sats.
 `;

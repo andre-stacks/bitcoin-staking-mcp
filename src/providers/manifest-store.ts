@@ -55,9 +55,8 @@ export class ManifestStore {
       const fallbackRaw = await readFile(resolve(dataRoot(), "bond-registry.json"), "utf8").catch((reason: unknown) => { throw new ServiceError("REGISTRY_UNAVAILABLE", `Remote manifests and bundled registry are unavailable: ${reason instanceof Error ? reason.message : String(reason)}`, true); });
       const fallback = BondRegistrySchema.parse(JSON.parse(fallbackRaw));
       const now = this.now();
-      if (!isReviewCurrent(fallback.reviewedAt, now, fallback.reviewCadenceDays)) throw new ServiceError("REGISTRY_UNAVAILABLE", `Remote manifests failed and bundled registry expired at ${reviewDueAt(fallback.reviewedAt, fallback.reviewCadenceDays)}.`, true);
       bonds = await Promise.all(fallback.bondFiles.map((name) => this.readManifest(name, "bundled_snapshot")));
-      metadata = { sourceMode: "bundled_snapshot", registryVersion: fallback.registryVersion, contentHash: registryHash(JSON.stringify(bonds)), fetchedAt: now.toISOString(), reviewedAt: fallback.reviewedAt, reviewDueAt: reviewDueAt(fallback.reviewedAt, fallback.reviewCadenceDays), reviewStatus: "current" };
+      metadata = { sourceMode: "bundled_snapshot", registryVersion: fallback.registryVersion, contentHash: registryHash(JSON.stringify(bonds)), fetchedAt: now.toISOString(), reviewedAt: fallback.reviewedAt, reviewDueAt: reviewDueAt(fallback.reviewedAt, fallback.reviewCadenceDays), reviewStatus: isReviewCurrent(fallback.reviewedAt, now, fallback.reviewCadenceDays) ? "current" : "needs_review" };
     }
     this.assertUnique(bonds);
     metadata = { ...metadata, contentHash: registryHash(JSON.stringify(bonds)) };

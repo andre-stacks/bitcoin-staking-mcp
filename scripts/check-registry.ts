@@ -8,22 +8,24 @@ const index = BondRegistrySchema.parse(JSON.parse(await readFile(resolve(root, "
 const custody = CustodyRegistrySchema.parse(JSON.parse(await readFile(resolve(root, "custody-paths.json"), "utf8")));
 const bonds = await Promise.all(index.bondFiles.map(async (name) => BondManifestSchema.parse(JSON.parse(await readFile(resolve(root, "bonds", name), "utf8")))));
 const errors: string[] = [];
-const now = new Date();
+const freshnessIssues: string[] = [];
+const now = new Date(process.env.BITCOIN_STAKING_REVIEW_NOW ?? Date.now());
+if (Number.isNaN(now.getTime())) throw new Error("BITCOIN_STAKING_REVIEW_NOW must be a valid date-time when provided.");
 
 if (new Set(bonds.map((bond) => bond.id)).size !== bonds.length) errors.push("Duplicate bond ID.");
-if (!isReviewCurrent(index.reviewedAt, now, index.reviewCadenceDays)) errors.push(`Bond registry is overdue: ${index.reviewedAt}.`);
-if (!isReviewCurrent(custody.reviewedAt, now, custody.reviewCadenceDays)) errors.push(`Custody registry is overdue: ${custody.reviewedAt}.`);
+if (!isReviewCurrent(index.reviewedAt, now, index.reviewCadenceDays)) freshnessIssues.push(`Bond registry is overdue: ${index.reviewedAt}.`);
+if (!isReviewCurrent(custody.reviewedAt, now, custody.reviewCadenceDays)) freshnessIssues.push(`Custody registry is overdue: ${custody.reviewedAt}.`);
 for (const bond of bonds) {
-  if (!isReviewCurrent(bond.attestation.reviewedAt, now, bond.attestation.reviewCadenceDays)) errors.push(`${bond.id} owner attestation is overdue: ${bond.attestation.reviewedAt}.`);
+  if (!isReviewCurrent(bond.attestation.reviewedAt, now, bond.attestation.reviewCadenceDays)) freshnessIssues.push(`${bond.id} owner attestation is overdue: ${bond.attestation.reviewedAt}.`);
   for (const route of bond.participationRoutes) {
-    if (!isReviewCurrent(route.attestation.reviewedAt, now, route.attestation.reviewCadenceDays)) errors.push(`${bond.id}/${route.id} owner attestation is overdue: ${route.attestation.reviewedAt}.`);
+    if (!isReviewCurrent(route.attestation.reviewedAt, now, route.attestation.reviewCadenceDays)) freshnessIssues.push(`${bond.id}/${route.id} owner attestation is overdue: ${route.attestation.reviewedAt}.`);
     if (route.routeType === "sbtc_pool") {
       for (const contract of route.contracts) if (contract.network !== bond.network) errors.push(`${bond.id}/${route.id} contract ${contract.contractId} uses ${contract.network}, expected ${bond.network}.`);
-      if (route.lst && !isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays)) errors.push(`${bond.id}/${route.id}/${route.lst.tokenSymbol} owner attestation is overdue: ${route.lst.attestation.reviewedAt}.`);
+      if (route.lst && !isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays)) freshnessIssues.push(`${bond.id}/${route.id}/${route.lst.tokenSymbol} owner attestation is overdue: ${route.lst.attestation.reviewedAt}.`);
     }
   }
 }
-for (const path of custody.paths) if (!isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays)) errors.push(`Custody path ${path.id} owner attestation is overdue: ${path.attestation.reviewedAt}.`);
+for (const path of custody.paths) if (!isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays)) freshnessIssues.push(`Custody path ${path.id} owner attestation is overdue: ${path.attestation.reviewedAt}.`);
 const genesis = bonds.find((bond) => bond.id === "genesis-bond-cycle-142");
 if (!genesis) errors.push("Genesis Bond is missing.");
 else {
@@ -35,6 +37,7 @@ else {
 
 const sources = [...bonds.flatMap((bond) => bond.sources), ...custody.sources];
 if (live) {
+  errors.push(...freshnessIssues);
   for (const source of new Map(sources.map((item) => [item.url, item])).values()) {
     if (source.sourceType === "public_manifest" || source.sourceType === "demo_manifest") continue; // The checked-in file itself is validated locally before it can exist at the release URL.
     try {
@@ -45,5 +48,6 @@ if (live) {
   }
 }
 
-process.stdout.write(`${JSON.stringify({ registryVersion: index.registryVersion, bonds: bonds.length, custodyPaths: custody.paths.length, sourceCount: sources.length, freshness: errors.length ? "review_required" : "current" }, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({ registryVersion: index.registryVersion, bonds: bonds.length, custodyPaths: custody.paths.length, sourceCount: sources.length, freshness: freshnessIssues.length ? "review_required" : "current" }, null, 2)}\n`);
+if (!live && freshnessIssues.length) process.stderr.write(`${freshnessIssues.map((issue) => `- needs_review: ${issue}`).join("\n")}\n`);
 if (errors.length) { process.stderr.write(`${errors.map((error) => `- ${error}`).join("\n")}\n`); process.exitCode = 1; }

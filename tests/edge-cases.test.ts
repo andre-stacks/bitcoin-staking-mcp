@@ -104,13 +104,17 @@ test("availability dimensions handle exact freshness boundary and every terminal
   assert.equal(routeEffectiveAvailability({ ...route, productStatus: "tested", enrollmentStatus: "unknown" }, due), "unknown");
 });
 
-test("yield refuses every incomplete economic dimension and invalid LST selection", async () => {
+test("yield requires rate and duration, while unknown fees leave net economics pending", async () => {
   const bond = await genesis();
   const direct = bond.participationRoutes[0];
   const pool = bond.participationRoutes[1];
-  assert.throws(() => simulateYield(bond, pool, { principalSats: "100000000" }), expectsCode("INSUFFICIENT_DATA"));
+  const poolWithoutFee = simulateYield(bond, pool, { principalSats: "100000000" });
+  assert.ok(poolWithoutFee.grossRewardSats);
+  assert.equal(poolWithoutFee.netRewardSats, undefined);
   assert.throws(() => simulateYield(bond, direct, { principalSats: "100000000", feeBps: 0, includeLst: true }), expectsCode("INVALID_INPUT"));
-  assert.throws(() => simulateYield(bond, { ...pool, feeBps: 0 }, { principalSats: "100000000", includeLst: true }), expectsCode("INSUFFICIENT_DATA"));
+  const poolWithoutLstFee = simulateYield(bond, { ...pool, feeBps: 0 }, { principalSats: "100000000", includeLst: true });
+  assert.ok(poolWithoutLstFee.grossRewardSats);
+  assert.equal(poolWithoutLstFee.netRewardSats, undefined);
 
   const noDuration = structuredClone(bond);
   delete noDuration.economics.referenceModel;

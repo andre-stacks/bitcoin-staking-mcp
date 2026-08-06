@@ -95,6 +95,17 @@ npx -y github:andre-stacks/bitcoin-staking-mcp#v0.3.0 setup \
 
 The same pinned source is stored in both host launch commands.
 
+## Release checklist
+
+Portable setup is pinned to `DEFAULT_PACKAGE_SPEC`; merging code does not publish that package reference. Before declaring a release available:
+
+1. merge the reviewed release commit;
+2. create and push the exact version tag referenced by `DEFAULT_PACKAGE_SPEC`, the README, and this guide;
+3. verify the tag resolves with `git ls-remote --tags origin VERSION_TAG`;
+4. run `npx -y github:andre-stacks/bitcoin-staking-mcp#VERSION_TAG check` from outside the repository.
+
+Do not announce fresh-install availability until the pinned tag exists and the portable check succeeds.
+
 ## Local checkout
 
 For development, register the current checkout instead of the GitHub package:

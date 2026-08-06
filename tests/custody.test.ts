@@ -3,7 +3,6 @@ import test from "node:test";
 import { CustodyRegistrySchema } from "../src/core/schemas.js";
 import { CustodyStore } from "../src/providers/custody-store.js";
 import { BitcoinStakingService } from "../src/service.js";
-import { ServiceError } from "../src/core/errors.js";
 
 test("custody registry contains the complete current product directory", async () => {
   const registry = CustodyRegistrySchema.parse(await new CustodyStore().read());
@@ -37,5 +36,7 @@ test("custody directory is product-level, filterable, and freshness-aware", asyn
   const stale = new BitcoinStakingService({
     now: () => new Date("2026-08-14T00:00:00.001Z"),
   });
-  await assert.rejects(stale.listCustodyPaths(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE");
+  const overdue = await stale.listCustodyPaths();
+  assert.equal(overdue.reviewStatus, "review_due");
+  assert.ok(overdue.paths.every((path) => path.effectiveStatus === "needs_review"));
 });

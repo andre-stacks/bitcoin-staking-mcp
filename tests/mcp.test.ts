@@ -57,7 +57,7 @@ test("every tool validates structured output and exposes no transaction fields",
 
 test("yield uses live CoinGecko prices and three-decimal quantity displays", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalSats: "2500000000", feeBps: 0 } });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalSats: "2500000000" } });
   assert.equal(result.isError, undefined);
   const content = result.structuredContent as any;
   assert.equal(content.priceSnapshot.provider, "CoinGecko");
@@ -67,19 +67,24 @@ test("yield uses live CoinGecko prices and three-decimal quantity displays", asy
   assert.equal(content.pairedStxRequirement.scenarios[0].requiredStxUnits, 620_453.635);
   assert.equal(content.pairedStxRequirement.scenarios[0].requiredStxUnitsDisplay, "620453.635 STX");
   assert.equal(content.grossRewardDisplay, "0.358 BTC");
-  assert.equal(content.netRewardSats, content.grossRewardSats);
+  assert.equal(content.netRewardSats, undefined);
+  assert.ok(content.assumptions.some((assumption: string) => /CoinGecko Simple Price observations/i.test(assumption)));
+  assert.ok(content.assumptions.every((assumption: string) => !/price enrichment was unavailable/i.test(assumption)));
   assert.ok(content.sources.some((source: any) => source.id === "coingecko-simple-price"));
 });
 
-test("yield refuses incomplete route economics before attempting optional price enrichment", async (context) => {
+test("yield returns gross economics when fees and optional price enrichment are unavailable", async (context) => {
   let priceRequests = 0;
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { priceRequests += 1; throw new Error("prices offline"); } });
   const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
   const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-stackingdao-sbtc-pool", principalBtc: "1 sBTC" } });
-  assert.equal(result.isError, true);
-  assert.match(JSON.stringify(result.content), /INSUFFICIENT_DATA/);
-  assert.equal(priceRequests, 0);
+  assert.equal(result.isError, undefined);
+  const content = result.structuredContent as any;
+  assert.ok(content.grossRewardSats);
+  assert.equal(content.netRewardSats, undefined);
+  assert.equal(content.priceSnapshot.usage, "unavailable");
+  assert.equal(priceRequests, 1);
 });
 
 test("optional price failure does not invalidate a complete deterministic sats calculation", async (context) => {
@@ -130,7 +135,7 @@ test("capabilities expose server and contract versions and concierge uses one ro
   assert.match(text, new RegExp(`Contract version: ${CONTRACT_VERSION}`)); assert.match(text, new RegExp(`Server version: ${SERVER_VERSION}`));
   assert.match(text, /Skill version: 0\.3\.0/); assert.match(text, /Registry version: 2026-08-06\.1/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
   const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: {} }); const content = prompt.messages[0]?.content;
-  assert.equal(content?.type, "text"); if (content?.type === "text") { assert.match(content.text, /call get_market_snapshot first/i); assert.match(content.text, /exactly two routes/i); assert.match(content.text, /keeping BTC on L1, permissionless smaller-balance access, or liquidity/i); assert.match(content.text, /stBTC.*optional/i); assert.match(content.text, /economics are incomplete and do not calculate/i); assert.match(content.text, /prices may enrich a complete scenario, but do not cure missing economics/i); assert.match(content.text, /three-decimal display fields/i); assert.match(content.text, /not final configured bond terms/i); }
+  assert.equal(content?.type, "text"); if (content?.type === "text") { assert.match(content.text, /call get_market_snapshot first/i); assert.match(content.text, /exactly two routes/i); assert.match(content.text, /keeping BTC on L1, permissionless smaller-balance access, or liquidity/i); assert.match(content.text, /stBTC.*optional/i); assert.match(content.text, /show the sourced gross reward, label net reward unknown/i); assert.match(content.text, /prices may enrich the scenario, but do not replace missing rate or duration inputs/i); assert.match(content.text, /three-decimal display fields/i); assert.match(content.text, /not final configured bond terms/i); }
 });
 
 test("concierge prompt makes the current audit question override unrelated prior context", async (context) => {

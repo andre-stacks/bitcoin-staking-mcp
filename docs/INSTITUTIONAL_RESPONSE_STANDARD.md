@@ -74,7 +74,7 @@ Avoid:
 - If the evidence does not answer the question, say: “This MCP does not currently verify that.” Then identify the missing evidence or source needed to answer it.
 - If a live tool fails or times out, say that current state could not be verified. Do not substitute stale state, demo data, or a remembered value.
 - Do not state a material factual claim without a returned source URL or an explicit deterministic derivation with its assumptions.
-- A sourced public reference model may supply rate and duration assumptions, but calculate route economics only when every applicable bond, pool, or selected-LST fee is also sourced or explicitly supplied.
+- A sourced public reference model may supply rate and duration for a labeled gross scenario. If an applicable bond, pool, or selected-LST fee is missing, keep net yield unknown rather than suppressing the gross calculation.
 - Treat `unknown`, `not_verified`, `not_assessable`, `context_only`, and an empty result as final evidence states, not invitations to guess.
 - Never infer wallet support from protocol compatibility, safety from an audit statement, availability from testnet or demo data, or realized yield from a target rate.
 

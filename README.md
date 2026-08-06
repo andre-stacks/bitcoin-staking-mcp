@@ -34,7 +34,7 @@ The concierge is an approachable Bitcoin Staking guide with institutional-qualit
 
 The answer policy is evidence-gated. The concierge may use only current MCP structured output and MCP resources for factual claims. It does not complete missing answers from model memory, infer wallet support from protocol behavior, treat an audit statement as end-to-end wallet proof, or substitute demo data after a live-read failure. When the corpus cannot answer a question, it says: “This MCP does not currently verify that,” and identifies the missing evidence.
 
-The published product registry currently lists the Genesis Bond as slated for August 26, 2026 in Cycle 142. Its versioned [public economic model](https://btc-staking-public-dashboard.vercel.app/) uses a 3% BTC target APY, a 5% minimum STX value ratio, and a 12-cycle (~174-day) reference period. Complete yield scenarios may use current CoinGecko prices to calculate paired STX units, but calculations are refused while any applicable fee is missing. The bond remains `upcoming` until on-chain configuration and enrollment are verified.
+The published product registry currently lists the Genesis Bond as slated for August 26, 2026 in Cycle 142. Its versioned [public economic model](https://btc-staking-public-dashboard.vercel.app/) uses a 3% BTC target APY, a 5% minimum STX value ratio, and a 12-cycle (~174-day) reference period. Yield scenarios use current CoinGecko prices to calculate paired STX units. A sourced rate and duration support a gross projection; when an applicable fee is missing, net yield remains unknown. The bond remains `upcoming` until on-chain configuration and enrollment are verified.
 
 ## Quick start
 
@@ -226,7 +226,7 @@ The default tests are offline. The mainnet and configured-testnet tests are opt-
 
 The offline suite invokes all fourteen tools through an in-process MCP client, validates complete output contracts, checks registry caching and freshness, exercises the two route journeys and upstream failures, and tests the shared prompt/skill evidence contract. Prompt controls materially reduce unsupported answers, but callers should treat returned provenance and explicit unknown states as the enforceable trust boundary.
 
-The bond, route, LST, and custody registries use a seven-day owner-review cadence. `npm run registry:validate` validates schemas, references, formats, duplicates, status-specific fields, and freshness; `npm run registry:validate:live` also checks external evidence URLs. A nightly GitHub Actions workflow opens or updates one `registry-review-due` issue when validation fails. The check never promotes a partner automatically: changed or stale claims require product-owner confirmation through a reviewed registry PR.
+The bond, route, LST, and custody registries use a seven-day owner-review cadence. `npm run registry:validate` validates schemas, references, formats, duplicates, and status-specific fields; overdue attestations are reported as `needs_review` without breaking offline builds. `npm run registry:validate:live` requires current attestations and also checks external evidence URLs. A nightly GitHub Actions workflow opens or updates one `registry-review-due` issue when live validation fails. The check never promotes a partner automatically: changed or stale claims require product-owner confirmation through a reviewed registry PR.
 
 ## Documentation
 

@@ -262,7 +262,7 @@ async function removeHostRegistration(
         });
   if (removed.code !== 0) {
     const output = `${removed.stderr}\n${removed.stdout}`;
-    if (/not found|no server|does not exist/i.test(output)) {
+    if (removed.code !== 127 && /not found|no server|does not exist/i.test(output)) {
       return { target: host, status: "skipped", message: "No registration was present." };
     }
     return {
@@ -378,6 +378,10 @@ export async function runInstaller(
   const steps: InstallerStepResult[] = [];
   const availableHosts: InstallerHost[] = [];
   for (const host of options.hosts) {
+    if (options.action === "uninstall") {
+      availableHosts.push(host);
+      continue;
+    }
     const probe = await runCommand(host, ["--version"], { cwd: verificationCwd });
     if (probe.code === 0) availableHosts.push(host);
     else steps.push({ target: host, status: options.hostsExplicit ? "failed" : "skipped", message: `${host} is not installed; ${options.hostsExplicit ? "the explicitly requested host is required" : "default setup skipped it"}.` });
@@ -387,7 +391,7 @@ export async function runInstaller(
     const value = await verifyServer();
     if (typeof value === "number") return { ok: value === EXPECTED_TOOL_NAMES.length, message: `MCP handshake returned ${value} tools; expected ${EXPECTED_TOOL_NAMES.length}.` };
     const exactTools = JSON.stringify(value.toolNames) === JSON.stringify([...EXPECTED_TOOL_NAMES]);
-    const ok = exactTools && value.serverVersion === SERVER_VERSION && value.contractVersion === CONTRACT_VERSION && value.skillVersion === SKILL_VERSION && value.registryVersion !== "unknown" && value.registryHash.startsWith("sha256:") && value.registryReviewStatus === "current";
+    const ok = exactTools && value.serverVersion === SERVER_VERSION && value.contractVersion === CONTRACT_VERSION && value.skillVersion === SKILL_VERSION && value.registryVersion !== "unknown" && value.registryHash.startsWith("sha256:") && ["current", "needs_review"].includes(value.registryReviewStatus);
     return { ok, message: `tools=${value.toolNames.length}, server=${value.serverVersion}, contract=${value.contractVersion}, skill=${value.skillVersion}, registry=${value.registryVersion} ${value.registryReviewStatus}, hash=${value.registryHash}` };
   };
 
