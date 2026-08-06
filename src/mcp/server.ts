@@ -10,6 +10,10 @@ import {
 import { GLOSSARY, YIELD_METHODOLOGY } from "../content.js";
 import { BitcoinStakingService } from "../service.js";
 import { SecurityTopicValues } from "../security.js";
+import {
+  INSTITUTIONAL_RESPONSE_STANDARD,
+  SOURCE_METHODOLOGY,
+} from "../institutional.js";
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -72,7 +76,7 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
     { name: "bitcoin-staking-mcp", version: "0.1.0" },
     {
       instructions:
-        "Read-only Bitcoin Staking intelligence. Never imply that demo data is live or that testnet assets are investable. Use get_protocol_status, list_protocol_bonds, and list_bonds before recommending a bond. Use get_security_guidance for audit, timelock, wallet, pre-funding, recovery, or early-exit questions. Keep protocol assurance separate from wallet integration proof. Keep native L1 BTC separate from sBTC, and treat wallet support as unknown unless cited product evidence says otherwise. Never construct, sign, or broadcast transactions.",
+        "Act as an institutional Bitcoin Staking diligence analyst: neutral, factual, concise, evidence-led, and non-promotional. Lead with the decision-relevant answer; adapt depth for CFO, investment, technical, custody, or security audiences. Ground answers on live state, deployed or release-pinned PoX-5 contracts and reference implementations, accepted SIP-045, then pinned SDK/tests and official docs. Never imply that demo data is live or testnet assets are investable. Use get_protocol_status, list_protocol_bonds, and list_bonds before recommending a bond. Use get_security_guidance for audit, timelock, wallet, pre-funding, recovery, or early-exit questions. Keep protocol assurance separate from wallet integration proof. Keep native L1 BTC separate from sBTC, and treat wallet support as unknown unless cited product evidence says otherwise. State what is not proven. Never construct, sign, or broadcast transactions.",
     },
   );
 
@@ -268,6 +272,28 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
   );
 
   server.registerResource(
+    "bitcoin-staking-source-methodology",
+    "bitcoin-staking://methodology/sources",
+    { title: "Bitcoin Staking source methodology", mimeType: "text/markdown" },
+    async (uri) => ({
+      contents: [
+        { uri: uri.href, mimeType: "text/markdown", text: SOURCE_METHODOLOGY },
+      ],
+    }),
+  );
+
+  server.registerResource(
+    "bitcoin-staking-institutional-response-standard",
+    "bitcoin-staking://methodology/response-standard",
+    { title: "Institutional response standard", mimeType: "text/markdown" },
+    async (uri) => ({
+      contents: [
+        { uri: uri.href, mimeType: "text/markdown", text: INSTITUTIONAL_RESPONSE_STANDARD },
+      ],
+    }),
+  );
+
+  server.registerResource(
     "bitcoin-staking-bond",
     new ResourceTemplate("bitcoin-staking://bonds/{bondId}", {
       list: async () => ({
@@ -348,11 +374,11 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
             type: "text" as const,
             text: `What would you like your Bitcoin to do?
 
-Act as a read-only Bitcoin Staking concierge. ${request ? `The user's initial request is: ${request}` : "Wait for the user's answer."}
+Act as a read-only institutional Bitcoin Staking diligence analyst. Be neutral, factual, concise, evidence-led, and non-promotional. Lead with the decision-relevant answer and adapt depth to the apparent audience: CFO/investment committee, technical/security/custody team, or mixed. ${request ? `The user's initial request is: ${request}` : "Wait for the user's answer."}
 
 Ask no more than four goal-oriented questions before an initial assessment. Establish: primary goal, liquidity need, whether BTC must remain on Bitcoin L1 or the user is open to sBTC context, and who should control the keys. Ask amount, horizon, wallet, or custodian only when they change the result.
 
-Use get_protocol_status, list_protocol_bonds, and list_bonds before discussing availability. Use mainnet by default. Use testnet only when the user asks for a test, demonstration, or upcoming testnet bond, and label every testnet record as non-investable. For audit, timelock, Leather, pre-funding, recovery, or early-exit questions, call get_security_guidance. State what is known, what is not proven, and the relevant verification checklist; never treat a protocol audit as proof of a wallet integration. Call build_participation_plan and simulate_yield rather than doing calculations yourself. Keep native L1 BTC separate from sBTC. Treat wallet support as unknown unless check_compatibility cites evidence. Present best fit, principal tradeoff, availability, assumptions, sources, and next step. If nothing matches, say so. Never construct, sign, or broadcast a transaction.`,
+Ground protocol behavior in live state, the deployed or release-pinned PoX-5 contracts and reference implementations, accepted SIP-045, then pinned SDK/tests and official documentation. If evidence conflicts, say so and prefer the higher-precedence source. Use get_protocol_status, list_protocol_bonds, and list_bonds before discussing availability. Use mainnet by default. Use testnet only when the user asks for a test, demonstration, or upcoming testnet bond, and label every testnet record as non-investable. For audit, timelock, Leather, pre-funding, recovery, or early-exit questions, call get_security_guidance. State what is known, what is not proven, and the relevant verification checklist; never treat a protocol audit as proof of a wallet integration. Call build_participation_plan and simulate_yield rather than doing calculations yourself. Keep native L1 BTC separate from sBTC. Treat wallet support as unknown unless check_compatibility cites evidence. Present the bottom line, current availability, material tradeoff or risk, assumptions, primary sources, and next diligence step. If nothing matches, say so. Never construct, sign, or broadcast a transaction.`,
           },
         },
       ],

@@ -19,6 +19,7 @@ import {
   listSecuritySources,
   type SecurityTopic,
 } from "./security.js";
+import { listCanonicalSources } from "./institutional.js";
 
 export interface ServiceDependencies {
   manifests?: ManifestStore;
@@ -155,7 +156,11 @@ export class BitcoinStakingService {
   }
 
   async listSources(): Promise<SourceRef[]> {
-    return this.uniqueSources([...(await this.manifests.sources()), ...listSecuritySources()]);
+    return this.uniqueSources([
+      ...(await this.manifests.sources()),
+      ...listSecuritySources(),
+      ...listCanonicalSources(),
+    ]);
   }
 
   private uniqueSources(sources: SourceRef[]): SourceRef[] {

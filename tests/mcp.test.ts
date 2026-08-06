@@ -82,6 +82,16 @@ test("MCP exposes resources and the concierge prompt", async (context) => {
   assert.ok(resources.resources.some((resource) => resource.uri === "bitcoin-staking://glossary"));
   assert.ok(resources.resources.some((resource) => resource.uri === "bitcoin-staking://security"));
   assert.ok(
+    resources.resources.some(
+      (resource) => resource.uri === "bitcoin-staking://methodology/sources",
+    ),
+  );
+  assert.ok(
+    resources.resources.some(
+      (resource) => resource.uri === "bitcoin-staking://methodology/response-standard",
+    ),
+  );
+  assert.ok(
     resources.resources.some((resource) => resource.uri === "bitcoin-staking://bonds/demo-native-bitcoin-bond"),
   );
 
@@ -94,6 +104,21 @@ test("MCP exposes resources and the concierge prompt", async (context) => {
   const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text");
   if (content?.type === "text") assert.match(content.text, /^What would you like your Bitcoin to do\?/);
+});
+
+test("canonical source catalog exposes the reference implementation", async (context) => {
+  const { client, server } = await connectedClient();
+  context.after(async () => {
+    await client.close();
+    await server.close();
+  });
+
+  const resource = await client.readResource({
+    uri: "bitcoin-staking://sources/reference-signer-manager",
+  });
+  const text = resource.contents[0]?.text;
+  assert.equal(typeof text, "string");
+  assert.match(String(text), /core-contract-tests\/contracts\/signer-manager\.clar/);
 });
 
 test("security guidance separates audit assurance from wallet integration proof", async (context) => {

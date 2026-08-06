@@ -30,6 +30,8 @@ flowchart LR
 
 The intelligence core contains schemas, provenance, economics, compatibility, and recommendation rules. It has no LLM dependency. The concierge is a thin workflow over MCP tools, not a separate service.
 
+The concierge uses an institutional diligence voice: decision-first for CFO and investment audiences, mechanism-first for technical and custody teams, neutral rather than promotional, and explicit about uncertainty and the next verification step.
+
 ## Quick start
 
 Requires Node 22.
@@ -115,6 +117,8 @@ Resources expose the glossary, yield methodology, bond manifests, and source rec
 
 `bitcoin-staking://security` exposes the complete security-diligence catalog. Security answers always distinguish published assurance, protocol/source behavior, SDK construction, wallet behavior, and end-to-end integration proof.
 
+`bitcoin-staking://methodology/sources` exposes the source hierarchy and known corpus gaps. `bitcoin-staking://methodology/response-standard` exposes the institutional persona, audience adaptation, evidence language, and response contract.
+
 ## Example prompts
 
 ```text
@@ -166,6 +170,8 @@ The default tests are offline. The mainnet and configured-testnet tests are opt-
 - [Technical specification](docs/TECHNICAL_SPEC.md)
 - [Hackathon delivery plan](docs/HACKATHON_PLAN.md)
 - [Security question catalog](docs/SECURITY_QUESTION_CATALOG.md)
+- [Institutional response standard](docs/INSTITUTIONAL_RESPONSE_STANDARD.md)
+- [Canonical source corpus](docs/SOURCE_CORPUS.md)
 
 ## Roadmap
 

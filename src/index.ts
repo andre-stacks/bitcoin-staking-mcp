@@ -5,4 +5,6 @@ export * from "./core/schemas.js";
 export * from "./providers/manifest-store.js";
 export * from "./providers/stacks.js";
 export * from "./service.js";
+export * from "./security.js";
+export * from "./institutional.js";
 export * from "./mcp/server.js";

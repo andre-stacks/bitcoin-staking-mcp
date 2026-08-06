@@ -46,6 +46,8 @@ Each successful tool result includes:
 
 Precedence is live chain/API data, published public documentation, versioned public manifests, then demo manifests. The server never merges a demo field into live chain state. Demo records require a demo source, are excluded by default, and appear only in `demoBonds` when requested.
 
+Within public evidence, protocol behavior follows a stricter hierarchy: live/deployed state; release-pinned contracts and reference implementations; accepted SIP-045; release-pinned SDK/tests; current operator/developer docs; public assurance; manifests; demo data. Conflicts are surfaced rather than silently reconciled in favor of lower-precedence prose.
+
 ## Providers
 
 The Stacks provider uses `STACKS_API_BASE_URL` for mainnet and `BITCOIN_STAKING_TESTNET_API_BASE_URL` plus `BITCOIN_STAKING_TESTNET_CHAIN_ID` for the testnet target. Mainnet defaults to Hiro mainnet; testnet defaults to Hiro's dedicated PoX-5 testnet at `https://api.testnet-pox5.hiro.so`. It reads PoX information, derives prepare and reward phase heights from returned cycle constants, checks optional bond indices, scans a bounded active bond window, and reads participant state. Requests are bounded by `BITCOIN_STAKING_UPSTREAM_TIMEOUT_MS`.
@@ -76,10 +78,14 @@ Resources:
 - `bitcoin-staking://glossary`
 - `bitcoin-staking://methodology/yield`
 - `bitcoin-staking://security`
+- `bitcoin-staking://methodology/sources`
+- `bitcoin-staking://methodology/response-standard`
 - `bitcoin-staking://bonds/{bondId}`
 - `bitcoin-staking://sources/{sourceId}`
 
 The `bitcoin-staking-concierge` prompt contains workflow instructions, not facts or math. Codex also discovers `.agents/skills/bitcoin-staking-concierge` and uses the same tool sequence.
+
+The prompt, MCP server instructions, and skill share one institutional response contract. CFO/investment questions lead with availability, custody, liquidity, economics, and material risk. Technical/security/custody questions lead with mechanisms, component boundaries, deterministic verification, and pinned sources. Mixed questions receive a short executive conclusion followed by compact technical evidence.
 
 Security guidance is a versioned deterministic corpus in `src/security.ts`. Topics return an answer, evidence level, known facts, unproven claims, verification checklist, and pinned source IDs. The source set includes the official public audit statement, SIP-045, pinned PoX-5 and Stacks.js code, golden-vector tests, and pinned Leather RPC implementations. Investor chats affect topic coverage only; they are not stored as evidence.
 

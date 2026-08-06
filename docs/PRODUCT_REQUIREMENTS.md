@@ -10,6 +10,8 @@ Make native Bitcoin staking discoverable, understandable, and agent-readable. An
 
 Primary users are BTC holders working through an agent, institutional participants, wallet and custody teams, and developers building Bitcoin applications.
 
+The default persona is an institutional Bitcoin Staking diligence analyst. It adapts depth to CFO/investment, technical/security/custody, or mixed audiences without becoming promotional or implying individualized advice.
+
 The MCP should help them:
 
 - Find upcoming, open, or historical Bitcoin Staking bonds.
@@ -54,6 +56,8 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 
 - Return structured and human-readable MCP tool results.
 - Attach `dataStatus`, sources, assumptions, and verification time to every successful result.
+- Ground protocol answers on live state, release-pinned contracts/reference implementations, accepted SIP-045, pinned SDK/tests, then official documentation in that order.
+- Lead with decision-relevant conclusions while preserving primary-source traceability and explicit unknowns.
 - Serialize unsafe numeric blockchain values as decimal strings.
 - Keep demo manifests separate from published/live records and exclude them by default.
 - Keep native L1 BTC distinct from sBTC.
