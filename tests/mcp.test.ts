@@ -252,6 +252,9 @@ test("MCP exposes resources and the concierge prompt", async (context) => {
   });
 
   const resources = await client.listResources();
+  assert.ok(
+    resources.resources.some((resource) => resource.uri === "bitcoin-staking://capabilities"),
+  );
   assert.ok(resources.resources.some((resource) => resource.uri === "bitcoin-staking://glossary"));
   assert.ok(resources.resources.some((resource) => resource.uri === "bitcoin-staking://security"));
   assert.ok(
@@ -278,7 +281,9 @@ test("MCP exposes resources and the concierge prompt", async (context) => {
   assert.equal(content?.type, "text");
   if (content?.type === "text") {
     assert.doesNotMatch(content.text, /^What would you like your Bitcoin to do\?/);
-    assert.match(content.text, /Proceed without asking the user to repeat goals already provided/);
+    assert.match(content.text, /ask the user to repeat goals already provided/);
+    assert.match(content.text, /Do not show the introductory menu/i);
+    assert.doesNotMatch(content.text, /This is an empty first-run invocation/);
     assert.match(content.text, /This MCP does not currently verify that/);
     assert.match(content.text, /Never fill a missing answer from model memory/i);
     assert.match(content.text, /institutional Bitcoin Staking diligence analyst/i);
@@ -294,8 +299,36 @@ test("MCP exposes resources and the concierge prompt", async (context) => {
   const emptyContent = emptyPrompt.messages[0]?.content;
   assert.equal(emptyContent?.type, "text");
   if (emptyContent?.type === "text") {
-    assert.match(emptyContent.text, /^What would you like your Bitcoin to do\?/);
+    assert.match(emptyContent.text, /This is an empty first-run invocation/);
+    assert.match(emptyContent.text, /I'm your Bitcoin Staking Concierge/);
+    assert.match(emptyContent.text, /1\. Check current protocol status and bond availability/);
+    assert.match(emptyContent.text, /5\. Answer security questions about audits, timelocks, Leather, recovery, and early exit/);
+    assert.match(emptyContent.text, /7\. Compare native L1 Bitcoin staking with sBTC paths/);
+    assert.match(emptyContent.text, /Choose a number or ask a question in your own words/);
+    assert.doesNotMatch(emptyContent.text, /^What would you like your Bitcoin to do\?/);
   }
+
+  const capabilities = await client.readResource({
+    uri: "bitcoin-staking://capabilities",
+  });
+  const capabilitiesText = String(capabilities.contents[0]?.text ?? "");
+  assert.match(capabilitiesText, /eleven read-only MCP tools/i);
+  for (const toolName of [
+    "get_protocol_status",
+    "list_protocol_bonds",
+    "list_bonds",
+    "get_bond",
+    "build_diligence_report",
+    "get_security_guidance",
+    "simulate_yield",
+    "check_compatibility",
+    "check_participant_status",
+    "compare_staking_paths",
+    "build_participation_plan",
+  ]) {
+    assert.ok(capabilitiesText.includes("`" + toolName + "`"));
+  }
+  assert.match(capabilitiesText, /cannot construct, sign, or broadcast transactions/i);
 
   const responseStandard = await client.readResource({
     uri: "bitcoin-staking://methodology/response-standard",

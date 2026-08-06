@@ -38,7 +38,7 @@ The agent reads live protocol status, scans the active on-chain PoX-5 bond windo
 
 ### Evaluate fit
 
-The concierge starts with “What would you like your Bitcoin to do?” It establishes goal, liquidity need, BTC-path preference, and key-control preference before asking amount, horizon, wallet, or custodian. It then returns fit, tradeoffs, missing facts, assumptions, sources, and the next safe step.
+An empty concierge invocation introduces the service and offers clear starting points for status, discovery, fit, economics, security, compatibility or public status, and path comparison. A request that already contains a question or goal bypasses the menu. The concierge establishes goal, liquidity need, BTC-path preference, and key-control preference before asking amount, horizon, wallet, or custodian. It then returns fit, tradeoffs, missing facts, assumptions, sources, and the next safe step.
 
 For a live protocol opportunity, `build_diligence_report` combines current network state, bounded bond discovery, the participant profile, exact configured-target math, and security evidence. Before activation or when no configured bond exists, it returns a decision-ready no-opportunity result rather than substituting demo terms.
 
@@ -78,6 +78,7 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 
 - Clean install and build on Node 22.
 - Complete a portable Codex and Claude installation from one `npx` command without requiring the user to remain in the repository.
+- End setup with example questions and make an empty concierge invocation explain the available services and recommended first action.
 - Verify the MCP handshake, both host registrations, and the global Codex skill; provide machine-readable check and targeted uninstall paths.
 - Connect through stdio in Codex and Claude Code.
 - Initialize and call every tool through MCP Inspector.

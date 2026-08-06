@@ -20,16 +20,28 @@ Restart Codex and Claude Code after setup so they reload MCP and skill metadata.
 
 ## First use
 
+Open the concierge without a question to see the available services.
+
 Codex:
 
 ```text
-$bitcoin-staking-concierge I want my Bitcoin to earn yield while remaining on Bitcoin L1.
+$bitcoin-staking-concierge
 ```
 
 Claude Code:
 
 ```text
 /mcp__bitcoin_staking__bitcoin_staking_concierge
+```
+
+The concierge introduces protocol status, bond discovery, participation fit, yield modeling, security diligence, compatibility and public-status checks, and native-L1 versus sBTC comparison. Choose a number or ask naturally, for example:
+
+```text
+What is the current protocol status, and are any bonds available?
+```
+
+```text
+What security evidence should I review before participating through Leather?
 ```
 
 ## Host selection

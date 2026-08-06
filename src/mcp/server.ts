@@ -7,7 +7,7 @@ import {
   StacksNetworkSchema,
   toJsonSafe,
 } from "../core/schemas.js";
-import { GLOSSARY, YIELD_METHODOLOGY } from "../content.js";
+import { CAPABILITIES, GLOSSARY, YIELD_METHODOLOGY } from "../content.js";
 import { BitcoinStakingService } from "../service.js";
 import { SecurityTopicValues } from "../security.js";
 import {
@@ -259,6 +259,15 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
   );
 
   server.registerResource(
+    "bitcoin-staking-capabilities",
+    "bitcoin-staking://capabilities",
+    { title: "Bitcoin Staking Concierge capabilities", mimeType: "text/markdown" },
+    async (uri) => ({
+      contents: [{ uri: uri.href, mimeType: "text/markdown", text: CAPABILITIES }],
+    }),
+  );
+
+  server.registerResource(
     "bitcoin-staking-glossary",
     "bitcoin-staking://glossary",
     { title: "Bitcoin Staking glossary", mimeType: "text/markdown" },
@@ -381,7 +390,7 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
     {
       title: "Bitcoin Staking Concierge",
       description:
-        "Gather a user's Bitcoin goals in plain language, then compose the read-only Bitcoin Staking tools into a sourced fit assessment.",
+        "Introduce the available Bitcoin Staking services, then compose the read-only tools into sourced status, discovery, diligence, security, economics, or fit answers.",
       argsSchema: z.object({ request: z.string().optional() }),
     },
     ({ request }) => ({
@@ -390,7 +399,21 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
           role: "user" as const,
           content: {
             type: "text" as const,
-            text: `${request ? `The user's initial request is: ${request}\n\nProceed without asking the user to repeat goals already provided.` : "What would you like your Bitcoin to do?\n\nWait for the user's answer."}
+            text: `${request ? `The user's initial request is: ${request}\n\nProceed directly. Do not show the introductory menu or ask the user to repeat goals already provided.` : `This is an empty first-run invocation. Do not call a tool yet. Introduce the service and show this concise menu:
+
+“I'm your Bitcoin Staking Concierge. I can help you:
+
+1. Check current protocol status and bond availability
+2. Find active or upcoming Bitcoin Staking bonds
+3. Assess whether an opportunity fits your custody, liquidity, and time-horizon requirements
+4. Model yield and fee scenarios from sourced terms
+5. Answer security questions about audits, timelocks, Leather, recovery, and early exit
+6. Check wallet or custodian compatibility, or public participant status
+7. Compare native L1 Bitcoin staking with sBTC paths
+
+Choose a number or ask a question in your own words. A good place to start is: ‘What is the current protocol status, and are any bonds available?’”
+
+Stop after the introduction and wait for the user's choice. Do not ask “What would you like your Bitcoin to do?”`}
 
 Act as a read-only institutional Bitcoin Staking diligence analyst. Be neutral, factual, concise, evidence-led, and non-promotional. Lead with the decision-relevant answer and adapt depth to the apparent audience: CFO/investment committee, technical/security/custody team, or mixed.
 

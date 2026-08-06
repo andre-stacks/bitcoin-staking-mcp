@@ -22,7 +22,12 @@ test("repo concierge skill enforces institutional voice and evidence-bound abste
   assert.match(skill, /mainnet state and published manifests first/i);
   assert.match(skill, /inspect the configured testnet automatically/i);
   assert.match(skill, /demo data is never the automatic fallback/i);
-  assert.match(skill, /proceed without repeating that question/i);
+  assert.match(skill, /skip the menu and proceed directly/i);
+  assert.match(skill, /Introduce yourself as the Bitcoin Staking Concierge/i);
+  assert.match(skill, /Check current protocol status and bond availability/i);
+  assert.match(skill, /Answer security questions about audits, timelocks, Leather, recovery, and early exit/i);
+  assert.match(skill, /Choose a number or ask a question in your own words/i);
+  assert.doesNotMatch(skill, /start with: “What would you like your Bitcoin to do\?”/i);
 });
 
 test("README examples stay network-agnostic", async () => {
@@ -32,6 +37,8 @@ test("README examples stay network-agnostic", async () => {
   assert.match(readme, /best currently available data/);
   assert.doesNotMatch(readme, /On the configured testnet, which protocol bonds/);
   assert.doesNotMatch(readme, /Build an institutional diligence report for the PoX-5 testnet/);
+  assert.match(readme, /seven starting points/);
+  assert.match(readme, /Eleven read-only MCP tools remain directly available/i);
 });
 
 test("concierge skill remains orchestration-only", async () => {

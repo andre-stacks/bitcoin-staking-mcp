@@ -395,8 +395,10 @@ export async function runInstaller(
     options.action === "setup" && ok
       ? [
           "Restart Codex and Claude Code so they reload MCP and skill metadata.",
-          "In Codex, invoke $bitcoin-staking-concierge from any repository.",
-          "In Claude Code, invoke /mcp__bitcoin_staking__bitcoin_staking_concierge.",
+          "Open the Bitcoin Staking Concierge in Codex with $bitcoin-staking-concierge, or in Claude Code with /mcp__bitcoin_staking__bitcoin_staking_concierge.",
+          "Start with: What is the current protocol status, and are any bonds available?",
+          "Or ask: What security evidence should I review before participating through Leather?",
+          "You can also invoke the concierge without a question to see the complete capability menu.",
           `Re-verify later with: ${checkCommand}`,
         ]
       : [];

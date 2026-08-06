@@ -78,6 +78,7 @@ All declare read-only and non-destructive annotations. Live network tools additi
 
 Resources:
 
+- `bitcoin-staking://capabilities`
 - `bitcoin-staking://glossary`
 - `bitcoin-staking://methodology/yield`
 - `bitcoin-staking://security`
@@ -86,7 +87,7 @@ Resources:
 - `bitcoin-staking://bonds/{bondId}`
 - `bitcoin-staking://sources/{sourceId}`
 
-The `bitcoin-staking-concierge` prompt contains workflow instructions, not facts or math. Codex also discovers `.agents/skills/bitcoin-staking-concierge` and uses the same tool sequence.
+The `bitcoin-staking-concierge` prompt contains workflow instructions, not facts or math. On an empty invocation it presents a seven-item user-facing service menu and waits; when a request is supplied it skips that menu and proceeds directly. Codex also discovers `.agents/skills/bitcoin-staking-concierge` and uses the same behavior and tool sequence. `bitcoin-staking://capabilities` provides the stable mapping from those services to the eleven MCP tools.
 
 The prompt, MCP server instructions, and skill share one institutional response contract. CFO/investment questions lead with availability, custody, liquidity, economics, and material risk. Technical/security/custody questions lead with mechanisms, component boundaries, deterministic verification, and pinned sources. Mixed questions receive a short executive conclusion followed by compact technical evidence.
 

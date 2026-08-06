@@ -8,6 +8,37 @@ export const GLOSSARY = `# Bitcoin Staking glossary
 - Demo manifest: An illustrative record for testing agent behavior. It is never evidence that a live opportunity exists.
 `;
 
+export const CAPABILITIES = `# Bitcoin Staking Concierge capabilities
+
+The concierge is one conversational entry point backed by eleven read-only MCP tools. Users can choose a capability or ask in plain language.
+
+1. **Check protocol status and availability** — current PoX-5 state, reward-cycle timing, and whether a verified bond is available.
+2. **Find Bitcoin Staking bonds** — active, upcoming, historical, or explicitly requested demo opportunities, with production and pre-production data clearly separated.
+3. **Assess participation fit** — liquidity needs, Bitcoin L1 versus sBTC path, key control, amount, time horizon, wallet, and custodian constraints.
+4. **Model economics** — deterministic yield, fee, and price scenarios using sourced terms and explicit assumptions.
+5. **Review security and transaction boundaries** — audits, timelock construction, Leather behavior, pre-funding validation, maturity recovery, and early exit, including what is not yet proven.
+6. **Check compatibility or public status** — cited wallet/custodian support and public Stacks address participation state. Address checks never prove ownership.
+7. **Compare staking paths** — native L1 Bitcoin staking and sourced sBTC context, without inventing a live liquidity or borrowing product.
+
+## Tool map for developers
+
+| User need | MCP tool |
+| --- | --- |
+| Protocol status | \`get_protocol_status\` |
+| Live on-chain bond discovery | \`list_protocol_bonds\` |
+| Public and demo manifest discovery | \`list_bonds\` |
+| One bond's normalized terms | \`get_bond\` |
+| Institutional diligence report | \`build_diligence_report\` |
+| Security diligence | \`get_security_guidance\` |
+| Yield scenarios | \`simulate_yield\` |
+| Wallet or custodian compatibility | \`check_compatibility\` |
+| Public participant status | \`check_participant_status\` |
+| Native L1 versus sBTC context | \`compare_staking_paths\` |
+| Participation fit and checklist | \`build_participation_plan\` |
+
+All tools are informational and read-only. They cannot construct, sign, or broadcast transactions.
+`;
+
 export const YIELD_METHODOLOGY = `# Yield methodology
 
 The MVP performs deterministic scenario analysis. It never predicts BTC or STX prices and never invents missing economics.

@@ -1,4 +1,4 @@
 interface:
   display_name: "Bitcoin Staking Concierge"
-  short_description: "Plan a sourced Bitcoin staking path"
-  default_prompt: "Use $bitcoin-staking-concierge to help me choose and understand a Bitcoin staking path."
+  short_description: "Explore and evaluate Bitcoin staking"
+  default_prompt: "Use $bitcoin-staking-concierge to introduce the service, show what it can help me with, and help me choose a next step."

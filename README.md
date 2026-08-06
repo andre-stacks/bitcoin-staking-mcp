@@ -52,6 +52,18 @@ npx -y github:andre-stacks/bitcoin-staking-mcp check
 
 To install only one host, use `--hosts codex` or `--hosts claude`. See [Installation](docs/INSTALLATION.md) for local-checkout, pinned-source, JSON, update, and uninstall options.
 
+### First conversation
+
+Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, the concierge introduces itself and offers seven starting points: protocol status, bond discovery, participation fit, yield modeling, security diligence, compatibility or public status, and native-L1 versus sBTC comparison.
+
+Choose a number or ask naturally. For example:
+
+```text
+What is the current protocol status, and are any bonds available?
+```
+
+The single concierge command is the user-facing entry point. Eleven read-only MCP tools remain directly available to agents, developers, and MCP Inspector; users do not need to know their names.
+
 For repository development:
 
 ```bash
@@ -141,7 +153,9 @@ Use Inspector to review the instructions, all tool schemas and annotations, reso
 | `compare_staking_paths` | Compare native-L1 staking with sourced sBTC context. |
 | `build_participation_plan` | Produce fit, tradeoffs, gaps, and safe next steps. |
 
-Resources expose the glossary, yield methodology, bond manifests, and source records under `bitcoin-staking://` URIs.
+Resources expose the capability catalog, glossary, yield methodology, bond manifests, and source records under `bitcoin-staking://` URIs.
+
+`bitcoin-staking://capabilities` maps the seven user-facing services to all eleven MCP tools.
 
 `bitcoin-staking://security` exposes the complete security-diligence catalog. Security answers always distinguish published assurance, protocol/source behavior, SDK construction, wallet behavior, and end-to-end integration proof.
 
@@ -210,6 +224,7 @@ The offline suite invokes all eleven tools through an in-process MCP client, val
 - [Canonical source corpus](docs/SOURCE_CORPUS.md)
 - [Hackathon demo runbook](docs/DEMO_RUNBOOK.md)
 - [Implementation audit](docs/IMPLEMENTATION_AUDIT.md)
+- [User experience review](docs/UX_REVIEW.md)
 
 ## Roadmap
 
