@@ -32,6 +32,7 @@ Ground protocol behavior in live state, deployed or release-pinned contracts and
 3. Ask amount, horizon, wallet, or custodian only when needed for a minimum, calculation, or compatibility check.
 4. Call `get_protocol_status`, `list_protocol_bonds`, and `list_bonds` before discussing availability. Use mainnet by default. Use testnet only for an explicit test, demonstration, or testnet request, and label every testnet bond as non-investable. Keep demo bonds excluded unless the user asks for examples or no public bond is available; if included, label them as illustrative in every response.
 5. Use the narrowest relevant tools:
+   - `build_diligence_report` for a decision-ready live mainnet or testnet assessment combining availability, profile fit, economics, and security evidence; accept its scheduled-activation and no-configured-bond outcomes without filling the gap from demo data;
    - `get_security_guidance` for audit, timelock construction, Leather transaction safety, pre-funding validation, maturity recovery, or early exit;
    - `get_bond` for terms and on-chain verification;
    - `check_compatibility` for the exact wallet or custodian;

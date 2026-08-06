@@ -76,6 +76,11 @@ export function simulateYield(bond: BondManifest, input: YieldSimulationInput): 
       input.annualRateBps !== undefined || input.feeBps !== undefined ? "explicit user assumptions where supplied" : "manifest values"
     }.`,
   ];
+  if (bond.economics.rewardAsset === "sBTC") {
+    assumptions.push(
+      "USD estimates use the supplied BTC price and assume one sBTC sat tracks one BTC sat; they do not model peg, liquidity, or redemption risk.",
+    );
+  }
 
   const result: YieldSimulation = {
     bondId: bond.id,
@@ -130,7 +135,7 @@ export function simulateYield(bond: BondManifest, input: YieldSimulationInput): 
       note:
         stxPriceUsd === undefined
           ? "No STX price assumption supplied."
-          : "In this BTC-target demo model, changing STX price does not change BTC-denominated reward sats.",
+          : `In this ${bond.economics.rewardAsset}-target model, changing STX price does not change ${bond.economics.rewardAsset}-denominated reward sats.`,
     };
     if (input.btcPriceUsd !== undefined) {
       scenario.btcPriceUsd = input.btcPriceUsd;

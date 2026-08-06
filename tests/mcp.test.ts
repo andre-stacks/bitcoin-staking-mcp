@@ -26,6 +26,7 @@ test("MCP lists all read-only tools", async (context) => {
   assert.deepEqual(
     tools.map((tool) => tool.name).sort(),
     [
+      "build_diligence_report",
       "build_participation_plan",
       "check_compatibility",
       "check_participant_status",

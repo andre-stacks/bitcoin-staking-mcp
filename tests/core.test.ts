@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ServiceError, withTimeout } from "../src/core/errors.js";
 import { simulateYield } from "../src/core/economics.js";
+import { buildInstitutionalDiligence } from "../src/core/diligence.js";
 import {
   BondManifestSchema,
   ParticipantProfileSchema,
@@ -39,6 +40,7 @@ test("demo manifest without a demo source is rejected", async () => {
 
 test("yield calculation is deterministic and rounds down", async () => {
   const bond = await demoBond();
+  assert.equal(bond.economics.rewardAsset, "sBTC");
   const result = simulateYield(bond, {
     principalSats: "100000000",
     btcPriceUsd: 100_000,
@@ -49,7 +51,7 @@ test("yield calculation is deterministic and rounds down", async () => {
   assert.equal(result.netRewardSats, "2465753");
   assert.equal(result.priceScenarios.length, 2);
   assert.equal(result.priceScenarios[0]?.estimatedRewardValueUsd, 2465.753);
-  assert.match(result.priceScenarios[1]?.note ?? "", /does not change BTC-denominated/);
+  assert.match(result.priceScenarios[1]?.note ?? "", /does not change sBTC-denominated/);
 });
 
 test("explicit fee assumption reduces net reward", async () => {
@@ -117,4 +119,138 @@ test("timeout errors are typed and retryable", async () => {
     (error: unknown) =>
       error instanceof ServiceError && error.code === "UPSTREAM_TIMEOUT" && error.retryable,
   );
+});
+
+const liveSource = {
+  id: "testnet-live",
+  title: "Testnet PoX API",
+  url: "https://api.testnet-pox5.hiro.so/v2/pox",
+  sourceType: "chain_api" as const,
+  dataStatus: "live" as const,
+};
+
+const securityEntry = {
+  topic: "audit_status",
+  answer: "Published audit statement.",
+  evidenceLevel: "published_security_statement",
+  whatIsNotProven: ["Wallet integration is not proven."],
+  verificationChecklist: ["Obtain the final report."],
+};
+
+test("diligence report refuses to infer a testnet bond before activation", () => {
+  const profile = ParticipantProfileSchema.parse({
+    goal: "earn_yield",
+    liquidityNeed: "lock_until_maturity",
+    bitcoinPathPreference: "bitcoin_l1_only",
+    keyControlPreference: "self_controlled",
+    amountSats: "100000000",
+  });
+  const result = buildInstitutionalDiligence({
+    network: "testnet",
+    profile,
+    status: {
+      network: "testnet",
+      chainId: 2147483648,
+      contractId: "ST000000000000000000002AMW42H.pox-4",
+      pox5Active: false,
+      pox5Scheduled: true,
+      pox5ActivationBurnchainBlockHeight: 2702,
+      blocksUntilPox5Activation: 80,
+      firstPox5RewardCycle: 4,
+      currentBurnchainBlockHeight: 2622,
+      sources: [liveSource],
+      assumptions: [],
+      verifiedAt: "2026-08-06T18:00:00.000Z",
+    },
+    scan: {
+      network: "testnet",
+      pox5Active: false,
+      pox5Scheduled: true,
+      currentBurnchainBlockHeight: 2622,
+      scannedBondIndices: [],
+      bonds: [],
+      sources: [liveSource],
+      assumptions: ["No bond entries were inferred or synthesized."],
+      verifiedAt: "2026-08-06T18:00:00.000Z",
+    },
+    securityEntries: [securityEntry],
+    sources: [liveSource],
+    verifiedAt: "2026-08-06T18:00:00.000Z",
+  });
+
+  assert.equal(result.assessmentStatus, "scheduled_activation");
+  assert.equal(result.fit, "not_assessable");
+  assert.equal(result.selectedBond, null);
+  assert.match(result.bottomLine, /burn height 2702/);
+});
+
+test("configured protocol bond assessment uses exact target and paired-STX math", () => {
+  const profile = ParticipantProfileSchema.parse({
+    goal: "earn_yield",
+    liquidityNeed: "lock_until_maturity",
+    bitcoinPathPreference: "bitcoin_l1_only",
+    keyControlPreference: "self_controlled",
+    walletOrCustodian: "Leather",
+    amountSats: "100000000",
+  });
+  const bond = {
+    id: "protocol-testnet-bond-0",
+    network: "testnet" as const,
+    chainId: 2147483648,
+    onChainBondIndex: 0,
+    contractId: "ST000000000000000000002AMW42H.pox-5",
+    protocolStatus: "open",
+    registrationStatus: "open",
+    startBurnHeight: 3600,
+    blocksUntilStart: 900,
+    startRewardCycle: 4,
+    phases: [],
+    targetRateBps: 500,
+    stxValueRatio: "1000000",
+    minUstxRatioBps: 8000,
+    earlyUnlockBytes: "00",
+    availability: "testnet_only_not_investable",
+    sources: [liveSource],
+    assumptions: [],
+    verifiedAt: "2026-08-06T18:00:00.000Z",
+  };
+  const result = buildInstitutionalDiligence({
+    network: "testnet",
+    profile,
+    status: {
+      network: "testnet",
+      chainId: 2147483648,
+      contractId: "ST000000000000000000002AMW42H.pox-5",
+      pox5Active: true,
+      pox5Scheduled: false,
+      pox5ActivationBurnchainBlockHeight: 2702,
+      blocksUntilPox5Activation: 0,
+      firstPox5RewardCycle: 4,
+      currentBurnchainBlockHeight: 2710,
+      sources: [liveSource],
+      assumptions: [],
+      verifiedAt: "2026-08-06T18:00:00.000Z",
+    },
+    scan: {
+      network: "testnet",
+      pox5Active: true,
+      currentBurnchainBlockHeight: 2710,
+      scannedBondIndices: [0],
+      bonds: [bond],
+      sources: [liveSource],
+      assumptions: [],
+      verifiedAt: "2026-08-06T18:00:00.000Z",
+    },
+    securityEntries: [securityEntry],
+    sources: [liveSource],
+    verifiedAt: "2026-08-06T18:00:00.000Z",
+  });
+
+  assert.equal(result.assessmentStatus, "configured_bond_assessed");
+  assert.equal(result.fit, "conditional");
+  assert.equal(result.economics.targetRewardPerCalculationSats, "100000");
+  assert.equal(result.economics.annualizedTargetSats, "5000000");
+  assert.equal(result.economics.pairedStxMinimumUstx, "800000000000");
+  assert.equal(result.availability.investable, false);
+  assert.ok(result.missingFacts.some((fact) => fact.includes("Leather")));
 });

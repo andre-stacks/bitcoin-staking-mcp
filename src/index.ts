@@ -1,4 +1,5 @@
 export * from "./core/economics.js";
+export * from "./core/diligence.js";
 export * from "./core/errors.js";
 export * from "./core/recommendation.js";
 export * from "./core/schemas.js";

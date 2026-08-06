@@ -58,6 +58,12 @@ npm start
 
 Call `get_protocol_status` and `list_protocol_bonds` with `network: "testnet"`. Before PoX-5 activation, the server returns the published activation height, countdown, and an empty bond list. After activation, it scans only the active bond window and returns configured records labeled `testnet_only_not_investable`. It never infers a bond merely because the network is named PoX-5.
 
+For a complete state-aware proof—mainnet status, testnet diligence, security evidence, demo fallback, no-match journey, and tool annotations—run:
+
+```bash
+npm run demo:proof
+```
+
 The environment variables in `.env.example` can override the endpoint or chain ID for another compatible test network.
 
 ### Codex
@@ -105,6 +111,7 @@ Use Inspector to review the instructions, all tool schemas and annotations, reso
 | `get_protocol_status` | Read current PoX-5 and reward-cycle state. |
 | `list_protocol_bonds` | Discover configured on-chain bonds in the active mainnet or testnet window. |
 | `get_security_guidance` | Answer audit, timelock, Leather, validation, recovery, and early-exit questions with evidence boundaries. |
+| `build_diligence_report` | Combine live status, a verified protocol bond if present, profile fit, exact PoX-5 target math, and security evidence. |
 | `list_bonds` | List public manifests and optionally separate demo records. |
 | `get_bond` | Read one normalized manifest and optional on-chain verification. |
 | `check_participant_status` | Read public Stacks staking and bond state. |
@@ -127,6 +134,10 @@ What is the current Bitcoin Staking protocol status, and are any public bonds av
 
 ```text
 On the configured testnet, which protocol bonds are currently open or approaching their start height? Make the testnet limitation explicit.
+```
+
+```text
+Build an institutional diligence report for the PoX-5 testnet. I have 1 BTC, require Bitcoin L1, want control of the maturity key, use Leather, and can lock for six months.
 ```
 
 ```text
@@ -160,6 +171,7 @@ npm test
 npm run build
 npm run test:live
 npm run test:testnet
+npm run demo:proof
 ```
 
 The default tests are offline. The mainnet and configured-testnet tests are opt-in and read current public chain state. The checked-in concierge skill also passes the `skill-creator` quick validator. No command constructs or broadcasts a transaction.
@@ -172,6 +184,7 @@ The default tests are offline. The mainnet and configured-testnet tests are opt-
 - [Security question catalog](docs/SECURITY_QUESTION_CATALOG.md)
 - [Institutional response standard](docs/INSTITUTIONAL_RESPONSE_STANDARD.md)
 - [Canonical source corpus](docs/SOURCE_CORPUS.md)
+- [Hackathon demo runbook](docs/DEMO_RUNBOOK.md)
 
 ## Roadmap
 

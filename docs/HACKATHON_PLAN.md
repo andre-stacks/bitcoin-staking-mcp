@@ -5,7 +5,7 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 ## Milestones
 
 - M1: Live mainnet PoX status, the dedicated testnet's scheduled/active PoX-5 state, and the explicitly labeled demo manifest are visible through MCP.
-- M2: All ten tools return validated structured output and the offline suite passes.
+- M2: All eleven tools return validated structured output and the offline suite passes.
 - M3: The concierge completes the native-yield and liquidity/borrowing journeys in Codex and Claude.
 - M4: A clean clone installs, builds, runs, and supports the recorded demo.
 
@@ -42,6 +42,8 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 8. Ask for continuous liquidity and borrowing without selling.
 9. Show a native-bond no-match and sBTC context without inventing a live DeFi product.
 10. End in Inspector on the tool schemas, read-only annotations, security sources, and structured output.
+
+The exact prompts, state branches, fallback command, and recording close are in `docs/DEMO_RUNBOOK.md`.
 
 ## Recording checklist
 

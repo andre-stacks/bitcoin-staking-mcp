@@ -40,6 +40,8 @@ The agent reads live protocol status, scans the active on-chain PoX-5 bond windo
 
 The concierge starts with “What would you like your Bitcoin to do?” It establishes goal, liquidity need, BTC-path preference, and key-control preference before asking amount, horizon, wallet, or custodian. It then returns fit, tradeoffs, missing facts, assumptions, sources, and the next safe step.
 
+For a live protocol opportunity, `build_diligence_report` combines current network state, bounded bond discovery, the participant profile, exact configured-target math, and security evidence. Before activation or when no configured bond exists, it returns a decision-ready no-opportunity result rather than substituting demo terms.
+
 ### Model yield
 
 The user supplies a principal and any desired price or fee assumptions. The core performs deterministic, non-compounding scenario analysis. It refuses to calculate when the manifest does not define a compatible reward model.

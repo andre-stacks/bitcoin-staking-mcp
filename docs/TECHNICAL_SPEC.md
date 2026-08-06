@@ -58,11 +58,12 @@ The manifest provider reads and validates every JSON file in `data/bonds`. Dupli
 
 ## MCP interfaces
 
-Ten tools are registered:
+Eleven tools are registered:
 
 - `get_protocol_status`
 - `list_protocol_bonds`
 - `get_security_guidance`
+- `build_diligence_report`
 - `list_bonds`
 - `get_bond`
 - `check_participant_status`
@@ -89,6 +90,8 @@ The prompt, MCP server instructions, and skill share one institutional response 
 
 Security guidance is a versioned deterministic corpus in `src/security.ts`. Topics return an answer, evidence level, known facts, unproven claims, verification checklist, and pinned source IDs. The source set includes the official public audit statement, SIP-045, pinned PoX-5 and Stacks.js code, golden-vector tests, and pinned Leather RPC implementations. Investor chats affect topic coverage only; they are not stored as evidence.
 
+`build_diligence_report` is a deterministic composition layer. It has scheduled-activation, no-configured-bond, and configured-bond branches. The configured branch derives the minimum paired uSTX and target sBTC reward from the live bond tuple, preserves wallet compatibility as unknown, and states that the reward pool can cap actual payout.
+
 ## Economics
 
 For BTC/sBTC target-rate manifests:
@@ -99,7 +102,9 @@ fee sats   = floor(gross sats × fee bps ÷ 10,000)
 net sats   = gross sats − fee sats
 ```
 
-The model is simple and non-compounding. STX price scenarios do not alter BTC-denominated reward sats. Fixed STX reward models require a manifest-provided unit quantity. Unknown or incompatible reward models return `INSUFFICIENT_DATA`.
+The model is simple and non-compounding. STX price scenarios do not alter BTC- or sBTC-denominated reward sats. Fixed STX reward models require a manifest-provided unit quantity. Unknown or incompatible reward models return `INSUFFICIENT_DATA`.
+
+For live PoX-5 protocol bonds, the target scenario mirrors the contract calculation: `floor(floor(principal sats × target-rate bps ÷ 10,000) ÷ 50)` sBTC sats per reward calculation. Annualized target sats multiply that rounded value by 50. Actual earned rewards can be lower when available rewards do not cover the target. The minimum paired uSTX mirrors `min-ustx-for-sats-amount` using the live `stx-value-ratio` and `min-ustx-ratio`.
 
 ## Host configuration
 

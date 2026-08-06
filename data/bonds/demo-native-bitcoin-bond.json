@@ -13,7 +13,7 @@
   "economics": {
     "targetRateBps": 500,
     "managerFeeBps": 0,
-    "rewardAsset": "BTC",
+    "rewardAsset": "sBTC",
     "rewardModel": "target_principal_rate"
   },
   "capacity": {
@@ -54,7 +54,7 @@
   ],
   "notes": [
     "DEMO ONLY: this is not a live, published, configured, or investable bond.",
-    "All capacity, rate, fee, duration, and eligibility values are synthetic hackathon inputs.",
+    "All capacity, rate, fee, duration, and eligibility values are synthetic hackathon inputs; the sBTC reward denomination matches the PoX-5 protocol reward path.",
     "No on-chain bond index is declared, so the server will not treat this record as configured in PoX-5."
   ],
   "sources": [

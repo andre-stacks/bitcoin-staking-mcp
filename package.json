@@ -29,6 +29,7 @@
     "test": "tsx --test tests/*.test.ts",
     "test:live": "BITCOIN_STAKING_LIVE_TEST=1 tsx --test tests/live.test.ts",
     "test:testnet": "BITCOIN_STAKING_TESTNET_LIVE_TEST=1 tsx --test tests/testnet-live.test.ts",
+    "demo:proof": "tsx scripts/demo-proof.ts",
     "check": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [

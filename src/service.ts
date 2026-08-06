@@ -6,6 +6,11 @@ import {
   compareStakingPaths,
 } from "./core/recommendation.js";
 import {
+  buildInstitutionalDiligence,
+  type ProtocolBondScanSnapshot,
+  type ProtocolStatusSnapshot,
+} from "./core/diligence.js";
+import {
   LifecycleFilterSchema,
   ParticipantProfileSchema,
   type ParticipantProfile,
@@ -55,6 +60,47 @@ export class BitcoinStakingService {
 
   getSecurityGuidance(topic: SecurityTopic | "all" = "all") {
     return getSecurityGuidance(topic);
+  }
+
+  async buildDiligenceReport(input: {
+    network?: StacksNetworkName | undefined;
+    bondIndex?: number | undefined;
+    profile: ParticipantProfile;
+  }) {
+    const network = input.network ?? "mainnet";
+    const profile = ParticipantProfileSchema.parse(input.profile);
+    const [status, scan, security, allSources] = await Promise.all([
+      this.getProtocolStatus(network),
+      this.listProtocolBonds(network),
+      Promise.resolve(this.getSecurityGuidance("all")),
+      this.listSources(),
+    ]);
+    const securityTopics = new Set([
+      "audit_status",
+      "timelock_construction",
+      "leather_transaction_safety",
+    ]);
+    const securityEntries = security.entries.filter((entry) => securityTopics.has(entry.topic));
+    const evidenceSourceIds = new Set([
+      ...security.sources.map((source) => source.id),
+      "pox5-release-contract",
+      "reference-signer-manager",
+    ]);
+
+    return buildInstitutionalDiligence({
+      network,
+      profile,
+      requestedBondIndex: input.bondIndex,
+      status: status as ProtocolStatusSnapshot,
+      scan: scan as ProtocolBondScanSnapshot,
+      securityEntries,
+      sources: this.uniqueSources([
+        ...status.sources,
+        ...scan.sources,
+        ...allSources.filter((source) => evidenceSourceIds.has(source.id)),
+      ]),
+      verifiedAt: this.now().toISOString(),
+    });
   }
 
   async listBonds(
