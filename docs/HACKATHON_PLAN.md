@@ -5,7 +5,7 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 ## Milestones
 
 - M1: Live mainnet PoX status, the dedicated testnet's scheduled/active PoX-5 state, and the explicitly labeled demo manifest are visible through MCP.
-- M2: All eleven tools return validated structured output and the offline suite passes.
+- M2: All fourteen tools return validated structured output and the offline suite passes.
 - M3: The concierge completes the native-yield and liquidity/borrowing journeys in Codex and Claude.
 - M4: A clean clone installs, builds, runs, and supports the recorded demo.
 
@@ -34,13 +34,13 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 
 1. Ask a generic question about current and upcoming Bitcoin Staking opportunities.
 2. Show that the concierge checks live mainnet state and published manifests first.
-3. If neither provides an opportunity, show the automatic fallback to the dedicated PoX-5 testnet. Before activation, report its schedule; after activation, discover any configured upcoming on-chain bond. Do not require a network-specific user prompt.
-4. If a testnet bond exists, point out `testnet_only_not_investable`; then request demo opportunities and show the separate `[DEMO]` manifest.
+3. If neither provides an opportunity, show the dedicated PoX-5 testnet as the live demo/prototype environment for the intended mainnet journey. Before activation, report its schedule; after activation, discover any configured upcoming on-chain bond. Do not require a network-specific user prompt.
+4. If a testnet bond exists, point out `live_testnet_demo` and what the working experience proves; then explicitly request illustrative demo manifests and show the separate `[DEMO]` record.
 5. Ask whether PoX-5 is audited and how Leather can safely sign the native-L1 lock transaction. Show known facts, unproven integration claims, and the pre-funding checklist.
 6. Invoke the concierge with a long-term, L1-only, self-controlled yield profile.
 7. Build the participation plan and run a 1 BTC yield scenario.
 8. Ask for continuous liquidity and borrowing without selling.
-9. Show a native-bond no-match and sBTC context without inventing a live DeFi product.
+9. Show a native-bond constraint conflict and route to the closest planned stBTC path without inventing a live DeFi product.
 10. End in Inspector on the tool schemas, read-only annotations, security sources, and structured output.
 
 The exact prompts, state branches, fallback command, and recording close are in `docs/DEMO_RUNBOOK.md`.

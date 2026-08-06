@@ -1,0 +1,38 @@
+name: Product registry review
+
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - id: registry
+        continue-on-error: true
+        run: npm run registry:validate:live | tee registry-review.md
+      - if: always()
+        run: cat registry-review.md >> "$GITHUB_STEP_SUMMARY"
+      - if: steps.registry.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'registry-review-due';
+            const body = 'The nightly Bitcoin Staking product-registry validation failed. Review the workflow log, refresh owner attestations or unreachable sources, and run `npm run registry:validate:live`.';
+            const { data } = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 100 });
+            const existing = data.find(issue => issue.title === title && !issue.pull_request);
+            if (existing) await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body });
+            else await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
+      - if: steps.registry.outcome == 'failure'
+        run: exit 1

@@ -13,9 +13,9 @@ The server now fails closed for missing evidence and live-read errors. The promp
 | Plan requirement | Status | Evidence |
 | --- | --- | --- |
 | TypeScript intelligence core with no LLM calls | Met | Schemas, economics, recommendation, provenance, and security logic live under `src/` and are deterministic. |
-| Read-only stdio MCP | Met | Eleven tools declare read-only/non-destructive annotations; no tool constructs, signs, or broadcasts transactions. |
+| Read-only stdio MCP | Met | Fourteen tools declare read-only/non-destructive annotations; no tool constructs, signs, or broadcasts transactions. |
 | Live mainnet PoX status | Met | `get_protocol_status` uses the configured mainnet API; the opt-in live test verifies current state. |
-| Dedicated PoX-5 testnet proof | Met | Status distinguishes scheduled from active PoX-5; configured bonds are discovered from chain reads and remain `testnet_only_not_investable`. |
+| Dedicated PoX-5 testnet proof | Met | Status distinguishes scheduled from active PoX-5; configured bonds are discovered from chain reads and labeled `live_testnet_demo`. |
 | Published/demo separation | Met | Demo manifests are excluded by default, returned in a separate collection, and remain `demo` through yield simulation. |
 | Deterministic yield math | Met | Integer arithmetic, fee handling, zero-rate behavior, price-scenario boundaries, and insufficient economics are tested. |
 | Source-aware compatibility | Met | Missing evidence returns `unknown`; every manifest claim must cite an existing manifest source. |
@@ -23,10 +23,10 @@ The server now fails closed for missing evidence and live-read errors. The promp
 | Security diligence | Met with corpus gaps | Deterministic topics separate public audit assurance, protocol behavior, SDK construction, wallet signing, and end-to-end proof. Final audit reports and release-specific integration attestations are not in the public corpus. |
 | Concierge prompt and Codex skill | Met | Both are instruction-only orchestration layers over the same MCP tools and share the institutional response contract. |
 | Anti-hallucination behavior | Met at the product boundary | Explicit abstention, final unknown states, no demo fallback, source requirements, policy tests, and adversarial host prompts are present. Free-form host-model compliance remains a residual risk. |
-| Every tool tested through MCP | Met | The offline contract suite invokes all eleven tools through an in-process MCP client and validates structured metadata. |
+| Every tool tested through MCP | Met | The offline contract suite invokes all fourteen tools through an in-process MCP client and validates structured output and read-only annotations. |
 | Codex and Claude stdio configuration | Implemented; host acceptance must be current | `.codex/config.toml` and `.mcp.json` use the same stdio entrypoint. A revoked or expired host login is an external acceptance blocker, not a server fallback condition. |
 | Inspector/demo recording/submission assets | Partially external | The terminal proof and demo runbook are present. Final recording and upload remain manual hackathon deliverables. |
-| One-command cross-repository installation | Met | The package CLI performs an eleven-tool handshake, registers Codex and Claude at user scope, installs the global Codex skill, and provides check and targeted uninstall commands. |
+| One-command cross-repository installation | Met | The package CLI verifies the exact fourteen-tool/version/registry contract, autodetects Codex and Claude, installs a hashed skill, and provides check, update, and targeted uninstall commands. |
 
 ## Anti-hallucination controls
 
@@ -41,7 +41,7 @@ The server now fails closed for missing evidence and live-read errors. The promp
 
 ## Institutional voice acceptance
 
-The intended voice is an institutional Bitcoin Staking diligence analyst: neutral, calm, concise, factual, non-promotional, and decision-first. CFO and investment questions prioritize availability, custody, liquidity, economics, material risk, and the next diligence item. Technical and security questions prioritize mechanisms, ownership boundaries, deterministic verification, gaps, and pinned primary sources. The response avoids unsupported assurances such as “safe,” “guaranteed,” “trustless,” or “risk-free.”
+The intended voice is a knowledgeable, approachable Bitcoin Staking guide with institutional-quality diligence. It leads with the closest path, upcoming versus live status, preparation steps, and the principal tradeoff. Technical and security questions still prioritize mechanisms, ownership boundaries, deterministic verification, gaps, and pinned primary sources. The response avoids unsupported assurances such as “safe,” “guaranteed,” “trustless,” or “risk-free.”
 
 ## Verification record
 

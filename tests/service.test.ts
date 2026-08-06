@@ -63,6 +63,7 @@ function publishedTestnetManifest() {
     requirements: {
       allowlistRequired: true,
       pairedStxRequired: true,
+      pairedStxMinimumValueRatioBps: 500,
       btcLocation: "bitcoin_l1",
       keyControl: "unknown",
       borrowingAgainstPosition: "unknown",

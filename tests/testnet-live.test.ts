@@ -16,7 +16,7 @@ test(
     if (scan.pox5Active) {
       assert.match(status.contractId, /\.pox-5$/);
       assert.ok(
-        scan.bonds.every((bond) => bond.availability === "testnet_only_not_investable"),
+        scan.bonds.every((bond) => bond.availability === "live_testnet_demo"),
       );
     } else {
       assert.ok(status.blocksUntilPox5Activation > 0);

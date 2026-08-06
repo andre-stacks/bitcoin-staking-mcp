@@ -8,11 +8,12 @@ const HELP = `Bitcoin Staking MCP
 Usage:
   bitcoin-staking-mcp [serve]
   bitcoin-staking-mcp setup [--hosts codex,claude] [--local] [--package-spec SPEC] [--json]
+  bitcoin-staking-mcp update [--hosts codex,claude] [--local] [--package-spec SPEC] [--json]
   bitcoin-staking-mcp check [--hosts codex,claude] [--local] [--package-spec SPEC] [--json]
   bitcoin-staking-mcp uninstall [--hosts codex,claude] [--keep-skill] [--json]
 
 Portable install:
-  npx -y github:andre-stacks/bitcoin-staking-mcp setup
+  npx -y github:andre-stacks/bitcoin-staking-mcp#v0.3.0 setup
 
 Options:
   --hosts HOSTS       codex, claude, both as a comma-separated list, or all
@@ -50,7 +51,7 @@ async function main() {
     console.log(HELP);
     return;
   }
-  if (command !== "setup" && command !== "check" && command !== "uninstall") {
+  if (command !== "setup" && command !== "update" && command !== "check" && command !== "uninstall") {
     throw new Error(`Unknown command: ${command}. Run bitcoin-staking-mcp --help.`);
   }
 
@@ -66,4 +67,3 @@ main().catch((error: unknown) => {
   console.error(`[bitcoin-staking-mcp] ${message}`);
   process.exitCode = 1;
 });
-

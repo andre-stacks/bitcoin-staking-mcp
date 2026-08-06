@@ -7,6 +7,8 @@ This catalog translates recurring investor and integration questions into public
 | Investor question | MCP topic | Required answer boundary |
 | --- | --- | --- |
 | Has PoX-5 been audited? | `audit_status` | Name the published assurance and distinguish it from audit-report scope, findings, remediation, and wallet-integration proof. |
+
+Audit-status answers remain topic-local. They may state generically that a protocol audit is not integration proof, but they must not introduce a named wallet or custodian from an earlier turn unless the current question asks whether it was covered.
 | How is the timelock constructed? | `timelock_construction` | Explain P2WSH, the CLTV maturity branch, the separate early-exit branch, participant unlock material, and the complete-script commitment. |
 | How do we know the Leather transaction is safe? | `leather_transaction_safety` | Separate SDK/app construction from Leather account selection and PSBT signing; require destination comparison and release-specific testnet proof. |
 | What must be checked before sending BTC? | `pre_funding_validation` | Derive the expected complete script and P2WSH destination from exact public inputs before funding. |

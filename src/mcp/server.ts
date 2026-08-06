@@ -1,432 +1,62 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { ServiceError } from "../core/errors.js";
-import {
-  MetadataSchema,
-  ParticipantProfileSchema,
-  StacksNetworkSchema,
-  toJsonSafe,
-} from "../core/schemas.js";
+import { CustodyPathStatusSchema, ParticipantProfileSchema, StacksNetworkSchema, toJsonSafe } from "../core/schemas.js";
 import { CAPABILITIES, GLOSSARY, YIELD_METHODOLOGY } from "../content.js";
 import { BitcoinStakingService } from "../service.js";
 import { SecurityTopicValues } from "../security.js";
+import { INSTITUTIONAL_RESPONSE_STANDARD, SOURCE_METHODOLOGY } from "../institutional.js";
 import {
-  INSTITUTIONAL_RESPONSE_STANDARD,
-  SOURCE_METHODOLOGY,
-} from "../institutional.js";
+  BondOutputSchema, BondsOutputSchema, ComparisonOutputSchema, CompatibilityOutputSchema,
+  CustodyOutputSchema, DiligenceOutputSchema, MarketSnapshotOutputSchema, ParticipantOutputSchema,
+  PlanOutputSchema, ProtocolBondsOutputSchema, ProtocolStatusOutputSchema, RoutesOutputSchema,
+  SecurityOutputSchema, YieldOutputSchema,
+} from "./output-schemas.js";
 
-const readOnlyAnnotations = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  openWorldHint: false,
-} as const;
+export const SERVER_VERSION = "0.3.0";
+export const CONTRACT_VERSION = "2.0.0";
+export const SKILL_VERSION = "0.3.0";
+export const EXPECTED_TOOL_NAMES = [
+  "get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "get_security_guidance", "build_diligence_report",
+  "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status",
+  "check_compatibility", "simulate_yield", "compare_staking_paths", "build_participation_plan",
+] as const;
 
-const liveReadAnnotations = {
-  ...readOnlyAnnotations,
-  openWorldHint: true,
-} as const;
-
-function success(value: unknown) {
-  const structuredContent = toJsonSafe(value) as Record<string, unknown>;
-  return {
-    structuredContent,
-    content: [{ type: "text" as const, text: JSON.stringify(structuredContent, null, 2) }],
-  };
-}
-
-function failure(error: unknown) {
-  const serviceError =
-    error instanceof ServiceError
-      ? error
-      : new ServiceError(
-          "INVALID_INPUT",
-          error instanceof Error ? error.message : "Unknown request failure.",
-          false,
-        );
-  return {
-    isError: true,
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(
-          {
-            error: {
-              code: serviceError.code,
-              message: serviceError.message,
-              retryable: serviceError.retryable,
-            },
-          },
-          null,
-          2,
-        ),
-      },
-    ],
-  };
-}
-
-function tool<T>(handler: () => Promise<T> | T) {
-  return Promise.resolve()
-    .then(handler)
-    .then(success)
-    .catch(failure);
-}
+const readOnlyAnnotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false } as const;
+const liveReadAnnotations = { ...readOnlyAnnotations, openWorldHint: true } as const;
+function success(value: unknown) { const structuredContent = toJsonSafe(value) as Record<string, unknown>; return { structuredContent, content: [{ type: "text" as const, text: JSON.stringify(structuredContent, null, 2) }] }; }
+function failure(error: unknown) { const serviceError = error instanceof ServiceError ? error : new ServiceError("INVALID_INPUT", error instanceof Error ? error.message : "Unknown request failure."); return { isError: true, content: [{ type: "text" as const, text: JSON.stringify({ error: { code: serviceError.code, message: serviceError.message, retryable: serviceError.retryable } }, null, 2) }] }; }
+function tool<T>(handler: () => Promise<T> | T) { return Promise.resolve().then(handler).then(success).catch(failure); }
 
 export function createBitcoinStakingMcpServer(service = new BitcoinStakingService()): McpServer {
-  const server = new McpServer(
-    { name: "bitcoin-staking-mcp", version: "0.2.0" },
-    {
-      instructions:
-        "Act as an institutional Bitcoin Staking diligence analyst: neutral, factual, concise, evidence-led, and non-promotional. For a general opportunity or diligence request, do not ask the user to choose a network: check verified mainnet state and published bonds first, then automatically inspect configured testnet data as a clearly non-investable preview only when no mainnet or published opportunity is available. Demo data requires an explicit user request. Use only current MCP structured output and MCP resources as factual support; never fill missing fields from model memory, plausibility, roadmap intent, demo data, or the user's preferred conclusion. If evidence does not answer a question, say 'This MCP does not currently verify that' and identify the missing evidence. If a live read fails, say current state could not be verified. Ground answers on live state, deployed or release-pinned PoX-5 contracts and reference implementations, accepted SIP-045, then pinned SDK/tests and official docs. Never imply that demo data is live or testnet assets are investable. Use get_protocol_status, list_protocol_bonds, and list_bonds before recommending a bond. Use build_diligence_report for a decision-ready live profile assessment. Use get_security_guidance for narrow audit, timelock, wallet, pre-funding, recovery, or early-exit questions. Keep protocol assurance separate from wallet integration proof. Keep native L1 BTC principal separate from sBTC rewards and sBTC principal paths, and treat wallet support as unknown unless cited product evidence says otherwise. State what is not proven. Never construct, sign, or broadcast transactions.",
-    },
-  );
+  const server = new McpServer({ name: "bitcoin-staking-mcp", version: SERVER_VERSION }, { instructions: "Treat the newest user request as the controlling scope. Do not carry a wallet, custodian, borrowing goal, amount, or named entity forward from an earlier turn unless the current request explicitly reconnects it. Keep audit-status answers audit-specific; do not introduce BitGo or another named integration unless the user asks whether it was covered. Start a new general diligence conversation with get_market_snapshot. Explain exactly two bond enrollment routes: native-L1 direct for larger allowlisted institutional participation, and permissionless sBTC pooling through StackingDAO. stBTC is an optional pool capability, never a third route. Apply runtime-over-owner conflict precedence and freshness before calling anything current. For Genesis yield questions, call simulate_yield without requiring user-supplied prices: it fetches current CoinGecko BTC and STX prices, calculates paired STX units, and returns a sourced gross projection. A pending fee makes net yield unknown, not gross yield unavailable. Use the three-decimal display fields in user-facing answers. Label public-model inputs as scenarios, not final configured bond terms. Ask only routing questions that change fit. Never construct, sign, or broadcast transactions or make unsupported safety, borrowing, or yield claims." });
 
-  server.registerTool(
-    "get_protocol_status",
-    {
-      title: "Get Bitcoin Staking protocol status",
-      description:
-        "Read the current Stacks PoX contract, burn height, current and next reward cycles, and derived prepare/reward phase heights from mainnet or a configured testnet API.",
-      inputSchema: z.object({ network: StacksNetworkSchema.default("mainnet") }),
-      outputSchema: MetadataSchema,
-      annotations: liveReadAnnotations,
-    },
-    ({ network }) => tool(() => service.getProtocolStatus(network)),
-  );
+  server.registerTool("get_market_snapshot", { title: "Get Bitcoin Staking market snapshot", description: "Deterministic front door combining the reviewed product registry, route freshness, live PoX state, and on-chain bond configuration with evidence precedence already applied.", inputSchema: z.object({ network: StacksNetworkSchema.default("mainnet") }), outputSchema: MarketSnapshotOutputSchema, annotations: liveReadAnnotations }, ({ network }) => tool(() => service.getMarketSnapshot({ network })));
+  server.registerTool("get_protocol_status", { title: "Get Bitcoin Staking protocol status", description: "Read current PoX state and exact endpoint provenance.", inputSchema: z.object({ network: StacksNetworkSchema.default("mainnet") }), outputSchema: ProtocolStatusOutputSchema, annotations: liveReadAnnotations }, ({ network }) => tool(() => service.getProtocolStatus(network)));
+  server.registerTool("list_protocol_bonds", { title: "List live PoX-5 protocol bonds", description: "Scan a bounded PoX-5 window and return only on-chain configured bonds.", inputSchema: z.object({ network: StacksNetworkSchema.default("mainnet"), lookbackPeriods: z.number().int().min(0).max(24).default(6), lookaheadPeriods: z.number().int().min(0).max(12).default(2) }), outputSchema: ProtocolBondsOutputSchema, annotations: liveReadAnnotations }, ({ network, lookbackPeriods, lookaheadPeriods }) => tool(() => service.listProtocolBonds(network, { lookbackPeriods, lookaheadPeriods })));
+  server.registerTool("get_security_guidance", { title: "Get Bitcoin Staking security guidance", description: "Return sourced security diligence with explicit evidence boundaries.", inputSchema: z.object({ topic: z.enum([...SecurityTopicValues, "all"]).default("all") }), outputSchema: SecurityOutputSchema, annotations: readOnlyAnnotations }, ({ topic }) => tool(() => service.getSecurityGuidance(topic)));
+  server.registerTool("build_diligence_report", { title: "Build a bond and route diligence report", description: "Build a claim-sourced report across bond availability, protocol economics, direct and pool dependencies, optional LST risks, fit, missing evidence, and a concrete next action.", inputSchema: z.object({ network: StacksNetworkSchema.optional(), bondIndex: z.number().int().nonnegative().optional(), bondId: z.string().min(1).optional(), routeId: z.string().min(1).optional(), profile: ParticipantProfileSchema }), outputSchema: DiligenceOutputSchema, annotations: liveReadAnnotations }, (input) => tool(() => service.buildDiligenceReport(input)));
+  server.registerTool("list_bonds", { title: "List Bitcoin Staking bonds", description: "List reviewed public bonds with route summaries; demo records remain excluded by default.", inputSchema: z.object({ lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]).optional(), includeDemo: z.boolean().default(false) }), outputSchema: BondsOutputSchema, annotations: readOnlyAnnotations }, (input) => tool(() => service.listBonds(input)));
+  server.registerTool("list_custody_paths", { title: "List native-L1 custody paths", description: "List current product-level custody evidence for direct native-L1 participation only.", inputSchema: z.object({ provider: z.string().min(1).optional(), status: CustodyPathStatusSchema.optional() }), outputSchema: CustodyOutputSchema, annotations: readOnlyAnnotations }, (input) => tool(() => service.listCustodyPaths(input)));
+  server.registerTool("list_bond_participation_routes", { title: "List a bond's participation routes", description: "Return the direct native-L1 and approved sBTC pool routes nested under one bond, including any optional pool LST capability.", inputSchema: z.object({ bondId: z.string().min(1) }), outputSchema: RoutesOutputSchema, annotations: readOnlyAnnotations }, (input) => tool(() => service.listBondParticipationRoutes(input)));
+  server.registerTool("get_bond", { title: "Get a Bitcoin Staking bond", description: "Get a normalized v2 bond and reconcile owner claims with on-chain state.", inputSchema: z.object({ bondId: z.string().min(1) }), outputSchema: BondOutputSchema, annotations: liveReadAnnotations }, ({ bondId }) => tool(() => service.getBond(bondId)));
+  server.registerTool("check_participant_status", { title: "Check public participant status", description: "Read public participant state, infer network from the address when appropriate, reject conflicts, and return component provenance.", inputSchema: z.object({ address: z.string().min(1), bondId: z.string().min(1).optional(), network: StacksNetworkSchema.optional() }), outputSchema: ParticipantOutputSchema, annotations: liveReadAnnotations }, ({ address, bondId, network }) => tool(() => service.checkParticipantStatus(address, bondId, network)));
+  server.registerTool("check_compatibility", { title: "Check direct-route custody compatibility", description: "Check one current custody path against the selected bond's direct native-L1 route.", inputSchema: z.object({ bondId: z.string().min(1), provider: z.string().min(1), keyControlPreference: z.enum(["self_controlled", "custodian", "either", "unknown"]).default("unknown") }), outputSchema: CompatibilityOutputSchema, annotations: readOnlyAnnotations }, (input) => tool(() => service.checkCompatibility(input)));
+  server.registerTool("simulate_yield", { title: "Simulate route-aware Bitcoin Staking yield", description: "Fetch current CoinGecko BTC/STX prices by default, calculate paired STX units and sourced gross economics, and leave net yield unknown when fees are pending.", inputSchema: z.object({ bondId: z.string().min(1), routeId: z.string().min(1).optional(), principalSats: z.string().regex(/^\d+$/).optional(), principalBtc: z.string().regex(/^\d+(?:\.\d{1,8})?\s*(?:s?btc)?$/i).optional(), durationDays: z.number().int().safe().positive().optional(), annualRateBps: z.number().int().safe().min(0).max(100_000).optional(), feeBps: z.number().int().safe().min(0).max(10_000).optional(), lstFeeBps: z.number().int().safe().min(0).max(10_000).optional(), includeLst: z.boolean().default(false), btcPriceUsd: z.number().positive().optional(), stxPriceScenariosUsd: z.array(z.number().positive()).max(12).optional() }).refine((value) => Boolean(value.principalSats || value.principalBtc), { message: "Provide principalSats or principalBtc." }), outputSchema: YieldOutputSchema, annotations: liveReadAnnotations }, (input) => tool(() => service.simulateYield(input)));
+  server.registerTool("compare_staking_paths", { title: "Compare the two bond routes", description: "Preserved compatibility tool that compares the direct route and approved pool under the canonical published bond.", inputSchema: ParticipantProfileSchema, outputSchema: ComparisonOutputSchema, annotations: liveReadAnnotations }, (profile) => tool(() => service.compareStakingPaths(profile)));
+  server.registerTool("build_participation_plan", { title: "Build a read-only participation plan", description: "Select or compare bond routes and return fit, dependencies, missing evidence, and diligence actions without transaction fields.", inputSchema: z.object({ bondId: z.string().min(1), routeId: z.string().min(1).optional(), profile: ParticipantProfileSchema }), outputSchema: PlanOutputSchema, annotations: liveReadAnnotations }, ({ bondId, routeId, profile }) => tool(() => service.buildParticipationPlan(bondId, profile, routeId)));
 
-  server.registerTool(
-    "list_protocol_bonds",
-    {
-      title: "List live PoX-5 protocol bonds",
-      description:
-        "Scan the active PoX-5 bond window on mainnet or a configured testnet and return only bonds proven to be configured on-chain, with phase, timing, terms, and explicit testnet availability.",
-      inputSchema: z.object({
-        network: StacksNetworkSchema.default("mainnet"),
-        lookbackPeriods: z.number().int().min(0).max(24).default(6),
-        lookaheadPeriods: z.number().int().min(0).max(12).default(2),
-      }),
-      outputSchema: MetadataSchema,
-      annotations: liveReadAnnotations,
-    },
-    ({ network, lookbackPeriods, lookaheadPeriods }) =>
-      tool(() => service.listProtocolBonds(network, { lookbackPeriods, lookaheadPeriods })),
-  );
+  const capabilities = `${CAPABILITIES}\n\nContract version: ${CONTRACT_VERSION}\nServer version: ${SERVER_VERSION}\nSkill version: ${SKILL_VERSION}\n`;
+  server.registerResource("bitcoin-staking-capabilities", "bitcoin-staking://capabilities", { title: "Bitcoin Staking Concierge capabilities", mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: capabilities }] }));
+  server.registerResource("bitcoin-staking-glossary", "bitcoin-staking://glossary", { title: "Bitcoin Staking glossary", mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: GLOSSARY }] }));
+  server.registerResource("bitcoin-staking-yield-methodology", "bitcoin-staking://methodology/yield", { title: "Yield methodology", mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: YIELD_METHODOLOGY }] }));
+  server.registerResource("bitcoin-staking-security", "bitcoin-staking://security", { title: "Security guidance", mimeType: "application/json" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(service.getSecurityGuidance("all"), null, 2) }] }));
+  server.registerResource("bitcoin-staking-custody-paths", "bitcoin-staking://custody-paths", { title: "Native-L1 custody registry", mimeType: "application/json" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(await service.listCustodyPaths(), null, 2) }] }));
+  server.registerResource("bitcoin-staking-source-methodology", "bitcoin-staking://methodology/sources", { title: "Source methodology", mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: SOURCE_METHODOLOGY }] }));
+  server.registerResource("bitcoin-staking-institutional-response-standard", "bitcoin-staking://methodology/response-standard", { title: "Diligence response standard", mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: INSTITUTIONAL_RESPONSE_STANDARD }] }));
+  server.registerResource("bitcoin-staking-bond", new ResourceTemplate("bitcoin-staking://bonds/{bondId}", { list: async () => ({ resources: (await service.manifests.list()).map((bond) => ({ uri: `bitcoin-staking://bonds/${bond.id}`, name: bond.title, title: bond.dataStatus === "demo" ? `[DEMO] ${bond.title}` : bond.title, mimeType: "application/json", description: bond.description })) }), complete: { bondId: async (value) => (await service.manifests.list()).map((bond) => bond.id).filter((id) => id.startsWith(value)) } }), { title: "Bitcoin Staking bond manifest", mimeType: "application/json" }, async (uri, variables) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(toJsonSafe(await service.getBond(String(variables.bondId))), null, 2) }] }));
+  server.registerResource("bitcoin-staking-source", new ResourceTemplate("bitcoin-staking://sources/{sourceId}", { list: async () => ({ resources: (await service.listSources()).map((source) => ({ uri: `bitcoin-staking://sources/${source.id}`, name: source.title, title: source.title, mimeType: "application/json", description: `${source.dataStatus} ${source.sourceType} source` })) }), complete: { sourceId: async (value) => (await service.listSources()).map((source) => source.id).filter((id) => id.startsWith(value)) } }), { title: "Bitcoin Staking source", mimeType: "application/json" }, async (uri, variables) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(await service.getSource(String(variables.sourceId)), null, 2) }] }));
 
-  server.registerTool(
-    "get_security_guidance",
-    {
-      title: "Get Bitcoin Staking security guidance",
-      description:
-        "Answer a sourced security-diligence topic about PoX-5 audits, native-L1 timelock construction, Leather transaction boundaries, pre-funding validation, maturity recovery, or early exit. Separates published assurance from what still requires integration proof.",
-      inputSchema: z.object({
-        topic: z.enum([...SecurityTopicValues, "all"]).default("all"),
-      }),
-      outputSchema: MetadataSchema,
-      annotations: readOnlyAnnotations,
-    },
-    ({ topic }) => tool(() => service.getSecurityGuidance(topic)),
-  );
-
-  server.registerTool(
-    "build_diligence_report",
-    {
-      title: "Build an institutional Bitcoin Staking diligence report",
-      description:
-        "Combine live PoX-5 status, bounded on-chain bond discovery, a participant profile, exact target-rate economics, and sourced security evidence. Before activation or without a configured bond, returns a verified no-opportunity result rather than inferred terms. Testnet records are always non-investable.",
-      inputSchema: z.object({
-        network: StacksNetworkSchema.default("mainnet"),
-        bondIndex: z.number().int().nonnegative().optional(),
-        profile: ParticipantProfileSchema,
-      }),
-      outputSchema: MetadataSchema,
-      annotations: liveReadAnnotations,
-    },
-    ({ network, bondIndex, profile }) =>
-      tool(() => service.buildDiligenceReport({ network, bondIndex, profile })),
-  );
-
-  server.registerTool(
-    "list_bonds",
-    {
-      title: "List Bitcoin Staking bonds",
-      description:
-        "List versioned public Bitcoin Staking bond manifests. Demo records are excluded by default and, when requested, returned in a separate demoBonds array.",
-      inputSchema: z.object({
-        lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]).optional(),
-        includeDemo: z.boolean().default(false),
-      }),
-      outputSchema: MetadataSchema,
-      annotations: readOnlyAnnotations,
-    },
-    (input) => tool(() => service.listBonds(input)),
-  );
-
-  server.registerTool(
-    "get_bond",
-    {
-      title: "Get a Bitcoin Staking bond",
-      description:
-        "Get one normalized bond manifest, its sources, missing fields, demo status, and optional on-chain PoX-5 verification.",
-      inputSchema: z.object({ bondId: z.string().min(1) }),
-      outputSchema: MetadataSchema,
-      annotations: liveReadAnnotations,
-    },
-    ({ bondId }) => tool(() => service.getBond(bondId)),
-  );
-
-  server.registerTool(
-    "check_participant_status",
-    {
-      title: "Check public participant status",
-      description:
-        "Read public Stacks account, staker, bond membership, and optional allowance state. This never proves ownership of the address.",
-      inputSchema: z.object({
-        address: z.string().min(1),
-        bondId: z.string().min(1).optional(),
-      }),
-      outputSchema: MetadataSchema,
-      annotations: liveReadAnnotations,
-    },
-    ({ address, bondId }) => tool(() => service.checkParticipantStatus(address, bondId)),
-  );
-
-  server.registerTool(
-    "check_compatibility",
-    {
-      title: "Check wallet or custodian compatibility",
-      description:
-        "Check a specific bond manifest for cited wallet or custodian compatibility. Missing evidence returns unknown, never assumed support.",
-      inputSchema: z.object({
-        bondId: z.string().min(1),
-        provider: z.string().min(1),
-        keyControlPreference: z
-          .enum(["self_controlled", "custodian", "either", "unknown"])
-          .default("unknown"),
-      }),
-      outputSchema: MetadataSchema,
-      annotations: readOnlyAnnotations,
-    },
-    (input) => tool(() => service.checkCompatibility(input)),
-  );
-
-  server.registerTool(
-    "simulate_yield",
-    {
-      title: "Simulate Bitcoin Staking yield",
-      description:
-        "Run deterministic, non-compounding yield and price scenarios using manifest terms and explicit assumptions. Refuses unsupported or incomplete reward models and preserves demo provenance when inputs are illustrative.",
-      inputSchema: z.object({
-        bondId: z.string().min(1),
-        principalSats: z.string().regex(/^\d+$/),
-        durationDays: z.number().int().positive().optional(),
-        annualRateBps: z.number().int().nonnegative().optional(),
-        feeBps: z.number().int().min(0).max(10_000).optional(),
-        btcPriceUsd: z.number().positive().optional(),
-        stxPriceScenariosUsd: z.array(z.number().positive()).max(10).optional(),
-      }),
-      outputSchema: MetadataSchema,
-      annotations: readOnlyAnnotations,
-    },
-    (input) => tool(() => service.simulateYield(input)),
-  );
-
-  server.registerTool(
-    "compare_staking_paths",
-    {
-      title: "Compare native Bitcoin staking and sBTC context",
-      description:
-        "Compare a user's goals with native-L1 Bitcoin staking and sourced sBTC application context without inventing or ranking live DeFi products.",
-      inputSchema: ParticipantProfileSchema,
-      outputSchema: MetadataSchema,
-      annotations: readOnlyAnnotations,
-    },
-    (profile) => tool(() => service.compareStakingPaths(profile)),
-  );
-
-  server.registerTool(
-    "build_participation_plan",
-    {
-      title: "Build a Bitcoin Staking participation plan",
-      description:
-        "Evaluate one complete participant profile against a bond and return fit, tradeoffs, missing facts, unsupported requirements, and read-only next steps.",
-      inputSchema: z.object({
-        bondId: z.string().min(1),
-        profile: ParticipantProfileSchema,
-      }),
-      outputSchema: MetadataSchema,
-      annotations: readOnlyAnnotations,
-    },
-    ({ bondId, profile }) => tool(() => service.buildParticipationPlan(bondId, profile)),
-  );
-
-  server.registerResource(
-    "bitcoin-staking-capabilities",
-    "bitcoin-staking://capabilities",
-    { title: "Bitcoin Staking Concierge capabilities", mimeType: "text/markdown" },
-    async (uri) => ({
-      contents: [{ uri: uri.href, mimeType: "text/markdown", text: CAPABILITIES }],
-    }),
-  );
-
-  server.registerResource(
-    "bitcoin-staking-glossary",
-    "bitcoin-staking://glossary",
-    { title: "Bitcoin Staking glossary", mimeType: "text/markdown" },
-    async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: GLOSSARY }] }),
-  );
-
-  server.registerResource(
-    "bitcoin-staking-yield-methodology",
-    "bitcoin-staking://methodology/yield",
-    { title: "Bitcoin Staking yield methodology", mimeType: "text/markdown" },
-    async (uri) => ({
-      contents: [{ uri: uri.href, mimeType: "text/markdown", text: YIELD_METHODOLOGY }],
-    }),
-  );
-
-  server.registerResource(
-    "bitcoin-staking-security",
-    "bitcoin-staking://security",
-    { title: "Bitcoin Staking security guidance", mimeType: "application/json" },
-    async (uri) => ({
-      contents: [
-        {
-          uri: uri.href,
-          mimeType: "application/json",
-          text: JSON.stringify(service.getSecurityGuidance("all"), null, 2),
-        },
-      ],
-    }),
-  );
-
-  server.registerResource(
-    "bitcoin-staking-source-methodology",
-    "bitcoin-staking://methodology/sources",
-    { title: "Bitcoin Staking source methodology", mimeType: "text/markdown" },
-    async (uri) => ({
-      contents: [
-        { uri: uri.href, mimeType: "text/markdown", text: SOURCE_METHODOLOGY },
-      ],
-    }),
-  );
-
-  server.registerResource(
-    "bitcoin-staking-institutional-response-standard",
-    "bitcoin-staking://methodology/response-standard",
-    { title: "Institutional response standard", mimeType: "text/markdown" },
-    async (uri) => ({
-      contents: [
-        { uri: uri.href, mimeType: "text/markdown", text: INSTITUTIONAL_RESPONSE_STANDARD },
-      ],
-    }),
-  );
-
-  server.registerResource(
-    "bitcoin-staking-bond",
-    new ResourceTemplate("bitcoin-staking://bonds/{bondId}", {
-      list: async () => ({
-        resources: (await service.manifests.list()).map((bond) => ({
-          uri: `bitcoin-staking://bonds/${bond.id}`,
-          name: bond.title,
-          title: bond.dataStatus === "demo" ? `[DEMO] ${bond.title}` : bond.title,
-          mimeType: "application/json",
-          description: bond.description,
-        })),
-      }),
-      complete: {
-        bondId: async (value) =>
-          (await service.manifests.list())
-            .map((bond) => bond.id)
-            .filter((id) => id.startsWith(value)),
-      },
-    }),
-    { title: "Bitcoin Staking bond manifest", mimeType: "application/json" },
-    async (uri, variables) => {
-      const result = await service.getBond(String(variables.bondId));
-      return {
-        contents: [
-          {
-            uri: uri.href,
-            mimeType: "application/json",
-            text: JSON.stringify(toJsonSafe(result), null, 2),
-          },
-        ],
-      };
-    },
-  );
-
-  server.registerResource(
-    "bitcoin-staking-source",
-    new ResourceTemplate("bitcoin-staking://sources/{sourceId}", {
-      list: async () => ({
-        resources: (await service.listSources()).map((source) => ({
-          uri: `bitcoin-staking://sources/${source.id}`,
-          name: source.title,
-          title: source.title,
-          mimeType: "application/json",
-          description: `${source.dataStatus} ${source.sourceType} source`,
-        })),
-      }),
-      complete: {
-        sourceId: async (value) =>
-          (await service.listSources())
-            .map((source) => source.id)
-            .filter((id) => id.startsWith(value)),
-      },
-    }),
-    { title: "Bitcoin Staking source", mimeType: "application/json" },
-    async (uri, variables) => ({
-      contents: [
-        {
-          uri: uri.href,
-          mimeType: "application/json",
-          text: JSON.stringify(await service.getSource(String(variables.sourceId)), null, 2),
-        },
-      ],
-    }),
-  );
-
-  server.registerPrompt(
-    "bitcoin-staking-concierge",
-    {
-      title: "Bitcoin Staking Concierge",
-      description:
-        "Introduce the available Bitcoin Staking services, then compose the read-only tools into sourced status, discovery, diligence, security, economics, or fit answers.",
-      argsSchema: z.object({ request: z.string().optional() }),
-    },
-    ({ request }) => ({
-      messages: [
-        {
-          role: "user" as const,
-          content: {
-            type: "text" as const,
-            text: `${request ? `The user's initial request is: ${request}\n\nProceed directly. Do not show the introductory menu or ask the user to repeat goals already provided.` : `This is an empty first-run invocation. Do not call a tool yet. Introduce the service and show this concise menu:
-
-“I'm your Bitcoin Staking Concierge. I can help you:
-
-1. Check current protocol status and bond availability
-2. Find active or upcoming Bitcoin Staking bonds
-3. Assess whether an opportunity fits your custody, liquidity, and time-horizon requirements
-4. Model yield and fee scenarios from sourced terms
-5. Answer security questions about audits, timelocks, Leather, recovery, and early exit
-6. Check wallet or custodian compatibility, or public participant status
-7. Compare native L1 Bitcoin staking with sBTC paths
-
-Choose a number or ask a question in your own words. A good place to start is: ‘What is the current protocol status, and are any bonds available?’”
-
-Stop after the introduction and wait for the user's choice. Do not ask “What would you like your Bitcoin to do?”`}
-
-Act as a read-only institutional Bitcoin Staking diligence analyst. Be neutral, factual, concise, evidence-led, and non-promotional. Lead with the decision-relevant answer and adapt depth to the apparent audience: CFO/investment committee, technical/security/custody team, or mixed.
-
-Ask no more than four goal-oriented questions before an initial assessment. Establish: primary goal, liquidity need, whether BTC must remain on Bitcoin L1 or the user is open to sBTC context, and who should control the keys. Ask amount, horizon, wallet, or custodian only when they change the result.
-
-Use only current MCP structured output and MCP resources as factual support. Never fill a missing answer from model memory, plausibility, roadmap intent, demo data, or the user's preferred conclusion. If the evidence does not answer the question, say “This MCP does not currently verify that,” then identify the missing evidence. If a live tool fails, say current state could not be verified; do not substitute a remembered value. Treat unknown, not_verified, not_assessable, context_only, and empty results as final evidence states rather than invitations to guess.
-
-Ground protocol behavior in live state, the deployed or release-pinned PoX-5 contracts and reference implementations, accepted SIP-045, then pinned SDK/tests and official documentation. If evidence conflicts, say so and prefer the higher-precedence source. Use get_protocol_status, list_protocol_bonds, and list_bonds before discussing availability. For a general opportunity or diligence request, do not ask the user to choose a network. Check verified mainnet state and published manifests first. If neither provides an available opportunity, automatically inspect the configured testnet as the best current preview and label every testnet record as non-investable. Mainnet or published opportunity data always outranks testnet data. Demo data requires an explicit user request and is never the automatic fallback. Use build_diligence_report for the selected evidence environment. For a narrow audit, timelock, Leather, pre-funding, recovery, or early-exit question, call get_security_guidance. State what is known, what is not proven, and the relevant verification checklist; never treat a protocol audit as proof of a wallet integration. Call build_participation_plan and simulate_yield for manifest-backed opportunities rather than doing calculations yourself. Keep native L1 BTC separate from sBTC rewards and sBTC principal paths. Treat wallet support as unknown unless check_compatibility cites evidence. Present the bottom line, current availability, material tradeoff or risk, assumptions, primary sources, and next diligence step. If nothing matches, say so. Never construct, sign, or broadcast a transaction.`,
-          },
-        },
-      ],
-    }),
-  );
-
+  server.registerPrompt("bitcoin-staking-concierge", { title: "Bitcoin Staking Concierge", description: "Route a user through bond-centric Bitcoin Staking diligence.", argsSchema: z.object({ request: z.string().optional() }) }, ({ request }) => ({ messages: [{ role: "user" as const, content: { type: "text" as const, text: `${request ? `Current user request: ${request}` : "This is an empty first-run invocation."}\n\nTreat the current user request as the controlling scope. For an audit-status question, answer only the audit claim, unavailable reports, scope, findings, remediation, and commit-attestation gaps. Do not mention BitGo or another named integration unless the current request asks whether it was covered. Act as a knowledgeable, approachable Bitcoin Staking guide. Call get_market_snapshot first for a new general diligence request. Distinguish schedule, enrollment, freshness, and on-chain configuration. Explain exactly two routes: direct L1 for larger allowlisted institutional participation, and permissionless smaller-balance sBTC pooling through StackingDAO. Mention stBTC only as an optional pool capability when redemption and market-liquidity evidence are current. Ask whether the user prioritizes keeping BTC on L1, permissionless smaller-balance access, or liquidity. Ask only route-changing follow-ups about asset held, amount, whitelist status, liquidity, and custody preference. For a Genesis yield question, call simulate_yield with the amount; it fetches current CoinGecko BTC and STX prices automatically. Give the current prices, paired STX units, and public-model gross reward. Use only its three-decimal display fields for BTC and STX quantities. If a fee is pending, leave net yield unknown rather than refusing the gross calculation. Say clearly that public-model assumptions are not final configured bond terms. For borrowing, require a named live lender and sourced collateral terms; transferability alone is never borrowing evidence. Accept BTC or sBTC amounts naturally and convert to sats internally. Never expose internal enums or basis points unless requested. Never construct, sign, or broadcast transactions or provide individualized advice.` } }] }));
   return server;
 }

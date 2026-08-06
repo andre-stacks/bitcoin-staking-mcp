@@ -1,4 +1,10 @@
-import type { ParticipantProfile, SourceRef, StacksNetworkName } from "./schemas.js";
+import type {
+  BondManifest,
+  ParticipantProfile,
+  SourceRef,
+  StacksNetworkName,
+} from "./schemas.js";
+import { simulateYield } from "./economics.js";
 
 const BPS_DENOMINATOR = 10_000n;
 const TARGET_CALCULATIONS_PER_YEAR = 50n;
@@ -70,6 +76,18 @@ function uniqueSources(sources: SourceRef[]): SourceRef[] {
   return [...new Map(sources.map((source) => [source.id, source])).values()];
 }
 
+function scheduledDateLabel(value?: string): string {
+  if (!value) return "the published launch window";
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 function pairedStxMinimumUstx(bond: ProtocolBondSnapshot, principalSats: bigint): bigint {
   return (
     ((BigInt(bond.stxValueRatio) * principalSats) / 100n) *
@@ -113,6 +131,7 @@ export function buildInstitutionalDiligence(input: {
   requestedBondIndex?: number | undefined;
   status: ProtocolStatusSnapshot;
   scan: ProtocolBondScanSnapshot;
+  upcomingBonds: BondManifest[];
   securityEntries: DiligenceSecurityEntry[];
   sources: SourceRef[];
   verifiedAt: string;
@@ -132,13 +151,17 @@ export function buildInstitutionalDiligence(input: {
         ? "scheduled_activation"
         : "pox5_unavailable",
       fit: "not_assessable",
-      bottomLine: input.status.pox5Scheduled
-        ? `No PoX-5 bond can be assessed yet. The live ${input.network} API schedules PoX-5 for burn height ${scheduledHeight}; the active contract is still ${input.status.contractId}.`
-        : `No PoX-5 bond can be assessed because the live ${input.network} API does not report PoX-5 as active or scheduled.`,
+      bottomLine: testnet
+        ? input.status.pox5Scheduled
+          ? `The live testnet demo environment is connected and schedules PoX-5 for burn height ${scheduledHeight}. Until activation, the complete mainnet-like bond journey cannot be demonstrated.`
+          : "The live testnet demo environment is connected, but this endpoint does not report PoX-5 as active or scheduled, so the complete mainnet-like bond journey cannot be demonstrated."
+        : input.status.pox5Scheduled
+          ? `No PoX-5 bond can be assessed yet. The live ${input.network} API schedules PoX-5 for burn height ${scheduledHeight}; the active contract is still ${input.status.contractId}.`
+          : `No PoX-5 bond can be assessed because the live ${input.network} API does not report PoX-5 as active or scheduled.`,
       availability: {
         investable: false,
         reason: testnet
-          ? "Testnet assets are non-investable, and PoX-5 is not active on this endpoint."
+          ? "This is the live product demo/prototype environment; PoX-5 is not active on this endpoint yet, so the full intended journey is not currently demonstrable."
           : "No active PoX-5 protocol opportunity was verified.",
         activationBurnHeight: scheduledHeight,
         currentBurnHeight: input.status.currentBurnchainBlockHeight,
@@ -172,19 +195,89 @@ export function buildInstitutionalDiligence(input: {
   }
 
   if (!selectedBond) {
+    const upcomingBond =
+      input.requestedBondIndex === undefined
+        ? input.upcomingBonds[0]
+        : input.upcomingBonds.find(
+            (bond) => bond.onChainBondIndex === input.requestedBondIndex,
+          );
     const requested =
       input.requestedBondIndex === undefined
         ? "No configured bond was returned in the scanned active window."
         : `Bond index ${input.requestedBondIndex} was not returned in the scanned active window.`;
+    if (!testnet && upcomingBond) {
+      const launchDate = scheduledDateLabel(upcomingBond.timing.scheduledLaunchDate);
+      const cycle = upcomingBond.timing.startsRewardCycle;
+      const referenceScenario = principalSats
+        ? simulateYield(upcomingBond, { principalSats: principalSats.toString() })
+        : null;
+      return {
+        network: input.network,
+        assessmentStatus: "upcoming_bond_scheduled",
+        fit: "preparation_stage",
+        bottomLine: `${upcomingBond.title} is slated for ${launchDate}${cycle ? ` in Cycle ${cycle}` : ""}. It is not yet configured in the bounded on-chain scan, so final terms and enrollment are pending, but participants can prepare custody, eligibility, key control, and lock-horizon decisions now.`,
+        availability: {
+          investable: false,
+          status: "upcoming",
+          reason:
+            "The product schedule is published, but on-chain configuration and open enrollment have not yet been verified.",
+          scheduledLaunchDate: upcomingBond.timing.scheduledLaunchDate ?? null,
+          startsRewardCycle: upcomingBond.timing.startsRewardCycle ?? null,
+          currentBurnHeight: input.status.currentBurnchainBlockHeight,
+          scannedBondIndices: input.scan.scannedBondIndices,
+        },
+        profile: input.profile,
+        selectedBond: null,
+        upcomingBond,
+        economics: referenceScenario
+          ? {
+              status: "reference_model_projection",
+              scenario: referenceScenario,
+              caveat:
+                "The target rate, duration, and STX value ratio are published reference-program inputs. The result uses complete supplied route economics but is not the final first-bond payout until configured terms, price snapshot, and on-chain state are verified.",
+            }
+          : {
+              status: "reference_model_available",
+              targetApyBps: upcomingBond.economics.targetRateBps ?? null,
+              pairedStxMinimumValueRatioBps:
+                upcomingBond.participationRoutes.find(
+                  (route) => route.routeType === "native_l1_direct",
+                )?.pairedStx.minimumValueRatioBps ?? null,
+              reason:
+                "Supply a BTC amount and every applicable route fee for a deterministic scenario; calculations are refused while required economics remain incomplete.",
+            },
+        materialRisks: [
+          "A slated launch date is not proof of on-chain configuration or open enrollment.",
+          "Final custody, eligibility, economics, and recovery terms may still change before launch.",
+        ],
+        securityEvidence: input.securityEntries,
+        nextDiligenceSteps: [
+          "Choose a currently supported custody path and confirm the Bitcoin lock and maturity-recovery signing flow.",
+          "Confirm allowlist eligibility and the amount and lock horizon you are prepared to use.",
+          "Compare the direct native-L1 bond with the announced community-pool and stBTC liquidity paths.",
+          "Refresh the final duration, manager fee, STX price snapshot, capacity, enrollment window, and on-chain configuration near launch.",
+        ],
+        dataStatus: "derived" as const,
+        sources: uniqueSources([...input.sources, ...upcomingBond.sources]),
+        assumptions: [
+          ...input.status.assumptions,
+          ...input.scan.assumptions,
+          "The published schedule is treated as upcoming product information, not live chain state.",
+        ],
+        verifiedAt: input.verifiedAt,
+      };
+    }
     return {
       network: input.network,
       assessmentStatus: "no_configured_bond",
       fit: "not_assessable",
-      bottomLine: `${requested} No opportunity terms were invented.`,
+      bottomLine: testnet
+        ? `${requested} The live testnet remains the product's prototype environment, but the complete mainnet-like bond journey is not currently configured.`
+        : `${requested} No opportunity terms were invented.`,
       availability: {
         investable: false,
         reason: testnet
-          ? "No configured testnet bond was verified, and testnet assets are non-investable."
+          ? "The live testnet demo environment is available, but no bond is configured in the scanned window, so a complete bond experience cannot currently be shown."
           : "No configured mainnet bond was verified in the bounded scan.",
         currentBurnHeight: input.status.currentBurnchainBlockHeight,
         scannedBondIndices: input.scan.scannedBondIndices,
@@ -262,11 +355,11 @@ export function buildInstitutionalDiligence(input: {
     network: input.network,
     assessmentStatus: "configured_bond_assessed",
     fit,
-    bottomLine: `${testnet ? "A real testnet bond is configured, but it is non-investable." : "A mainnet bond is configured on-chain."} The profile is ${fit === "no_match" ? "not a clean fit" : "a conditional fit pending eligibility and integration evidence"}.`,
+    bottomLine: `${testnet ? "A live testnet demo bond is configured and can exercise the intended mainnet-like product journey with test assets." : "A mainnet bond is configured on-chain."} The profile is ${fit === "no_match" ? "not a clean fit" : "a conditional fit pending eligibility and integration evidence"}.`,
     availability: {
       investable: false,
       reason: testnet
-        ? "The record proves testnet configuration only."
+        ? "The record proves a working testnet demo configuration. It does not represent a mainnet opportunity."
         : "This MCP does not determine investability; on-chain configuration does not by itself prove open enrollment or suitability for this participant.",
       protocolStatus: selectedBond.protocolStatus,
       registrationStatus: selectedBond.registrationStatus,

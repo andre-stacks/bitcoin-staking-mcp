@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "registryVersion": "2026-08-06.1",
+  "reviewedAt": "2026-08-06T00:00:00.000Z",
+  "reviewCadenceDays": 7,
+  "bondFiles": [
+    "genesis-bond-cycle-142.json",
+    "demo-native-bitcoin-bond.json"
+  ]
+}

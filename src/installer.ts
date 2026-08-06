@@ -1,16 +1,18 @@
 import { spawn } from "node:child_process";
-import { cp, mkdir, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import { CONTRACT_VERSION, EXPECTED_TOOL_NAMES, SERVER_VERSION, SKILL_VERSION } from "./mcp/server.js";
 
-export const DEFAULT_PACKAGE_SPEC = "github:andre-stacks/bitcoin-staking-mcp";
+export const DEFAULT_PACKAGE_SPEC = "github:andre-stacks/bitcoin-staking-mcp#v0.3.0";
 export const SERVER_NAME = "bitcoin-staking";
 export const SKILL_NAME = "bitcoin-staking-concierge";
 
-export type InstallerAction = "setup" | "check" | "uninstall";
+export type InstallerAction = "setup" | "update" | "check" | "uninstall";
 export type InstallerHost = "codex" | "claude";
 
 export interface InstallerOptions {
@@ -20,6 +22,7 @@ export interface InstallerOptions {
   packageSpec: string;
   json: boolean;
   keepSkill: boolean;
+  hostsExplicit: boolean;
 }
 
 export interface CommandResult {
@@ -43,7 +46,7 @@ export interface InstallerDependencies {
   packageRoot?: string;
   homeDirectory?: string;
   verificationCwd?: string;
-  verifyServer?: () => Promise<number>;
+  verifyServer?: () => Promise<number | ServerVerification>;
 }
 
 export interface InstallerStepResult {
@@ -83,6 +86,7 @@ export function parseInstallerOptions(
     packageSpec: DEFAULT_PACKAGE_SPEC,
     json: false,
     keepSkill: false,
+    hostsExplicit: false,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -97,9 +101,11 @@ export function parseInstallerOptions(
       const value = args[index + 1];
       if (!value) throw new Error("--hosts requires a value.");
       options.hosts = splitHosts(value);
+      options.hostsExplicit = true;
       index += 1;
     } else if (argument?.startsWith("--hosts=")) {
       options.hosts = splitHosts(argument.slice("--hosts=".length));
+      options.hostsExplicit = true;
     } else if (argument === "--package-spec") {
       const value = args[index + 1];
       if (!value) throw new Error("--package-spec requires a value.");
@@ -205,6 +211,7 @@ async function checkHostRegistration(
   host: InstallerHost,
   runCommand: CommandRunner,
   cwd: string,
+  expectedSource: ReturnType<typeof serverCommand>,
 ): Promise<InstallerStepResult> {
   const checked =
     host === "codex"
@@ -217,6 +224,17 @@ async function checkHostRegistration(
       message:
         checked.stderr.trim() || checked.stdout.trim() || `${host} registration was not found.`,
     };
+  }
+  if (host === "codex") {
+    try {
+      const value = JSON.parse(checked.stdout) as { command?: string; args?: string[]; transport?: { command?: string; args?: string[] } };
+      const registration = value.transport ?? value;
+      if (registration.command !== expectedSource.command || JSON.stringify(registration.args ?? []) !== JSON.stringify(expectedSource.args)) {
+        return { target: host, status: "failed", message: `Registration does not match ${expectedSource.description}.` };
+      }
+    } catch {
+      // Older Codex builds may not return JSON despite accepting --json; existence is still reported.
+    }
   }
   return {
     target: host,
@@ -258,6 +276,8 @@ async function installCodexSkill(
   const destination = join(homeDirectory, ".agents", "skills", SKILL_NAME);
   await mkdir(dirname(destination), { recursive: true });
   await cp(source, destination, { recursive: true, force: true });
+  const skill = await readFile(join(destination, "SKILL.md"));
+  await writeFile(join(destination, ".integrity.json"), `${JSON.stringify({ skillVersion: SKILL_VERSION, sha256: createHash("sha256").update(skill).digest("hex") }, null, 2)}\n`, "utf8");
   return {
     target: "codex-skill",
     status: "installed",
@@ -268,8 +288,10 @@ async function installCodexSkill(
 async function checkCodexSkill(homeDirectory: string): Promise<InstallerStepResult> {
   const skillPath = join(homeDirectory, ".agents", "skills", SKILL_NAME, "SKILL.md");
   try {
-    const { access } = await import("node:fs/promises");
-    await access(skillPath);
+    const skill = await readFile(skillPath);
+    const integrity = JSON.parse(await readFile(join(dirname(skillPath), ".integrity.json"), "utf8")) as { skillVersion?: string; sha256?: string };
+    const actualHash = createHash("sha256").update(skill).digest("hex");
+    if (integrity.skillVersion !== SKILL_VERSION || integrity.sha256 !== actualHash) throw new Error("Skill version or hash mismatch.");
     return {
       target: "codex-skill",
       status: "verified",
@@ -294,7 +316,17 @@ async function removeCodexSkill(homeDirectory: string): Promise<InstallerStepRes
   };
 }
 
-export async function verifyPackagedServer(packageRoot = packageRootFromModule): Promise<number> {
+export interface ServerVerification {
+  toolNames: string[];
+  serverVersion: string;
+  contractVersion: string;
+  skillVersion: string;
+  registryVersion: string;
+  registryHash: string;
+  registryReviewStatus: string;
+}
+
+export async function verifyPackagedServer(packageRoot = packageRootFromModule): Promise<ServerVerification> {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [join(packageRoot, "dist", "cli.js"), "serve"],
@@ -302,13 +334,21 @@ export async function verifyPackagedServer(packageRoot = packageRootFromModule):
     stderr: "pipe",
   });
   const client = new Client(
-    { name: "bitcoin-staking-installer", version: "0.2.0" },
+    { name: "bitcoin-staking-installer", version: SERVER_VERSION },
     { capabilities: {}, versionNegotiation: { mode: "legacy" } },
   );
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    return tools.tools.length;
+    const capability = await client.readResource({ uri: "bitcoin-staking://capabilities" });
+    const text = String((capability.contents[0] as { text?: string } | undefined)?.text ?? "");
+    const listed = await client.callTool({ name: "list_bonds", arguments: {} });
+    const registry = (listed.structuredContent as { registry?: { registryVersion?: string; contentHash?: string; reviewStatus?: string } } | undefined)?.registry;
+    return {
+      toolNames: tools.tools.map((tool) => tool.name), serverVersion: text.match(/Server version: ([^\s]+)/)?.[1] ?? "unknown",
+      contractVersion: text.match(/Contract version: ([^\s]+)/)?.[1] ?? "unknown", skillVersion: text.match(/Skill version: ([^\s]+)/)?.[1] ?? "unknown",
+      registryVersion: registry?.registryVersion ?? "unknown", registryHash: registry?.contentHash ?? "unknown", registryReviewStatus: registry?.reviewStatus ?? "unknown",
+    };
   } finally {
     await client.close();
   }
@@ -330,13 +370,27 @@ export async function runInstaller(
   const verifyServer = dependencies.verifyServer ?? (() => verifyPackagedServer(packageRoot));
   const source = serverCommand(options, packageRoot);
   const steps: InstallerStepResult[] = [];
+  const availableHosts: InstallerHost[] = [];
+  for (const host of options.hosts) {
+    const probe = await runCommand(host, ["--version"], { cwd: verificationCwd });
+    if (probe.code === 0) availableHosts.push(host);
+    else steps.push({ target: host, status: options.hostsExplicit ? "failed" : "skipped", message: `${host} is not installed; ${options.hostsExplicit ? "the explicitly requested host is required" : "default setup skipped it"}.` });
+  }
 
-  if (options.action === "setup") {
-    const toolCount = await verifyServer();
+  const serverVerification = async () => {
+    const value = await verifyServer();
+    if (typeof value === "number") return { ok: value === EXPECTED_TOOL_NAMES.length, message: `MCP handshake returned ${value} tools; expected ${EXPECTED_TOOL_NAMES.length}.` };
+    const exactTools = JSON.stringify(value.toolNames) === JSON.stringify([...EXPECTED_TOOL_NAMES]);
+    const ok = exactTools && value.serverVersion === SERVER_VERSION && value.contractVersion === CONTRACT_VERSION && value.skillVersion === SKILL_VERSION && value.registryVersion !== "unknown" && value.registryHash.startsWith("sha256:") && value.registryReviewStatus === "current";
+    return { ok, message: `tools=${value.toolNames.length}, server=${value.serverVersion}, contract=${value.contractVersion}, skill=${value.skillVersion}, registry=${value.registryVersion} ${value.registryReviewStatus}, hash=${value.registryHash}` };
+  };
+
+  if (options.action === "setup" || options.action === "update") {
+    const verification = await serverVerification();
     const serverStep: InstallerStepResult = {
       target: "mcp-server",
-      status: toolCount === 11 ? "verified" : "failed",
-      message: `MCP handshake returned ${toolCount} tools; expected 11.`,
+      status: verification.ok ? "verified" : "failed",
+      message: verification.message,
     };
     steps.push(serverStep);
     if (serverStep.status === "failed") {
@@ -348,7 +402,7 @@ export async function runInstaller(
         nextSteps: [],
       };
     }
-    for (const host of options.hosts) {
+    for (const host of availableHosts) {
       steps.push(
         await replaceHostRegistration(
           host,
@@ -359,30 +413,30 @@ export async function runInstaller(
         ),
       );
     }
-    if (options.hosts.includes("codex")) {
+    if (availableHosts.includes("codex")) {
       steps.push(await installCodexSkill(packageRoot, homeDirectory));
     }
-    for (const host of options.hosts) {
-      steps.push(await checkHostRegistration(host, runCommand, verificationCwd));
+    for (const host of availableHosts) {
+      steps.push(await checkHostRegistration(host, runCommand, verificationCwd, source));
     }
   } else if (options.action === "check") {
-    const toolCount = await verifyServer();
+    const verification = await serverVerification();
     steps.push({
       target: "mcp-server",
-      status: toolCount === 11 ? "verified" : "failed",
-      message: `MCP handshake returned ${toolCount} tools; expected 11.`,
+      status: verification.ok ? "verified" : "failed",
+      message: verification.message,
     });
-    for (const host of options.hosts) {
-      steps.push(await checkHostRegistration(host, runCommand, verificationCwd));
+    for (const host of availableHosts) {
+      steps.push(await checkHostRegistration(host, runCommand, verificationCwd, source));
     }
-    if (options.hosts.includes("codex")) {
+    if (availableHosts.includes("codex")) {
       steps.push(await checkCodexSkill(homeDirectory));
     }
   } else {
-    for (const host of options.hosts) {
+    for (const host of availableHosts) {
       steps.push(await removeHostRegistration(host, runCommand, verificationCwd));
     }
-    if (options.hosts.includes("codex") && !options.keepSkill) {
+    if (availableHosts.includes("codex") && !options.keepSkill) {
       steps.push(await removeCodexSkill(homeDirectory));
     }
   }
@@ -392,7 +446,7 @@ export async function runInstaller(
     ? "npm run setup:check"
     : `npx -y ${options.packageSpec} check --package-spec ${options.packageSpec}`;
   const nextSteps =
-    options.action === "setup" && ok
+    (options.action === "setup" || options.action === "update") && ok
       ? [
           "Restart Codex and Claude Code so they reload MCP and skill metadata.",
           "Open the Bitcoin Staking Concierge in Codex with $bitcoin-staking-concierge, or in Claude Code with /mcp__bitcoin_staking__bitcoin_staking_concierge.",

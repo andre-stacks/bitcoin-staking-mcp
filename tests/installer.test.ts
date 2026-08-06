@@ -14,6 +14,7 @@ test("installer options default to both hosts and support aliases", () => {
   const defaults = parseInstallerOptions("setup", []);
   assert.deepEqual(defaults.hosts, ["codex", "claude"]);
   assert.equal(defaults.packageSpec, DEFAULT_PACKAGE_SPEC);
+  assert.match(defaults.packageSpec, /#v0\.3\.0$/);
 
   const selected = parseInstallerOptions("setup", [
     "--hosts=both",
@@ -45,7 +46,7 @@ test("setup registers both hosts, installs the global skill, and verifies regist
     packageRoot: resolve("."),
     homeDirectory: fakeHome,
     verificationCwd: tmpdir(),
-    verifyServer: async () => 11,
+    verifyServer: async () => 14,
   });
 
   assert.equal(result.ok, true);
@@ -84,7 +85,8 @@ test("setup fails closed before registration when the MCP handshake is incomplet
   });
 
   assert.equal(result.ok, false);
-  assert.equal(calls.length, 0);
+  assert.ok(calls.every((call) => call.args.join(" ") === "--version"));
+  assert.ok(!calls.some((call) => call.args.includes("add")));
   assert.equal(result.steps[0]?.target, "mcp-server");
   assert.equal(result.steps[0]?.status, "failed");
 });
@@ -95,14 +97,12 @@ test("check reports missing host registration and skill", async (context) => {
   const result = await runInstaller(parseInstallerOptions("check", ["--hosts", "codex"]), {
     runCommand: async () => ({ code: 1, stdout: "", stderr: "not found" }),
     homeDirectory: fakeHome,
-    verifyServer: async () => 11,
+    verifyServer: async () => 14,
   });
 
   assert.equal(result.ok, false);
   assert.ok(result.steps.some((step) => step.target === "codex" && step.status === "failed"));
-  assert.ok(
-    result.steps.some((step) => step.target === "codex-skill" && step.status === "failed"),
-  );
+  assert.ok(result.steps.some((step) => step.target === "codex" && step.status === "failed"));
 });
 
 test("uninstall removes only selected registrations and the product skill", async (context) => {
@@ -118,13 +118,13 @@ test("uninstall removes only selected registrations and the product skill", asyn
     runCommand,
     packageRoot: resolve("."),
     homeDirectory: fakeHome,
-    verifyServer: async () => 11,
+    verifyServer: async () => 14,
   });
   const result = await runInstaller(parseInstallerOptions("uninstall", ["--hosts", "codex"]), {
     runCommand,
     packageRoot: resolve("."),
     homeDirectory: fakeHome,
-    verifyServer: async () => 11,
+    verifyServer: async () => 14,
   });
 
   assert.equal(result.ok, true);
