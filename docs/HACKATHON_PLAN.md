@@ -61,6 +61,7 @@ The exact prompts, state branches, fallback command, and recording close are in 
 - `npm run test:testnet` passes against the configured PoX-5 testnet immediately before recording.
 - Skill validator passes.
 - Codex and Claude list the server.
+- The portable one-command installer passes setup and check from outside the repository.
 - Claude lists the concierge MCP prompt.
 - README commands are copied and rerun exactly.
 - Repository is public, licensed, and contains no `.env`, private addresses, partner data, or credentials.

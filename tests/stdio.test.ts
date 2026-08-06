@@ -4,10 +4,10 @@ import { resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
-test("stdio entrypoint initializes and serves tools", async (context) => {
+test("packaged CLI serve command initializes and serves tools", async (context) => {
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [resolve("node_modules/tsx/dist/cli.mjs"), resolve("src/stdio.ts")],
+    args: [resolve("dist/cli.js"), "serve"],
     cwd: process.cwd(),
     stderr: "pipe",
   });

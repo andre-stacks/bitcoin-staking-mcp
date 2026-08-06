@@ -76,6 +76,8 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 ## Success criteria
 
 - Clean install and build on Node 22.
+- Complete a portable Codex and Claude installation from one `npx` command without requiring the user to remain in the repository.
+- Verify the MCP handshake, both host registrations, and the global Codex skill; provide machine-readable check and targeted uninstall paths.
 - Connect through stdio in Codex and Claude Code.
 - Initialize and call every tool through MCP Inspector.
 - Read current PoX status from the live Stacks API.

@@ -26,6 +26,7 @@ The server now fails closed for missing evidence and live-read errors. The promp
 | Every tool tested through MCP | Met | The offline contract suite invokes all eleven tools through an in-process MCP client and validates structured metadata. |
 | Codex and Claude stdio configuration | Implemented; host acceptance must be current | `.codex/config.toml` and `.mcp.json` use the same stdio entrypoint. A revoked or expired host login is an external acceptance blocker, not a server fallback condition. |
 | Inspector/demo recording/submission assets | Partially external | The terminal proof and demo runbook are present. Final recording and upload remain manual hackathon deliverables. |
+| One-command cross-repository installation | Met | The package CLI performs an eleven-tool handshake, registers Codex and Claude at user scope, installs the global Codex skill, and provides check and targeted uninstall commands. |
 
 ## Anti-hallucination controls
 
@@ -44,13 +45,14 @@ The intended voice is an institutional Bitcoin Staking diligence analyst: neutra
 
 ## Verification record
 
-- `npm run check`: passed. The offline runner discovered 32 tests; 30 passed and the two opt-in network tests were skipped as designed. Type-checking and the production build passed.
+- `npm run check`: passed. The offline runner discovered 37 tests; 35 passed and the two opt-in network tests were skipped as designed. Type-checking and the production build passed.
 - `npm run test:live`: passed against the current mainnet PoX API.
 - `npm run test:testnet`: passed against the dedicated PoX-5 testnet API.
 - `npm run demo:proof`: passed. At `2026-08-06T18:44:07Z`, the endpoint reported PoX-5 scheduled at burn height `2702`, current burn height `2663`, and no assessable configured PoX-5 bond. This is a time-specific observation, not a permanent network fact.
 - Official skill quick validation: passed.
 - `npm audit --audit-level=high`: reported zero known vulnerabilities for the locked dependency graph at audit time.
 - Package dry run: passed and includes the compiled server, demo manifest, README, and concierge skill.
+- Isolated installer acceptance: passed against the real Codex and Claude CLIs using a temporary home. Setup, handshake, registration reads, global-skill discovery, check, and uninstall all completed without changing the user's normal host configuration.
 - Codex stdio health and adversarial host turn: passed. The model rejected an instruction to assume Leather safety, used the fixed abstention, and identified the missing release-specific proof.
 - Claude stdio health: passed. The model-turn acceptance test could not run because the local Claude OAuth access token returned `401 OAuth access token has been revoked`; this remains external and must be rerun after reauthentication.
 

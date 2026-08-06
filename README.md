@@ -38,6 +38,22 @@ The answer policy is evidence-gated. The concierge may use only current MCP stru
 
 Requires Node 22.
 
+Install for both Codex and Claude Code from any directory:
+
+```bash
+npx -y github:andre-stacks/bitcoin-staking-mcp setup
+```
+
+The installer performs a real MCP handshake, registers `bitcoin-staking` in the user-level configuration for both hosts, installs the global Codex concierge skill, and prints the first prompts. Restart both hosts after setup, then verify at any time:
+
+```bash
+npx -y github:andre-stacks/bitcoin-staking-mcp check
+```
+
+To install only one host, use `--hosts codex` or `--hosts claude`. See [Installation](docs/INSTALLATION.md) for local-checkout, pinned-source, JSON, update, and uninstall options.
+
+For repository development:
+
 ```bash
 npm ci
 npm run check
@@ -75,7 +91,7 @@ The repository includes `.codex/config.toml` and the repo-scoped `$bitcoin-staki
 Manual configuration:
 
 ```bash
-codex mcp add bitcoin-staking -- node /absolute/path/to/bitcoin-staking-mcp/dist/stdio.js
+codex mcp add bitcoin-staking -- node /absolute/path/to/bitcoin-staking-mcp/dist/cli.js serve
 ```
 
 Then ask:
@@ -101,7 +117,7 @@ Invoke the server prompt:
 ### MCP Inspector
 
 ```bash
-npx @modelcontextprotocol/inspector node dist/stdio.js
+npx @modelcontextprotocol/inspector node dist/cli.js serve
 ```
 
 Use Inspector to review the instructions, all tool schemas and annotations, resources, prompt, valid calls, and error cases.
@@ -183,6 +199,7 @@ The offline suite invokes all eleven tools through an in-process MCP client, val
 ## Documentation
 
 - [Product requirements](docs/PRODUCT_REQUIREMENTS.md)
+- [Installation](docs/INSTALLATION.md)
 - [Technical specification](docs/TECHNICAL_SPEC.md)
 - [Hackathon delivery plan](docs/HACKATHON_PLAN.md)
 - [Security question catalog](docs/SECURITY_QUESTION_CATALOG.md)

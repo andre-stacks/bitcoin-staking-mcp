@@ -114,11 +114,13 @@ For live PoX-5 protocol bonds, the target scenario mirrors the contract calculat
 
 The checked-in `.codex/config.toml` starts `node dist/stdio.js` and the repo-scoped skill is available after the project is trusted. `.mcp.json` provides the equivalent Claude Code project configuration. Build before opening either host.
 
+For cross-repository use, `dist/cli.js` is the package binary. `setup` first performs an in-process stdio handshake and requires exactly eleven tools. It then registers an `npx`-backed `bitcoin-staking` server in Codex's user configuration and Claude's user scope, copies the concierge to `~/.agents/skills/bitcoin-staking-concierge`, and re-reads both host registrations. `check` repeats server and host verification. `uninstall` removes only those named host registrations and, unless retained explicitly, the named global skill. `--local` registers the current checkout for development; the portable default uses the GitHub package specification.
+
 Claude exposes the MCP prompt as `/mcp__bitcoin_staking__bitcoin_staking_concierge`. Codex invokes `$bitcoin-staking-concierge`; both use the same MCP tools.
 
 ## Testing
 
-The default suite is offline. It covers manifest validation and cited-source integrity, demo isolation and provenance preservation, BigInt conversion, zero-rate and invalid-input cases, math, fees, missing economics, compatibility, path classification, recommendations, network-specific manifest routing, timeout and unavailable-upstream behavior, MCP discovery and invocation of all eleven tools, resource and prompt contracts, read-only annotations, institutional voice and abstention policy, and fail-fast address validation.
+The default suite is offline. It covers manifest validation and cited-source integrity, demo isolation and provenance preservation, BigInt conversion, zero-rate and invalid-input cases, math, fees, missing economics, compatibility, path classification, recommendations, network-specific manifest routing, timeout and unavailable-upstream behavior, MCP discovery and invocation of all eleven tools, resource and prompt contracts, read-only annotations, institutional voice and abstention policy, fail-fast address validation, installer argument parsing, exact Codex/Claude registration commands, global-skill installation, incomplete-handshake refusal, checks, and targeted uninstall behavior.
 
 `npm run test:live` performs the opt-in mainnet PoX smoke test. `npm run test:testnet` verifies that the dedicated testnet publishes either scheduled or active PoX-5 state; after activation, any returned bonds must remain explicitly non-investable. `npm run check` runs type checking, offline tests, and a production build.
 
