@@ -2,6 +2,7 @@ export type ServiceErrorCode =
   | "INVALID_INPUT"
   | "NOT_FOUND"
   | "INSUFFICIENT_DATA"
+  | "REGISTRY_UNAVAILABLE"
   | "UPSTREAM_ERROR"
   | "UPSTREAM_TIMEOUT";
 

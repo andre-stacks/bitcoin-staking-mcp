@@ -55,20 +55,14 @@ async function main() {
       assumptions: mainnetBonds.assumptions,
     });
 
-    const testnetDiligence = await call("build_diligence_report", {
-      network: "testnet",
-      profile: nativeProfile,
-    });
-    section("3. LIVE POX-5 TESTNET DILIGENCE", {
-      bottomLine: testnetDiligence.bottomLine,
-      assessmentStatus: testnetDiligence.assessmentStatus,
-      availability: testnetDiligence.availability,
-      selectedBond: testnetDiligence.selectedBond,
-      economics: testnetDiligence.economics,
-      materialRisks: testnetDiligence.materialRisks,
-      nextDiligenceSteps: testnetDiligence.nextDiligenceSteps,
-      verifiedAt: testnetDiligence.verifiedAt,
-      sources: testnetDiligence.sources,
+    const testnetSnapshot = await call("get_market_snapshot", { network: "testnet" });
+    section("3. LIVE POX-5 TESTNET EVIDENCE", {
+      protocol: testnetSnapshot.protocol,
+      onChainBonds: testnetSnapshot.onChainBonds,
+      investable: false,
+      precedence: testnetSnapshot.precedence,
+      verifiedAt: testnetSnapshot.verifiedAt,
+      sources: testnetSnapshot.sources,
     });
 
     const security = await call("get_security_guidance", { topic: "all" });
@@ -85,7 +79,7 @@ async function main() {
       call("simulate_yield", { bondId: demoBond.id, principalSats: "100000000" }),
       call("build_participation_plan", { bondId: demoBond.id, profile: liquidityProfile }),
     ]);
-    section("5. EXPLICITLY LABELED DEMO FALLBACK", {
+    section("5. EXPLICITLY REQUESTED DEMO ILLUSTRATION", {
       disclosure: "Synthetic hackathon data; not live, published, or investable.",
       bondId: demoBond.id,
       nativePlan,

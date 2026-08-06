@@ -1,0 +1,179 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { ServiceError } from "../src/core/errors.js";
+import { simulateYield } from "../src/core/economics.js";
+import { assessRoute } from "../src/core/recommendation.js";
+import {
+  BondManifestSchema,
+  CustodyRegistrySchema,
+  ParticipantProfileSchema,
+  btcAmountToSats,
+  normalizeParticipantProfileAmount,
+  routeEffectiveAvailability,
+} from "../src/core/schemas.js";
+
+async function genesis(): Promise<any> {
+  return BondManifestSchema.parse(JSON.parse(await readFile(resolve("data/bonds/genesis-bond-cycle-142.json"), "utf8")));
+}
+
+async function custody(): Promise<any[]> {
+  return CustodyRegistrySchema.parse(JSON.parse(await readFile(resolve("data/custody-paths.json"), "utf8"))).paths;
+}
+
+function expectsCode(code: string) {
+  return (error: unknown) => error instanceof ServiceError && error.code === code;
+}
+
+test("natural BTC and sBTC amounts convert exactly and conflicting representations are rejected", () => {
+  assert.equal(btcAmountToSats("1 BTC"), "100000000");
+  assert.equal(btcAmountToSats("0.00000001 sBTC"), "1");
+  const normalized = normalizeParticipantProfileAmount(ParticipantProfileSchema.parse({
+    goal: "compare_options", liquidityNeed: "unknown", bitcoinPathPreference: "compare_both",
+    keyControlPreference: "either", amountBtc: "12.34567890 BTC",
+  }));
+  assert.equal(normalized.amountSats, "1234567890");
+  assert.throws(() => ParticipantProfileSchema.parse({ goal: "compare_options", liquidityNeed: "unknown", bitcoinPathPreference: "compare_both", keyControlPreference: "either", amountBtc: "1 BTC", amountSats: "2" }));
+  assert.throws(() => ParticipantProfileSchema.parse({ goal: "compare_options", liquidityNeed: "unknown", bitcoinPathPreference: "compare_both", keyControlPreference: "either", amountBtc: "0.000000001 BTC" }));
+});
+
+test("bond schema rejects duplicate evidence, invalid attestation sources, and impossible timing", async () => {
+  const duplicate = await genesis();
+  duplicate.sources.push(structuredClone(duplicate.sources[0]));
+  assert.equal(BondManifestSchema.safeParse(duplicate).success, false);
+
+  const badAttestation = await genesis();
+  badAttestation.attestation.sourceIds = ["sip-045"];
+  assert.equal(BondManifestSchema.safeParse(badAttestation).success, false);
+
+  const timing = await genesis();
+  timing.timing.opensAt = "2026-08-20T00:00:00.000Z";
+  timing.timing.closesAt = "2026-08-19T00:00:00.000Z";
+  assert.equal(BondManifestSchema.safeParse(timing).success, false);
+});
+
+test("bond schema rejects invalid limits, paired-STX terms, reward fields, and contract networks", async () => {
+  const directLimits = await genesis();
+  Object.assign(directLimits.participationRoutes[0], { minimumSats: "200", maximumSats: "100" });
+  assert.equal(BondManifestSchema.safeParse(directLimits).success, false);
+
+  const paired = await genesis();
+  delete paired.participationRoutes[0].pairedStx.minimumValueRatioBps;
+  assert.equal(BondManifestSchema.safeParse(paired).success, false);
+
+  const fixed = await genesis();
+  fixed.economics.rewardModel = "fixed_reward_units";
+  delete fixed.economics.fixedRewardUnits;
+  assert.equal(BondManifestSchema.safeParse(fixed).success, false);
+
+  const contract = await genesis();
+  contract.participationRoutes[1].contracts = [{ role: "pool", contractId: "ST000000000000000000002AMW42H.pool", network: "testnet" }];
+  assert.equal(BondManifestSchema.safeParse(contract).success, false);
+});
+
+test("open routes cannot omit usability-critical enrollment and pool evidence", async () => {
+  const direct = await genesis();
+  Object.assign(direct.participationRoutes[0], { productStatus: "production", enrollmentStatus: "open" });
+  assert.equal(BondManifestSchema.safeParse(direct).success, false, "open direct route needs an enrollment URL");
+
+  const pool = await genesis();
+  Object.assign(pool.participationRoutes[1], { productStatus: "production", enrollmentStatus: "open" });
+  assert.equal(BondManifestSchema.safeParse(pool).success, false, "open pool needs contracts, fee, verified accounting/withdrawal, and enrollment URL");
+
+  const lst = await genesis();
+  lst.participationRoutes[1].lst.productStatus = "production";
+  assert.equal(BondManifestSchema.safeParse(lst).success, false, "production LST needs a token contract");
+});
+
+test("borrowing integrations require named live collateral terms", async () => {
+  const bond = await genesis();
+  bond.participationRoutes[1].lst.verifiedDefiIntegrations = [{ name: "Example lender", capability: "borrowing", status: "live", sourceIds: ["stacks-q2-stbtc"] }];
+  assert.equal(BondManifestSchema.safeParse(bond).success, false);
+});
+
+test("availability dimensions handle exact freshness boundary and every terminal state", async () => {
+  const bond = await genesis();
+  const route = bond.participationRoutes[0];
+  const due = new Date("2026-08-13T00:00:00.000Z");
+  assert.equal(routeEffectiveAvailability(route, due), "scheduled");
+  assert.equal(routeEffectiveAvailability(route, new Date(due.getTime() + 1)), "needs_review");
+  assert.equal(routeEffectiveAvailability(route, due, true), "conflict");
+  assert.equal(routeEffectiveAvailability({ ...route, productStatus: "blocked" }, due), "unavailable");
+  assert.equal(routeEffectiveAvailability({ ...route, productStatus: "production", enrollmentStatus: "open" }, due), "available");
+  assert.equal(routeEffectiveAvailability({ ...route, productStatus: "tested", enrollmentStatus: "unknown" }, due), "unknown");
+});
+
+test("yield requires rate and duration, while unknown fees leave net economics pending", async () => {
+  const bond = await genesis();
+  const direct = bond.participationRoutes[0];
+  const pool = bond.participationRoutes[1];
+  const poolWithoutFee = simulateYield(bond, pool, { principalSats: "100000000" });
+  assert.ok(poolWithoutFee.grossRewardSats);
+  assert.equal(poolWithoutFee.netRewardSats, undefined);
+  assert.throws(() => simulateYield(bond, direct, { principalSats: "100000000", feeBps: 0, includeLst: true }), expectsCode("INVALID_INPUT"));
+  const poolWithoutLstFee = simulateYield(bond, { ...pool, feeBps: 0 }, { principalSats: "100000000", includeLst: true });
+  assert.ok(poolWithoutLstFee.grossRewardSats);
+  assert.equal(poolWithoutLstFee.netRewardSats, undefined);
+
+  const noDuration = structuredClone(bond);
+  delete noDuration.economics.referenceModel;
+  assert.throws(() => simulateYield(noDuration, noDuration.participationRoutes[0], { principalSats: "1", feeBps: 0 }), expectsCode("INSUFFICIENT_DATA"));
+
+  const noRate = structuredClone(bond);
+  delete noRate.economics.targetRateBps;
+  delete noRate.economics.referenceModel;
+  noRate.timing.lockDurationDays = 30;
+  assert.throws(() => simulateYield(noRate, noRate.participationRoutes[0], { principalSats: "1", feeBps: 0 }), expectsCode("INSUFFICIENT_DATA"));
+});
+
+test("yield applies sequential fees deterministically across zero, full-fee, and maximum-supply principals", async () => {
+  const bond = await genesis();
+  const pool = { ...bond.participationRoutes[1], feeBps: 1_000, lst: { ...bond.participationRoutes[1].lst, feeBps: 500 } };
+  const result = simulateYield(bond, pool, { principalBtc: "1 BTC", durationDays: 365, annualRateBps: 1_000, includeLst: true });
+  assert.equal(result.grossRewardSats, "10000000");
+  assert.equal(result.routeFeeSats, "1000000");
+  assert.equal(result.lstFeeSats, "450000");
+  assert.equal(result.netRewardSats, "8550000");
+
+  const fullFee = simulateYield(bond, bond.participationRoutes[0], { principalSats: "100000000", durationDays: 365, annualRateBps: 1_000, feeBps: 10_000 });
+  assert.equal(fullFee.netRewardSats, "0");
+  const huge = simulateYield(bond, bond.participationRoutes[0], { principalSats: "2100000000000000", durationDays: 365, annualRateBps: 1, feeBps: 0 });
+  assert.doesNotMatch(huge.grossRewardDisplay, /Infinity|NaN/);
+  assert.throws(() => simulateYield(bond, bond.participationRoutes[0], { principalSats: "2100000000000001", durationDays: 365, annualRateBps: 1, feeBps: 0 }), expectsCode("INVALID_INPUT"));
+});
+
+test("yield rejects conflicting principal forms, zero principal, and out-of-range economics", async () => {
+  const bond = await genesis();
+  const direct = bond.participationRoutes[0];
+  assert.throws(() => simulateYield(bond, direct, { principalSats: "1", principalBtc: "1 BTC", feeBps: 0 }), expectsCode("INVALID_INPUT"));
+  assert.throws(() => simulateYield(bond, direct, { principalSats: "0", feeBps: 0 }), expectsCode("INVALID_INPUT"));
+  assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 10_001 }), expectsCode("INVALID_INPUT"));
+  assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 0, annualRateBps: 100_001 }), expectsCode("INVALID_INPUT"));
+  assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 0, btcPriceUsd: Number.POSITIVE_INFINITY }), expectsCode("INVALID_INPUT"));
+});
+
+test("direct-route fit enforces paired STX, amount boundaries, and a current custody path", async () => {
+  const bond = await genesis();
+  const route = { ...bond.participationRoutes[0], productStatus: "production", enrollmentStatus: "open", minimumSats: "100", maximumSats: "200" };
+  const paths = await custody();
+  const base = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather" } as const;
+  const noStx = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "100", stxAvailable: "no" }), paths, new Date("2026-08-06T12:00:00.000Z"));
+  assert.equal(noStx.fit, "no_match");
+  const exactMax = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "200", stxAvailable: "yes" }), paths, new Date("2026-08-06T12:00:00.000Z"));
+  assert.notEqual(exactMax.fit, "no_match");
+  const above = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "201", stxAvailable: "yes" }), paths, new Date("2026-08-06T12:00:00.000Z"));
+  assert.equal(above.fit, "no_match");
+  const noCustody = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "150", stxAvailable: "yes" }), [], new Date("2026-08-06T12:00:00.000Z"));
+  assert.equal(noCustody.fit, "not_assessable");
+});
+
+test("sBTC+STX pools distinguish yes, no, and unknown STX availability", async () => {
+  const bond = await genesis();
+  const pool = { ...bond.participationRoutes[1], productStatus: "production", enrollmentStatus: "open", investorInputs: "sbtc_and_stx", feeBps: 0, contracts: [{ role: "pool", contractId: "SP000000000000000000002Q6VF78.pool", network: "mainnet" }], rewardAccounting: { ...bond.participationRoutes[1].rewardAccounting, status: "verified" }, withdrawalTerms: { ...bond.participationRoutes[1].withdrawalTerms, status: "verified" }, enrollmentUrl: "https://example.com/enroll" };
+  const base = { goal: "earn_yield", assetHeld: "sbtc", participantType: "individual", whitelistStatus: "not_approved", liquidityNeed: "unknown", bitcoinPathPreference: "open_to_sbtc", keyControlPreference: "self_controlled", amountSats: "1000" } as const;
+  const paths = await custody();
+  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "no" }), paths, new Date("2026-08-06T12:00:00.000Z")).fit, "no_match");
+  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "unknown" }), paths, new Date("2026-08-06T12:00:00.000Z")).fit, "conditional");
+  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "yes" }), paths, new Date("2026-08-06T12:00:00.000Z")).fit, "strong");
+});

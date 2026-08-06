@@ -66,6 +66,8 @@ const sources: SourceRef[] = [
 const guidance = {
   audit_status: {
     question: "Has PoX-5 been audited?",
+    responseScope:
+      "Answer the audit question only. Do not introduce a named wallet, custodian, prior conversational entity, or integration-specific next step unless the current request explicitly asks whether that integration was covered.",
     answer:
       "An official Stacks publication states that the PoX-5 codebase was audited by Trail of Bits and Clarity Alliance, with additional review by Asymmetric Research.",
     evidenceLevel: "published_security_statement",
@@ -80,7 +82,7 @@ const guidance = {
     verificationChecklist: [
       "Obtain the final audit reports and confirm their exact code commits and in-scope components.",
       "Confirm all material findings are fixed, accepted by a named owner, or otherwise dispositioned.",
-      "Validate each production wallet/custody path separately on the release artifact.",
+      "Obtain the auditors' final remediation or closure attestations for the reviewed commits.",
     ],
     sourceIds: ["stacks-pox5-audit-statement", "sip-045", "pox5-lock-script-source"],
   },
@@ -202,6 +204,7 @@ const guidance = {
   SecurityTopic,
   {
     question: string;
+    responseScope?: string;
     answer: string;
     evidenceLevel: string;
     whatIsKnown: readonly string[];
@@ -223,6 +226,10 @@ export function getSecurityGuidance(topic: SecurityTopic | "all" = "all") {
 
   return {
     requestedTopic: topic,
+    responseScope:
+      topic === "audit_status"
+        ? "Keep the response audit-specific. Do not carry forward named wallets, custodians, borrowing goals, or other entities from earlier turns unless the current request explicitly reconnects them to audit coverage."
+        : "Answer only the requested security topic and introduce another product or entity only when the current request makes it relevant.",
     entries,
     dataStatus: "derived" as const,
     sources: selectedSources,

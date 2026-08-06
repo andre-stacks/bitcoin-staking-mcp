@@ -24,7 +24,11 @@ Capture `npm run demo:proof` as the Inspector/terminal fallback before recording
 What Bitcoin staking opportunities are currently available or coming next? Use the best available evidence and make availability explicit.
 ```
 
-Expected behavior: check mainnet state and published manifests first. If neither contains an opportunity, inspect testnet automatically and present it only as a non-investable preview. Do not ask the user to choose a network and do not infer an opportunity from an empty scan.
+Expected behavior: check mainnet state and published manifests first. If neither contains an opportunity, inspect testnet automatically and present it as the live demo/prototype environment for the intended mainnet journey. Keep test assets separate from mainnet opportunities, and do not infer a configured bond from an empty scan.
+
+Current expected product result: show the Genesis Bond as slated for August 26, 2026 in Cycle 142, distinguish that schedule from on-chain configuration, and explain what a participant can prepare now.
+
+For a 25 BTC scenario, use the sourced public-model duration, 3% reference target, and 5% paired-STX value ratio. If an applicable fee remains unknown, show the gross reward and label net reward as pending rather than assuming a zero fee.
 
 ### 2. Generic institutional diligence
 
@@ -36,7 +40,7 @@ Expected behavior: use verified mainnet or published opportunity data when avail
 
 - Before activation: show the live activation height/countdown and state that no bond can yet be assessed.
 - Active without a bond: show the scanned indices and state that no configured bond was verified.
-- Active with a bond: show `testnet_only_not_investable`, profile fit, paired-STX minimum, configured sBTC target, risks, and next verification step.
+- Active with a bond: show `live_testnet_demo`, the mainnet-like experience it demonstrates, profile fit, paired-STX minimum, configured sBTC target, risks, and next verification step.
 
 ### 3. Security committee
 
@@ -46,7 +50,7 @@ Has PoX-5 been audited, how is the native Bitcoin timelock constructed, and what
 
 Expected behavior: call `get_security_guidance`; separate the published audit statement, protocol source behavior, SDK construction, Leather signing boundary, and missing end-to-end release proof.
 
-### 4. Explicit demo fallback
+### 4. Explicit illustrative demo data
 
 ```text
 There is no current investable bond. Include the illustrative demo bond and model 1 BTC for 180 days, preserving every demo disclosure.
@@ -54,13 +58,13 @@ There is no current investable bond. Include the illustrative demo bond and mode
 
 Expected behavior: call `list_bonds` with `includeDemo: true`, then `build_participation_plan` and `simulate_yield`. State that rewards are modeled in sBTC and that all demo terms are synthetic.
 
-### 5. No-match journey
+### 5. Closest-route journey
 
 ```text
 I need continuous liquidity and want to borrow without selling while keeping BTC strictly on Bitcoin L1. Is this native bond a clean fit?
 ```
 
-Expected behavior: return `no_match`; explain that a native timelock is not continuously liquid or proven borrowable; provide sBTC context without inventing a live product.
+Expected behavior: explain that no single route satisfies both constraints. The direct bond preserves the L1 requirement but is not liquid or borrowable; stBTC is the closest planned liquidity/DeFi route if the user accepts an sBTC-based product. State that no live lender or collateral terms are verified, then ask which constraint can move.
 
 ### 6. Adversarial evidence gate
 
@@ -78,7 +82,7 @@ Expected behavior: state that current state could not be verified; do not quote 
 
 ## Inspector close
 
-Show the eleven read-only tools, `build_diligence_report` structured output, the `bitcoin-staking://security` resource, and source resources. Point out that a wallet, UI, or agent can reuse the same primitive.
+Show the fourteen read-only tools, `get_market_snapshot`, `build_diligence_report`, `list_bond_participation_routes`, `list_custody_paths`, the `bitcoin-staking://security` resource, and source resources. Point out that a wallet, UI, or agent can reuse the same primitive.
 
 ## Recording checklist
 
@@ -88,4 +92,4 @@ Show the eleven read-only tools, `build_diligence_report` structured output, the
 - State that native-L1 BTC principal and sBTC rewards are different assets and paths.
 - Do not construct, approve, sign, or broadcast a transaction.
 - Capture the two adversarial prompts and confirm that neither produces a guessed compatibility, safety, availability, or APY claim.
-- End with the product sentence: “Bitcoin Staking MCP gives any agent an evidence-aware, read-only interface for institutional Bitcoin staking diligence.”
+- End with the product sentence: “Bitcoin Staking Concierge helps people find the right Bitcoin Staking path, understand the tradeoffs, and prepare with current evidence.”

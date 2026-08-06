@@ -264,13 +264,13 @@ export class StacksProvider {
             minUstxRatioBps: bond.minUstxRatioBps,
             earlyUnlockBytes: bond.earlyUnlockBytes,
             availability:
-              this.networkName === "testnet" ? "testnet_only_not_investable" : "mainnet_on_chain",
+              this.networkName === "testnet" ? "live_testnet_demo" : "mainnet_on_chain",
             dataStatus: "live" as const,
             sources: [this.sourceRef(verifiedAt)],
             assumptions: [
               "This record proves on-chain bond configuration and timing, not wallet compatibility or participant eligibility.",
               this.networkName === "testnet"
-                ? "Testnet bonds use test assets and are not investable mainnet opportunities."
+                ? "This is the live demo/prototype environment for the intended mainnet journey. It uses test assets and is not a mainnet opportunity."
                 : "Mainnet availability still depends on allowance, compatibility, custody, and participant requirements.",
             ],
             verifiedAt,
@@ -340,6 +340,12 @@ export class StacksProvider {
         bondAllowanceSats: bondAllowance?.toString() ?? null,
         requestedBondId: bond?.id ?? null,
         requestedBondDataStatus: bond?.dataStatus ?? null,
+        componentProvenance: [
+          { component: "accountStatus", endpoint: `${this.apiBaseUrl}/v2/accounts/${encodeURIComponent(address)}?proof=0`, contractId: null },
+          { component: "stakerInfo", endpoint: `${this.apiBaseUrl}/v2/contracts/call-read/${this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78" : "ST000000000000000000002AMW42H"}/pox-5/get-staker-info`, contractId: `${this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78" : "ST000000000000000000002AMW42H"}.pox-5`, function: "get-staker-info" },
+          { component: "bondMembership", endpoint: `${this.apiBaseUrl}/v2/contracts/call-read/${this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78" : "ST000000000000000000002AMW42H"}/pox-5/get-bond-membership`, contractId: `${this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78" : "ST000000000000000000002AMW42H"}.pox-5`, function: "get-bond-membership" },
+          ...(bond?.onChainBondIndex === undefined ? [] : [{ component: "bondAllowance", endpoint: `${this.apiBaseUrl}/v2/map_entry/${this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78" : "ST000000000000000000002AMW42H"}/pox-5/protocol-bond-allowances`, contractId: `${this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78" : "ST000000000000000000002AMW42H"}.pox-5`, map: "protocol-bond-allowances" }]),
+        ],
         dataStatus: "live" as const,
         sources: [this.sourceRef(verifiedAt)],
         assumptions: [

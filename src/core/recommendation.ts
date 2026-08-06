@@ -1,212 +1,242 @@
 import type {
   BondManifest,
-  CompatibilityClaim,
+  CustodyPath,
   ParticipantProfile,
-  RecommendationResult,
+  ParticipationRoute,
+  SourceRef,
 } from "./schemas.js";
+import { isReviewCurrent, routeEffectiveAvailability } from "./schemas.js";
 
-function normalized(value: string): string {
-  return value.trim().toLocaleLowerCase();
+export interface RouteAssessment {
+  bondId: string;
+  routeId: string;
+  routeType: ParticipationRoute["routeType"];
+  fit: "strong" | "conditional" | "no_match" | "not_assessable";
+  effectiveAvailability: ReturnType<typeof routeEffectiveAvailability>;
+  reasons: string[];
+  tradeoffs: string[];
+  missingEvidence: string[];
+  unsupportedRequirements: string[];
+  nextDiligenceAction: string;
 }
 
-export function findCompatibility(
+function amountFits(amountSats: string | undefined, minimum?: string, maximum?: string) {
+  if (!amountSats) return "unknown" as const;
+  const amount = BigInt(amountSats);
+  if (minimum && amount < BigInt(minimum)) return "below" as const;
+  if (maximum && amount > BigInt(maximum)) return "above" as const;
+  return "fits" as const;
+}
+
+export function assessRoute(
   bond: BondManifest,
-  name: string,
-): CompatibilityClaim | undefined {
-  return bond.compatibility.find((claim) => normalized(claim.name) === normalized(name));
-}
-
-export function checkCompatibility(
-  bond: BondManifest,
-  name: string,
-  keyControlPreference: ParticipantProfile["keyControlPreference"],
-) {
-  const claim = findCompatibility(bond, name);
-  const fallbackEvidence =
-    "No public compatibility claim is present in this manifest. Unknown is not evidence of support or incompatibility.";
-
-  return {
-    bondId: bond.id,
-    provider: name,
-    providerKind: claim?.kind ?? "unknown",
-    status: claim?.status ?? "unknown",
-    evidence: claim?.evidence ?? fallbackEvidence,
-    keyControlPreference,
-    keyControlFit:
-      keyControlPreference === "unknown" || keyControlPreference === "either"
-        ? "not_evaluated"
-        : bond.requirements.keyControl === "custodian_or_participant"
-          ? "compatible_in_principle"
-          : keyControlPreference === "self_controlled" && bond.requirements.keyControl === "participant"
-            ? "compatible_in_principle"
-            : "unknown",
-    dataStatus: bond.dataStatus,
-    sources: claim
-      ? bond.sources.filter((source) => claim.sourceIds.includes(source.id))
-      : bond.sources,
-    assumptions: [
-      "Compatibility is a product claim, not a protocol guarantee.",
-      "Unknown remains unknown until an end-to-end wallet or custodian flow is publicly verified.",
-    ],
-    verifiedAt: bond.verifiedAt,
-  };
-}
-
-export function compareStakingPaths(profile: ParticipantProfile, sources: BondManifest["sources"]) {
-  const wantsBorrowing = profile.goal === "borrow_without_selling";
-  const needsLiquidity = profile.liquidityNeed === "access_anytime";
-  const l1Only = profile.bitcoinPathPreference === "bitcoin_l1_only";
-
-  return {
-    profile,
-    paths: [
-      {
-        id: "native_l1_btc_staking",
-        availability: "bond_dependent",
-        fit: wantsBorrowing || needsLiquidity ? "weak" : "potential",
-        bitcoinLocation: "Bitcoin L1 timelocked output",
-        custody: "Can preserve participant key control; exact wallet or custodian support is product-specific.",
-        strengths: ["BTC remains on Bitcoin L1", "Defined maturity recovery path"],
-        constraints: [
-          "BTC is locked for the bond term",
-          "Borrowing against the locked position is not implied",
-          "Early exit and wallet support must be verified per bond",
-        ],
-      },
-      {
-        id: "sbtc_application_context",
-        availability: "context_only",
-        fit: l1Only ? "excluded_by_preference" : wantsBorrowing || needsLiquidity ? "investigate" : "optional",
-        bitcoinLocation: "sBTC on Stacks",
-        custody: "Custody, redemption, and application assumptions require separate verification for the selected sBTC path.",
-        strengths: ["Programmable in Stacks applications", "May support lending or other DeFi uses"],
-        constraints: [
-          "This MCP does not verify or rank a live DeFi product in the MVP",
-          "Liquidity, collateral terms, and smart-contract risks are application-specific",
-        ],
-      },
-    ],
-    conclusion:
-      wantsBorrowing && l1Only
-        ? "No verified native-bond borrowing path is represented. Keep the requirement open and do not infer that a locked bond is borrowable."
-        : "Use a specific bond manifest and compatibility evidence before selecting a participation path.",
-    dataStatus: "derived" as const,
-    sources,
-    assumptions: [
-      "sBTC information is context, not a verified live-product recommendation.",
-      "Self-custody and Bitcoin-versus-sBTC location are separate decisions.",
-    ],
-    verifiedAt: new Date().toISOString(),
-  };
-}
-
-export function buildParticipationPlan(
-  bond: BondManifest,
+  route: ParticipationRoute,
   profile: ParticipantProfile,
-): RecommendationResult {
+  custodyPaths: CustodyPath[],
+  now: Date,
+  availabilityOverride?: ReturnType<typeof routeEffectiveAvailability>,
+): RouteAssessment {
+  const availability = availabilityOverride ?? routeEffectiveAvailability(route, now);
   const reasons: string[] = [];
   const tradeoffs: string[] = [];
-  const missingFacts: string[] = [];
+  const missingEvidence: string[] = [];
   const unsupportedRequirements: string[] = [];
-  const nextSteps: string[] = [];
-  let fit: RecommendationResult["fit"] = "strong";
+  let fit: RouteAssessment["fit"] = "strong";
 
-  if (bond.dataStatus === "demo") {
-    reasons.push("This is an illustrative demo opportunity, not an available live bond.");
-  }
-  if (profile.goal === "borrow_without_selling") {
-    if (bond.requirements.borrowingAgainstPosition !== "supported") {
-      unsupportedRequirements.push("Borrowing against this staking position is not verified as supported.");
+  if (["conflict", "needs_review", "unknown"].includes(availability)) fit = "not_assessable";
+  else if (availability === "unavailable") fit = "no_match";
+  else if (availability !== "available") fit = "conditional";
+
+  if (route.routeType === "native_l1_direct") {
+    if (profile.bitcoinPathPreference === "open_to_sbtc" && profile.assetHeld === "sbtc") {
+      unsupportedRequirements.push("This route requires native BTC on Bitcoin L1.");
+      fit = "no_match";
+    } else reasons.push("This route preserves principal on Bitcoin L1.");
+
+    if (profile.participantType !== "unknown" && profile.participantType !== "either" && !route.participantTypes.includes(profile.participantType)) {
+      unsupportedRequirements.push(`The route does not list ${profile.participantType} participants.`);
       fit = "no_match";
     }
-  } else {
-    reasons.push("The stated goal can be evaluated against a yield-bearing bond without assuming borrowing.");
-  }
+    if (route.whitelist.required) {
+      if (profile.whitelistStatus === "not_approved") {
+        unsupportedRequirements.push("Allowlist approval is required.");
+        fit = "no_match";
+      } else if (profile.whitelistStatus !== "approved") {
+        missingEvidence.push("Allowlist eligibility is not confirmed.");
+        if (fit === "strong") fit = "conditional";
+      }
+    }
 
-  if (profile.liquidityNeed === "access_anytime") {
-    unsupportedRequirements.push("Continuous access conflicts with a timelocked native-L1 bond.");
-    fit = "no_match";
-  } else if (profile.liquidityNeed === "may_need_early_exit") {
-    if (bond.requirements.earlyExit !== "supported") {
-      missingFacts.push("A usable early-exit path is not verified for this bond.");
+    const amount = amountFits(profile.amountSats, route.minimumSats, route.maximumSats);
+    if (amount === "below" || amount === "above") {
+      unsupportedRequirements.push("The amount is outside the direct route limits.");
+      fit = "no_match";
+    } else if (amount === "unknown") {
+      missingEvidence.push("Amount is needed to check route limits.");
       if (fit === "strong") fit = "conditional";
     }
-    tradeoffs.push("An early exit may forfeit rewards and depend on a bond-specific coordination path.");
-  } else {
-    reasons.push("The user can accept a maturity-based lock.");
-  }
 
-  if (profile.bitcoinPathPreference === "open_to_sbtc") {
-    tradeoffs.push("This bond uses native BTC on L1; openness to sBTC does not make the locked position composable.");
-  }
-  if (profile.bitcoinPathPreference === "compare_both") {
-    nextSteps.push("Call compare_staking_paths before choosing between a native bond and sBTC application context.");
-  }
+    if (route.pairedStx.required) {
+      if (profile.stxAvailable === "no") {
+        unsupportedRequirements.push("The route requires a paired STX position, but the user does not have STX available.");
+        fit = "no_match";
+      } else if (profile.stxAvailable !== "yes") {
+        missingEvidence.push("STX availability is needed to satisfy the paired-STX requirement.");
+        if (fit === "strong") fit = "conditional";
+      } else reasons.push("The user reports STX is available for the paired-STX requirement.");
+    }
 
-  if (profile.amountSats) {
-    const amount = BigInt(profile.amountSats);
-    if (bond.capacity.minSats && amount < BigInt(bond.capacity.minSats)) {
-      unsupportedRequirements.push(`Amount is below the bond minimum of ${bond.capacity.minSats} sats.`);
+    const lockDuration = bond.timing.lockDurationDays ?? bond.economics.referenceModel?.bondingPeriodDays;
+    if (profile.timeHorizonDays && lockDuration && profile.timeHorizonDays < lockDuration) {
+      if (bond.timing.lockDurationDays !== undefined) {
+        unsupportedRequirements.push("The requested horizon is shorter than the bond lock.");
+        fit = "no_match";
+      } else {
+        missingEvidence.push("The requested horizon is shorter than the published reference period, while final lock duration remains unconfirmed.");
+        if (fit === "strong") fit = "conditional";
+      }
+    }
+    if (profile.liquidityNeed === "access_anytime") {
+      unsupportedRequirements.push("Continuous liquidity conflicts with the native-L1 timelock.");
       fit = "no_match";
     }
-    if (bond.capacity.maxSats && amount > BigInt(bond.capacity.maxSats)) {
-      unsupportedRequirements.push(`Amount exceeds the per-participant maximum of ${bond.capacity.maxSats} sats.`);
+    if (profile.liquidityNeed === "may_need_early_exit" && route.earlyExit.status !== "supported") {
+      if (route.earlyExit.status === "unsupported") {
+        unsupportedRequirements.push("A usable bond-specific early-exit flow is not supported.");
+        fit = "no_match";
+      } else {
+        missingEvidence.push("A usable bond-specific early-exit flow is not confirmed.");
+        if (fit === "strong") fit = "conditional";
+      }
+    }
+    if (profile.goal === "borrow_without_selling") {
+      unsupportedRequirements.push("No borrowing capability is verified for the locked native-L1 position.");
       fit = "no_match";
     }
-  } else {
-    missingFacts.push("BTC amount is needed to check minimums, maximums, and calculate scenarios.");
-    if (fit === "strong") fit = "conditional";
-  }
-
-  if (profile.timeHorizonDays && bond.timing.lockDurationDays) {
-    if (profile.timeHorizonDays < bond.timing.lockDurationDays) {
-      unsupportedRequirements.push(
-        `Time horizon is shorter than the ${bond.timing.lockDurationDays}-day illustrative lock.`,
-      );
-      fit = "no_match";
-    }
-  }
-
-  if (profile.walletOrCustodian) {
-    const compatibility = findCompatibility(bond, profile.walletOrCustodian);
-    if (!compatibility || compatibility.status === "unknown") {
-      missingFacts.push(`${profile.walletOrCustodian} compatibility is not publicly verified.`);
+    if (profile.keyControlPreference === "self_controlled" && route.keyControl === "unknown") {
+      missingEvidence.push("Participant-controlled maturity key support is not confirmed.");
       if (fit === "strong") fit = "conditional";
-    } else if (compatibility.status === "unsupported") {
-      unsupportedRequirements.push(`${profile.walletOrCustodian} is marked unsupported by the manifest evidence.`);
+    }
+    if (profile.keyControlPreference === "custodian" && route.keyControl === "participant") {
+      unsupportedRequirements.push("The route requires participant-controlled maturity keys.");
       fit = "no_match";
+    }
+
+    const viableCustodyPaths = custodyPaths.filter((path) =>
+      path.status === "available" &&
+      route.custodyPathIds.includes(path.id) &&
+      isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays)
+    );
+    if (viableCustodyPaths.length === 0) {
+      missingEvidence.push("No current approved custody path is available for this direct route.");
+      if (fit !== "no_match") fit = "not_assessable";
+    }
+    const requestedCustody = profile.walletOrCustodian?.toLowerCase();
+    if (requestedCustody) {
+      const path = custodyPaths.find((item) => item.id.toLowerCase() === requestedCustody || item.name.toLowerCase() === requestedCustody);
+      const current = path && isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays);
+      if (path && current && path.status === "not_currently_supported") {
+        unsupportedRequirements.push(`${path.name} is currently confirmed as unsupported for this route.`);
+        fit = "no_match";
+      } else if (!path || path.status !== "available" || !route.custodyPathIds.includes(path.id) || !current) {
+        missingEvidence.push(`${profile.walletOrCustodian} is not a current approved custody path for this route.`);
+        if (fit === "strong") fit = "conditional";
+      } else reasons.push(`${path.name} is a current approved custody path.`);
     } else {
-      reasons.push(`${profile.walletOrCustodian} is marked supported by cited product evidence.`);
+      missingEvidence.push("A viable wallet or custodian has not been selected.");
+      if (fit === "strong") fit = "conditional";
     }
-  }
+    tradeoffs.push("BTC is timelocked on L1 and paired STX may be required.");
+  } else {
+    if (profile.bitcoinPathPreference === "bitcoin_l1_only") {
+      unsupportedRequirements.push("This route requires sBTC exposure on Stacks.");
+      fit = "no_match";
+    }
+    if (profile.assetHeld === "btc_l1") {
+      missingEvidence.push("The user would need to obtain sBTC; that conversion is outside this read-only plan.");
+      if (fit === "strong") fit = "conditional";
+    }
+    if (route.investorInputs === "sbtc_and_stx") {
+      tradeoffs.push("The pool requires both sBTC and STX inputs.");
+      if (profile.stxAvailable === "no") {
+        unsupportedRequirements.push("The user does not have the STX input required by this pool.");
+        fit = "no_match";
+      } else if (profile.stxAvailable !== "yes") {
+        missingEvidence.push("STX availability is needed for this pool's investor inputs.");
+        if (fit === "strong") fit = "conditional";
+      }
+    } else reasons.push("The pool accepts sBTC without a participant-supplied STX input.");
 
-  tradeoffs.push("Native BTC remains on Bitcoin L1 but is unavailable until maturity or a verified early-exit flow.");
-  tradeoffs.push("Wallet and custody support must be verified separately from PoX-5 protocol behavior.");
-  nextSteps.push("Review the bond sources and confirm it is live before taking any action.");
-  nextSteps.push("Call check_compatibility for the exact wallet or custodian.");
-  if (profile.amountSats) nextSteps.push("Call simulate_yield with explicit price and fee assumptions.");
+    const amount = amountFits(profile.amountSats, route.minimumSats, route.capacitySats);
+    if (amount === "below" || amount === "above") {
+      unsupportedRequirements.push("The amount is outside the pool limits.");
+      fit = "no_match";
+    }
+    if (route.feeBps === undefined) missingEvidence.push("The pool fee is not published.");
+    if (route.contracts.length === 0) missingEvidence.push("Deployed pool contracts are not published.");
+    if (route.rewardAccounting.status !== "verified") missingEvidence.push("Pool reward accounting is not verified.");
+    if (route.withdrawalTerms.status !== "verified") missingEvidence.push("Pool withdrawal timing and method are not verified.");
+    if (missingEvidence.length > 0 && fit === "strong") fit = "conditional";
+
+    if (profile.liquidityNeed === "access_anytime") {
+      const liquid = route.lst?.productStatus === "production" &&
+        route.lst.verification.includes("product_owner_confirmed") &&
+        route.lst.redemption.status === "verified" &&
+        route.lst.liquidityEvidence.status === "verified" &&
+        isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays);
+      if (!liquid) {
+        missingEvidence.push("The optional LST does not have current verified redemption and market-liquidity evidence.");
+        if (fit === "strong") fit = "conditional";
+      }
+    }
+    if (profile.goal === "borrow_without_selling") {
+      const lstCurrent = route.lst?.productStatus === "production" &&
+        route.lst.verification.includes("product_owner_confirmed") &&
+        isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays);
+      const lender = lstCurrent ? route.lst?.verifiedDefiIntegrations.find((item) => (item.capability === "borrowing" || item.capability === "lending") && item.status === "live" && item.collateralTerms) : undefined;
+      if (!lender) {
+        unsupportedRequirements.push("No named live lender with sourced collateral terms is verified.");
+        fit = "no_match";
+      }
+    }
+    tradeoffs.push("This route adds sBTC, pool operator, smart-contract, accounting, and withdrawal dependencies.");
+  }
 
   return {
     bondId: bond.id,
+    routeId: route.id,
+    routeType: route.routeType,
     fit,
+    effectiveAvailability: availability,
     reasons,
     tradeoffs,
-    missingFacts,
+    missingEvidence,
     unsupportedRequirements,
-    alternatives: [
-      {
-        path: "sBTC application context",
-        status: "context_only",
-        reason: "Explore only if liquidity or borrowing goals justify additional protocol and application assumptions.",
-      },
-    ],
-    nextSteps,
-    dataStatus: bond.dataStatus === "demo" ? "demo" : "derived",
-    sources: bond.sources,
-    assumptions: [
-      "This is a product-fit assessment, not individualized financial advice.",
-      "No transaction has been constructed, signed, or broadcast.",
-    ],
-    verifiedAt: new Date().toISOString(),
+    nextDiligenceAction: route.routeType === "native_l1_direct"
+      ? "Confirm allowlist eligibility and execute a custody-specific testnet lock and maturity-recovery rehearsal."
+      : "Obtain the final pool fee, deployed contracts, accounting method, and verified withdrawal terms before depositing.",
+  };
+}
+
+export function compareBondRoutes(
+  bond: BondManifest,
+  profile: ParticipantProfile,
+  custody: CustodyPath[],
+  now: Date,
+  sources: SourceRef[],
+  availabilityByRoute: Map<string, ReturnType<typeof routeEffectiveAvailability>> = new Map(),
+) {
+  const assessments = bond.participationRoutes.map((route) => assessRoute(bond, route, profile, custody, now, availabilityByRoute.get(route.id)));
+  const rank = { strong: 0, conditional: 1, not_assessable: 2, no_match: 3 } as const;
+  assessments.sort((a, b) => rank[a.fit] - rank[b.fit]);
+  return {
+    bondId: bond.id,
+    profile,
+    recommendedRouteId: assessments.find((item) => item.effectiveAvailability === "available" && (item.fit === "strong" || item.fit === "conditional"))?.routeId ?? null,
+    assessments,
+    dataStatus: "derived" as const,
+    sources,
+    assumptions: ["Product fit is not individualized financial advice.", "No transaction is constructed, signed, or broadcast."],
+    verifiedAt: now.toISOString(),
   };
 }

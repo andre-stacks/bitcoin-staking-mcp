@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "registryVersion": "2026-08-06.1",
+  "scope": "native_l1_bitcoin_staking",
+  "reviewCadenceDays": 7,
+  "reviewedAt": "2026-08-06T00:00:00.000Z",
+  "verificationMethod": "product_owner_confirmed",
+  "ownerOrganization": "Stacks Labs",
+  "paths": [
+    {
+      "id": "leather",
+      "name": "Leather",
+      "category": "software_wallet",
+      "status": "available",
+      "summary": "Available as the direct wallet path for the Bitcoin Staking product flow.",
+      "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Leather as the primary launch wallet.",
+      "sourceIds": ["custody-registry", "stacks-q2-2026"],
+      "attestation": { "scope": "Leather native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+    },
+    {
+      "id": "leather-multisig",
+      "name": "Leather Multi-sig",
+      "category": "multisig_wallet",
+      "status": "available",
+      "summary": "Available as the shared-control Leather custody path.",
+      "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Leather multisig work for Bitcoin Staking.",
+      "sourceIds": ["custody-registry", "stacks-q2-2026"],
+      "attestation": { "scope": "Leather multisig native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+    },
+    {
+      "id": "ledger",
+      "name": "Ledger",
+      "category": "hardware_wallet",
+      "status": "available",
+      "summary": "Available through the supported Ledger hardware-wallet path.",
+      "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Ledger support in the Leather launch path.",
+      "sourceIds": ["custody-registry", "stacks-q2-2026"],
+      "attestation": { "scope": "Ledger native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+    },
+    {
+      "id": "fordefi",
+      "name": "Fordefi",
+      "category": "institutional_wallet",
+      "status": "available",
+      "summary": "Available as an institutional wallet and signing path.",
+      "evidence": "Current product-owner confirmation; the linked official Stacks publication identifies Fordefi as an institutional Bitcoin Staking integration path.",
+      "sourceIds": ["custody-registry", "stacks-institutional-custody"],
+      "attestation": { "scope": "Fordefi native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+    },
+    {
+      "id": "fireblocks",
+      "name": "Fireblocks",
+      "category": "institutional_wallet",
+      "status": "available",
+      "summary": "Available as an institutional MPC wallet and custody path.",
+      "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting the Fireblocks custody integration.",
+      "sourceIds": ["custody-registry", "stacks-q2-2026", "stacks-fireblocks"],
+      "attestation": { "scope": "Fireblocks native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+    },
+    {
+      "id": "bitgo",
+      "name": "BitGo",
+      "category": "qualified_custodian",
+      "status": "not_currently_supported",
+      "summary": "BitGo does not currently support the native-L1 Bitcoin Staking bond flow.",
+      "evidence": "Current product-owner confirmation. BitGo's adjacent STX stacking and sBTC support must not be presented as support for this native-L1 bond flow.",
+      "sourceIds": ["custody-registry", "bitgo-stacks-docs", "bitgo-sbtc"],
+      "attestation": { "scope": "BitGo native-L1 direct participation non-support", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+    }
+  ],
+  "sources": [
+    {
+      "id": "custody-registry",
+      "title": "Bitcoin Staking custody-path registry",
+      "url": "https://github.com/andre-stacks/bitcoin-staking-mcp/blob/main/data/custody-paths.json",
+      "sourceType": "public_manifest",
+      "dataStatus": "published"
+    },
+    {
+      "id": "stacks-q2-2026",
+      "title": "Stacks ecosystem report: Q2 2026",
+      "url": "https://www.stacks.co/blog/q2-2026",
+      "sourceType": "official_docs",
+      "dataStatus": "published"
+    },
+    {
+      "id": "stacks-institutional-custody",
+      "title": "Bitcoin Staking for institutions",
+      "url": "https://www.stacks.co/blog/bitcoin-staking-for-institutions-why-self-custody-yield-is-the-solution",
+      "sourceType": "official_docs",
+      "dataStatus": "published"
+    },
+    {
+      "id": "stacks-fireblocks",
+      "title": "Stacks is live on Fireblocks, with Bitcoin Staking coming soon",
+      "url": "https://www.stacks.co/blog/stacks-is-live-on-fireblocks-with-bitcoin-staking-coming",
+      "sourceType": "official_docs",
+      "dataStatus": "published"
+    },
+    {
+      "id": "bitgo-stacks-docs",
+      "title": "BitGo Stacks developer documentation",
+      "url": "https://developers.bitgo.com/docs/stacks/",
+      "sourceType": "official_docs",
+      "dataStatus": "published"
+    },
+    {
+      "id": "bitgo-sbtc",
+      "title": "BitGo institutional support for sBTC",
+      "url": "https://www.bitgo.com/resources/blog/bitgo-launches-institutional-support-for-sbtc/",
+      "sourceType": "official_docs",
+      "dataStatus": "published"
+    }
+  ]
+}

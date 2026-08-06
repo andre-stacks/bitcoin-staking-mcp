@@ -1,6 +1,6 @@
 # Bitcoin Staking MCP — Product Requirements
 
-Status: hackathon MVP. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
+Status: v0.3.0 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
 
 ## Outcome
 
@@ -10,17 +10,18 @@ Make native Bitcoin staking discoverable, understandable, and agent-readable. An
 
 Primary users are BTC holders working through an agent, institutional participants, wallet and custody teams, and developers building Bitcoin applications.
 
-The default persona is an institutional Bitcoin Staking diligence analyst. It adapts depth to CFO/investment, technical/security/custody, or mixed audiences without becoming promotional or implying individualized advice.
+The default persona is a knowledgeable, approachable Bitcoin Staking guide with institutional-quality diligence. It helps users choose between a bond's direct native-L1 route and approved StackingDAO sBTC pool without becoming promotional or implying individualized advice. stBTC is an optional capability of that pool, not a third route.
 
 The MCP should help them:
 
 - Find upcoming, open, or historical Bitcoin Staking bonds.
+- Compare the direct native-L1 route and approved StackingDAO sBTC pool; evaluate optional stBTC redemption and liquidity only within the pool.
 - Understand timing, capacity, economics, eligibility, BTC location, key-control, early-exit, and compatibility requirements.
 - Inspect public PoX-5 and participant state.
 - Answer recurring investor security questions with sourced assurance, explicit unknowns, and component-specific verification steps.
 - Model yield scenarios with explicit assumptions.
 - Determine whether a native-L1 bond fits a stated goal.
-- Recognize when liquidity or borrowing goals require sBTC context or a future product rather than a native bond.
+- Recognize when liquidity or borrowing goals point to the planned stBTC path rather than a direct native-L1 bond, without implying that a live lending market exists.
 
 ## Product layers
 
@@ -34,17 +35,17 @@ The concierge is not a second backend. A future web app should consume the same 
 
 ### Discover a bond
 
-The agent reads live protocol status, scans the active on-chain PoX-5 bond window, and lists public manifests without requiring the user to select a network. It checks mainnet and published opportunities first. When neither is available, it inspects the configured testnet automatically as a clearly non-investable preview. Demo manifests remain opt-in and separately grouped. The agent can retrieve terms and on-chain verification for one manifest-backed bond.
+The agent reads live protocol status, scans the active on-chain PoX-5 bond window, and lists public manifests without requiring the user to select a network. It checks mainnet and published opportunities first. When neither is available, it inspects the configured testnet automatically as the live demo/prototype environment for the intended mainnet journey. Testnet uses test assets and remains separate from mainnet opportunities. Demo manifests remain opt-in and separately grouped. The agent can retrieve terms and on-chain verification for one manifest-backed bond.
 
-### Evaluate fit
+### Choose a participation route
 
-An empty concierge invocation introduces the service and offers clear starting points for status, discovery, fit, economics, security, compatibility or public status, and path comparison. A request that already contains a question or goal bypasses the menu. The concierge establishes goal, liquidity need, BTC-path preference, and key-control preference before asking amount, horizon, wallet, or custodian. It then returns fit, tradeoffs, missing facts, assumptions, sources, and the next safe step.
+An empty concierge invocation calls `get_market_snapshot`. It explains the direct native-L1 and approved StackingDAO sBTC-pool routes, then asks whether L1 custody, permissionless smaller-balance access, or liquidity matters most. A request that already contains a goal proceeds directly. The concierge returns the closest route, freshness, current status, the principal tradeoff, and one useful next action.
 
-For a live protocol opportunity, `build_diligence_report` combines current network state, bounded bond discovery, the participant profile, exact configured-target math, and security evidence. Before activation or when no configured bond exists, it returns a decision-ready no-opportunity result rather than substituting demo terms.
+For a live protocol opportunity, `build_diligence_report` combines current network state, bounded bond discovery, the participant profile, exact configured-target math, and security evidence. When an upcoming published bond is not yet configured on-chain, it returns the schedule and preparation plan without substituting missing economic terms.
 
 ### Model yield
 
-The user supplies a principal and any desired price or fee assumptions. The core performs deterministic, non-compounding scenario analysis. It refuses to calculate when the manifest does not define a compatible reward model.
+The user supplies a BTC/sBTC principal naturally and the service converts it to sats. A gross calculation is returned when duration and rate are sourced or explicitly supplied. Missing route or selected-LST fees leave net yield unknown. CoinGecko BTC and STX prices are the default source for paired-STX units; price failure does not block an otherwise complete sats-denominated scenario. Public-model inputs remain distinct from final configured bond terms.
 
 ### Check public state
 
@@ -69,9 +70,14 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Keep native L1 BTC distinct from sBTC.
 - Keep BTC location distinct from self-custody or custodial key control.
 - Return unknown compatibility when evidence is missing.
+- Expose the product-level custody directory without requiring a configured bond, including review freshness and explicit non-support.
+- Expose exactly two approved bond routes: direct native-L1 and an approved sBTC pool. Represent any LST as an optional capability nested within its pool.
+- Never default to waiting when an upcoming or adjacent route exists; name the closest route and the key tradeoff.
 - Treat product compatibility separately from PoX-5 protocol behavior.
 - Keep protocol audits, SDK construction, wallet behavior, and end-to-end integration proof as separate evidence layers.
 - Treat price inputs as scenarios rather than predictions.
+- Separate reference-program economics from final bond-specific and on-chain terms.
+- Refuse a gross yield calculation unless duration and rate are sourced or explicitly supplied; leave net yield unknown until every applicable bond, pool, or selected-LST fee is known.
 - Make every MCP tool read-only and non-destructive.
 
 ## Success criteria
@@ -90,9 +96,9 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Preserve `demo` provenance through every calculation based on synthetic terms.
 - Invoke and metadata-validate every tool through an in-process MCP client without live-network dependencies.
 - Demonstrate that a failed live read returns an explicit error and never falls back to demo or remembered state.
-- Keep the prompt, skill, and response-standard resource aligned on institutional voice and abstention behavior.
+- Keep the prompt, skill, and response-standard resource aligned on guided discovery and evidence boundaries.
 - Produce an initial concierge assessment after at most four goal-oriented questions.
-- Demonstrate one long-term native-yield journey and one liquidity/borrowing no-match journey.
+- Demonstrate one direct native-yield journey and one liquidity/borrowing journey that routes to the closest planned stBTC path without presenting a live lending market.
 
 ## Exclusions
 
@@ -104,7 +110,7 @@ Transactions, PSBTs, signatures, wallet connection, private partner data, indivi
 - The dedicated PoX-5 testnet may still be before its scheduled activation height: report the schedule and countdown, and return no protocol bonds rather than treating a future contract version as active.
 - A public product document may lag chain state: label it published, not live.
 - Wallet support may change: require cited product evidence and preserve unknown as unknown.
-- A target APY may not define actual payout mechanics: refuse unsupported calculations.
+- A target APY may support a labeled gross scenario without defining actual payout mechanics; never infer fees or present an unknown net payout.
 - An agent may try to turn a checklist into execution: server capabilities contain no write or transaction-building tool.
 - A host model can still ignore instructions: deterministic outputs, provenance, explicit unknown states, and adversarial host checks reduce this risk, but the product does not claim a mathematical no-hallucination guarantee for free-form model prose.
 
