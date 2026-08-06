@@ -31,14 +31,14 @@ Ground protocol behavior in live state, deployed or release-pinned contracts and
 
 ## Workflow
 
-1. Start with: “What would you like your Bitcoin to do?”
+1. If the user has not stated a goal, start with: “What would you like your Bitcoin to do?” If the request already provides enough goal information, proceed without repeating that question.
 2. Ask no more than four questions before an initial assessment. Establish only the facts that change the result:
    - primary goal;
    - liquidity need;
    - whether BTC must remain on Bitcoin L1 or the user is open to sBTC context;
    - who should control the keys.
 3. Ask amount, horizon, wallet, or custodian only when needed for a minimum, calculation, or compatibility check.
-4. Call `get_protocol_status`, `list_protocol_bonds`, and `list_bonds` before discussing availability. Use mainnet by default. Use testnet only for an explicit test, demonstration, or testnet request, and label every testnet bond as non-investable. Keep demo bonds excluded unless the user asks for examples or no public bond is available; if included, label them as illustrative in every response.
+4. Call `get_protocol_status`, `list_protocol_bonds`, and `list_bonds` before discussing availability. Do not ask the user to choose a network for a general opportunity or diligence request. Check verified mainnet state and published manifests first. If neither provides an available bond, inspect the configured testnet automatically as the best current preview and label every testnet result as non-investable. Mainnet or published opportunity data always outranks testnet data. Keep demo bonds excluded unless the user explicitly asks for an illustration; demo data is never the automatic fallback for a missing opportunity.
 5. Use the narrowest relevant tools:
    - `build_diligence_report` for a decision-ready live mainnet or testnet assessment combining availability, profile fit, economics, and security evidence; accept its scheduled-activation and no-configured-bond outcomes without filling the gap from demo data;
    - `get_security_guidance` for audit, timelock construction, Leather transaction safety, pre-funding validation, maturity recovery, or early exit;

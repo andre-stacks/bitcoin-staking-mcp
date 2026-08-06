@@ -45,7 +45,7 @@ The intended voice is an institutional Bitcoin Staking diligence analyst: neutra
 
 ## Verification record
 
-- `npm run check`: passed. The offline runner discovered 37 tests; 35 passed and the two opt-in network tests were skipped as designed. Type-checking and the production build passed.
+- `npm run check`: passed. The offline runner discovered 38 tests; 36 passed and the two opt-in network tests were skipped as designed. Type-checking and the production build passed.
 - `npm run test:live`: passed against the current mainnet PoX API.
 - `npm run test:testnet`: passed against the dedicated PoX-5 testnet API.
 - `npm run demo:proof`: passed. At `2026-08-06T18:44:07Z`, the endpoint reported PoX-5 scheduled at burn height `2702`, current burn height `2663`, and no assessable configured PoX-5 bond. This is a time-specific observation, not a permanent network fact.

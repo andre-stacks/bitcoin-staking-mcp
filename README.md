@@ -2,7 +2,7 @@
 
 The agent-readable interface for discovering, understanding, and planning native Bitcoin staking on Stacks.
 
-Bitcoin Staking MCP combines live mainnet and testnet PoX state, on-chain protocol-bond discovery, versioned bond manifests, deterministic yield scenarios, sourced security diligence, compatibility evidence, and a goal-first concierge. It is intentionally read-only: it cannot construct, sign, or broadcast transactions.
+Bitcoin Staking MCP combines current PoX state, on-chain protocol-bond discovery, versioned bond manifests, deterministic yield scenarios, sourced security diligence, compatibility evidence, and a goal-first concierge. It is intentionally read-only: it cannot construct, sign, or broadcast transactions.
 
 ## Why this exists
 
@@ -19,8 +19,8 @@ This server keeps four kinds of information separate:
 
 ```mermaid
 flowchart LR
-  A["Stacks mainnet"] --> C["Bitcoin Staking intelligence core"]
-  T["Configured PoX-5 testnet"] --> C
+  A["Current production data"] --> C["Bitcoin Staking intelligence core"]
+  T["Pre-production network data"] --> C
   B["Versioned bond manifests"] --> C
   C --> M["Read-only MCP server"]
   M --> X["Codex concierge skill"]
@@ -66,17 +66,20 @@ For development:
 npm run dev
 ```
 
-### PoX-5 testnet proof
+### Live data selection
 
-The default testnet target is Hiro's dedicated PoX-5 testnet at `https://api.testnet-pox5.hiro.so`. No additional configuration is needed:
+Users do not need to choose a network. For a general opportunity or diligence question, the concierge:
 
-```bash
-npm start
-```
+1. checks verified mainnet state and published bond data;
+2. uses that data when an opportunity is available;
+3. otherwise checks the configured testnet automatically and labels it as a non-investable preview;
+4. uses demo data only when the user explicitly requests an illustration.
 
-Call `get_protocol_status` and `list_protocol_bonds` with `network: "testnet"`. Before PoX-5 activation, the server returns the published activation height, countdown, and an empty bond list. After activation, it scans only the active bond window and returns configured records labeled `testnet_only_not_investable`. It never infers a bond merely because the network is named PoX-5.
+This routing keeps the user experience stable: when a bond becomes published or available on mainnet, higher-precedence production data replaces the testnet preview without requiring different questions or prompts.
 
-For a complete state-aware proof—mainnet status, testnet diligence, security evidence, demo fallback, no-match journey, and tool annotations—run:
+The current pre-production source is Hiro's dedicated PoX-5 testnet at `https://api.testnet-pox5.hiro.so`. Before activation, the server reports the activation schedule rather than inventing a bond. After activation, it returns only bonds proven on-chain and labels them `testnet_only_not_investable`.
+
+For a complete state-aware proof—current status, opportunity routing, security evidence, demo fallback, no-match journey, and tool annotations—run:
 
 ```bash
 npm run demo:proof
@@ -151,11 +154,11 @@ What is the current Bitcoin Staking protocol status, and are any public bonds av
 ```
 
 ```text
-On the configured testnet, which protocol bonds are currently open or approaching their start height? Make the testnet limitation explicit.
+Which Bitcoin staking opportunities are currently available or coming next? Separate investable opportunities from pre-production data.
 ```
 
 ```text
-Build an institutional diligence report for the PoX-5 testnet. I have 1 BTC, require Bitcoin L1, want control of the maturity key, use Leather, and can lock for six months.
+Build an institutional diligence report using the best currently available data. I have 1 BTC, require Bitcoin L1, want control of the maturity key, use Leather, and can lock for six months.
 ```
 
 ```text

@@ -18,21 +18,21 @@ Capture `npm run demo:proof` as the Inspector/terminal fallback before recording
 
 ## Primary host prompts
 
-### 1. Mainnet truth
+### 1. Generic opportunity discovery
 
 ```text
-What is the current Bitcoin Staking protocol status on mainnet? List only bonds that are configured on-chain, and distinguish that from published or demo opportunities.
+What Bitcoin staking opportunities are currently available or coming next? Use the best available evidence and make availability explicit.
 ```
 
-Expected behavior: call `get_protocol_status` and `list_protocol_bonds`; show live source time; do not infer an opportunity from an empty scan.
+Expected behavior: check mainnet state and published manifests first. If neither contains an opportunity, inspect testnet automatically and present it only as a non-investable preview. Do not ask the user to choose a network and do not infer an opportunity from an empty scan.
 
-### 2. Testnet proof
+### 2. Generic institutional diligence
 
 ```text
-Build an institutional diligence report for the dedicated PoX-5 testnet. I want yield, must keep 1 BTC on Bitcoin L1, want to control the maturity key, use Leather, and can lock for six months.
+Build an institutional Bitcoin staking diligence report using the best currently available data. I want yield, must keep 1 BTC on Bitcoin L1, want to control the maturity key, use Leather, and can lock for six months.
 ```
 
-Expected behavior: call `build_diligence_report` with `network: testnet`.
+Expected behavior: use verified mainnet or published opportunity data when available. Otherwise call `build_diligence_report` with `network: testnet` and disclose that the result is a pre-production preview.
 
 - Before activation: show the live activation height/countdown and state that no bond can yet be assessed.
 - Active without a bond: show the scanned indices and state that no configured bond was verified.

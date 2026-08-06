@@ -32,9 +32,9 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 
 ## Demo script
 
-1. Ask for current mainnet Bitcoin Staking protocol status and upcoming bonds.
-2. Show live mainnet PoX-5 state and the honest absence of configured public manifests if applicable.
-3. Switch explicitly to the dedicated PoX-5 testnet. Before activation, show its scheduled activation height and countdown; after activation, discover any configured upcoming on-chain bond.
+1. Ask a generic question about current and upcoming Bitcoin Staking opportunities.
+2. Show that the concierge checks live mainnet state and published manifests first.
+3. If neither provides an opportunity, show the automatic fallback to the dedicated PoX-5 testnet. Before activation, report its schedule; after activation, discover any configured upcoming on-chain bond. Do not require a network-specific user prompt.
 4. If a testnet bond exists, point out `testnet_only_not_investable`; then request demo opportunities and show the separate `[DEMO]` manifest.
 5. Ask whether PoX-5 is audited and how Leather can safely sign the native-L1 lock transaction. Show known facts, unproven integration claims, and the pre-funding checklist.
 6. Invoke the concierge with a long-term, L1-only, self-controlled yield profile.

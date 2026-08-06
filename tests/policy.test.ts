@@ -18,6 +18,20 @@ test("repo concierge skill enforces institutional voice and evidence-bound abste
   assert.match(skill, /If a live tool fails, state that current status could not be verified/);
   assert.match(skill, /Treat `unknown`, `not_verified`, `not_assessable`, `context_only`, and empty results as conclusions/);
   assert.match(skill, /Never construct, sign, or broadcast a transaction/);
+  assert.match(skill, /Do not ask the user to choose a network/i);
+  assert.match(skill, /mainnet state and published manifests first/i);
+  assert.match(skill, /inspect the configured testnet automatically/i);
+  assert.match(skill, /demo data is never the automatic fallback/i);
+  assert.match(skill, /proceed without repeating that question/i);
+});
+
+test("README examples stay network-agnostic", async () => {
+  const readme = await readFile(resolve("README.md"), "utf8");
+
+  assert.match(readme, /Users do not need to choose a network/);
+  assert.match(readme, /best currently available data/);
+  assert.doesNotMatch(readme, /On the configured testnet, which protocol bonds/);
+  assert.doesNotMatch(readme, /Build an institutional diligence report for the PoX-5 testnet/);
 });
 
 test("concierge skill remains orchestration-only", async () => {

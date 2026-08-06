@@ -34,7 +34,7 @@ The concierge is not a second backend. A future web app should consume the same 
 
 ### Discover a bond
 
-The agent reads live protocol status, scans the active on-chain PoX-5 bond window, lists public manifests, and optionally requests a separately grouped demo manifest. A testnet scan is opt-in and every result is explicitly non-investable. The agent can retrieve terms and on-chain verification for one manifest-backed bond.
+The agent reads live protocol status, scans the active on-chain PoX-5 bond window, and lists public manifests without requiring the user to select a network. It checks mainnet and published opportunities first. When neither is available, it inspects the configured testnet automatically as a clearly non-investable preview. Demo manifests remain opt-in and separately grouped. The agent can retrieve terms and on-chain verification for one manifest-backed bond.
 
 ### Evaluate fit
 
@@ -65,6 +65,7 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Treat `unknown`, `not_verified`, `not_assessable`, `context_only`, and empty results as final evidence states rather than prompts to guess.
 - Serialize unsafe numeric blockchain values as decimal strings.
 - Keep demo manifests separate from published/live records and exclude them by default.
+- Route generic opportunity questions by evidence precedence: mainnet and published bonds first, then a labeled testnet preview; never require a network-specific user prompt.
 - Keep native L1 BTC distinct from sBTC.
 - Keep BTC location distinct from self-custody or custodial key control.
 - Return unknown compatibility when evidence is missing.
@@ -82,6 +83,7 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Initialize and call every tool through MCP Inspector.
 - Read current PoX status from the live Stacks API.
 - Show scheduled PoX-5 activation on the dedicated testnet and discover configured bonds automatically once they exist, without conflating either state with mainnet availability.
+- Replace the pre-production preview automatically when verified mainnet or published opportunity data becomes available, without changing the user-facing questions.
 - Keep demo opportunities impossible to mistake for live bonds.
 - Reproduce yield outputs from automated tests.
 - Preserve `demo` provenance through every calculation based on synthetic terms.

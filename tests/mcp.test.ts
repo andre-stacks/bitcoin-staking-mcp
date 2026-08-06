@@ -277,12 +277,24 @@ test("MCP exposes resources and the concierge prompt", async (context) => {
   const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text");
   if (content?.type === "text") {
-    assert.match(content.text, /^What would you like your Bitcoin to do\?/);
+    assert.doesNotMatch(content.text, /^What would you like your Bitcoin to do\?/);
+    assert.match(content.text, /Proceed without asking the user to repeat goals already provided/);
     assert.match(content.text, /This MCP does not currently verify that/);
     assert.match(content.text, /Never fill a missing answer from model memory/i);
     assert.match(content.text, /institutional Bitcoin Staking diligence analyst/i);
     assert.match(content.text, /CFO\/investment committee/);
     assert.match(content.text, /technical\/security\/custody/);
+    assert.match(content.text, /do not ask the user to choose a network/i);
+    assert.match(content.text, /mainnet state and published manifests first/i);
+    assert.match(content.text, /automatically inspect the configured testnet/i);
+    assert.match(content.text, /Demo data requires an explicit user request/i);
+  }
+
+  const emptyPrompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: {} });
+  const emptyContent = emptyPrompt.messages[0]?.content;
+  assert.equal(emptyContent?.type, "text");
+  if (emptyContent?.type === "text") {
+    assert.match(emptyContent.text, /^What would you like your Bitcoin to do\?/);
   }
 
   const responseStandard = await client.readResource({
