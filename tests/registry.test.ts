@@ -44,6 +44,22 @@ test("hung registry reads time out, expose the reason, and use only a current fa
   assert.match(result.metadata.fallbackReason ?? "", /timed out after 5ms/);
 });
 
+test("registry timeout covers a stalled response body and aborts the request", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "btc-registry-body-timeout-")); context.after(() => rm(directory, { recursive: true, force: true }));
+  const fallback = join(directory, "fallback.json");
+  await writeFile(fallback, JSON.stringify({ registryVersion: "fallback", reviewedAt: "2026-08-06T00:00:00.000Z", reviewCadenceDays: 7, value: "fallback" }));
+  let signal: AbortSignal | null = null;
+  const fetchImpl: typeof fetch = async (_url, init) => {
+    signal = init?.signal ?? null;
+    return new Response(new ReadableStream({ start() {} }), { status: 200 });
+  };
+  const client = new VersionedRegistryClient({ remoteUrl: "https://example.com", fallbackPath: fallback, parse, now: () => new Date("2026-08-10T00:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5 });
+  const result = await client.read();
+  assert.equal(result.metadata.sourceMode, "bundled_snapshot");
+  assert.match(result.metadata.fallbackReason ?? "", /timed out after 5ms/);
+  assert.equal(signal?.aborted, true);
+});
+
 test("cache revalidation occurs at the exact 15-minute boundary", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "btc-registry-boundary-")); context.after(() => rm(directory, { recursive: true, force: true }));
   const fallback = join(directory, "fallback.json"); await writeFile(fallback, JSON.stringify({ registryVersion: "fallback", reviewedAt: "2026-08-06T00:00:00.000Z", reviewCadenceDays: 7, value: "fallback" }));
@@ -125,4 +141,24 @@ test("hung remote manifest reads time out and preserve the fallback reason", asy
   const result = await store.listWithMetadata();
   assert.equal(result.metadata.sourceMode, "bundled_snapshot");
   assert.match(result.metadata.fallbackReason ?? "", /Bond manifest .* timed out after 5ms/);
+});
+
+test("manifest timeout covers a stalled response body and aborts the request", async () => {
+  const index = JSON.parse(await readFile(resolve("data/bond-registry.json"), "utf8"));
+  let requests = 0;
+  let manifestSignal: AbortSignal | null = null;
+  const fetchImpl: typeof fetch = async (_url, init) => {
+    requests += 1;
+    if (requests === 1) return new Response(JSON.stringify(index), { status: 200 });
+    manifestSignal = init?.signal ?? null;
+    return new Response(new ReadableStream({ start() {} }), { status: 200 });
+  };
+  const store = new ManifestStore(undefined, {
+    now: () => new Date("2026-08-06T12:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5,
+    remoteRegistryUrl: "https://example.com/data/bond-registry.json",
+  });
+  const result = await store.listWithMetadata();
+  assert.equal(result.metadata.sourceMode, "bundled_snapshot");
+  assert.match(result.metadata.fallbackReason ?? "", /Bond manifest .* timed out after 5ms/);
+  assert.equal(manifestSignal?.aborted, true);
 });

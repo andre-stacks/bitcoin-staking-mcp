@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { ServiceError, withTimeout } from "../core/errors.js";
+import { ServiceError, withAbortTimeout } from "../core/errors.js";
 import { isReviewCurrent, reviewDueAt } from "../core/schemas.js";
 
 export interface RegistryEnvelope<T> {
@@ -64,11 +64,14 @@ export class VersionedRegistryClient<T extends VersionedValue> {
     let remoteFailure: string | undefined;
     if (this.remoteEnabled) {
       try {
-        const response = await withTimeout(
-          this.fetchImpl(
-            this.options.remoteUrl,
-            this.cached?.etag ? { headers: { "If-None-Match": this.cached.etag } } : {},
-          ),
+        const { response, raw } = await withAbortTimeout(
+          async (signal) => {
+            const response = await this.fetchImpl(
+              this.options.remoteUrl,
+              this.cached?.etag ? { headers: { "If-None-Match": this.cached.etag }, signal } : { signal },
+            );
+            return { response, raw: response.ok ? await response.text() : undefined };
+          },
           this.timeoutMs,
           "Product registry fetch",
         );
@@ -79,7 +82,7 @@ export class VersionedRegistryClient<T extends VersionedValue> {
           return this.envelope(this.cached.value, this.cached.raw, "runtime_cache", now);
         }
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const raw = await response.text();
+        if (raw === undefined) throw new Error("Remote registry response body is unavailable.");
         const value = this.options.parse(JSON.parse(raw));
         this.assertNotFutureDated(value, now);
         if (!isReviewCurrent(value.reviewedAt, now, value.reviewCadenceDays)) throw new Error("Remote registry review is overdue.");

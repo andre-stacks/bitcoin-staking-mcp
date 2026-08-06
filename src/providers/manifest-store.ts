@@ -3,7 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BondManifestSchema, BondRegistrySchema, isReviewCurrent, reviewDueAt, type BondManifest, type SourceRef } from "../core/schemas.js";
-import { ServiceError, withTimeout } from "../core/errors.js";
+import { ServiceError, withAbortTimeout } from "../core/errors.js";
 import { VersionedRegistryClient, registryHash, type RegistryEnvelope } from "./versioned-registry.js";
 
 function dataRoot(): string {
@@ -93,9 +93,13 @@ export class ManifestStore {
       }
       if (sourceMode === "live_registry" && this.remoteEnabled) {
         const base = this.remoteRegistryUrl.replace(/\/[^/]+$/, "/");
-        const response = await withTimeout(this.fetchImpl(`${base}bonds/${name}`), this.timeoutMs, `Bond manifest ${name} fetch`);
+        const { response, body } = await withAbortTimeout(async (signal) => {
+          const response = await this.fetchImpl(`${base}bonds/${name}`, { signal });
+          return { response, body: response.ok ? await response.text() : undefined };
+        }, this.timeoutMs, `Bond manifest ${name} fetch`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        raw = await response.text();
+        if (body === undefined) throw new Error("Remote manifest response body is unavailable.");
+        raw = body;
       } else raw = await readFile(resolve(this.directory, name), "utf8");
       const manifest = BondManifestSchema.parse(JSON.parse(raw));
       if (sourceMode === "live_registry") this.remoteManifestCache.set(name, manifest);
