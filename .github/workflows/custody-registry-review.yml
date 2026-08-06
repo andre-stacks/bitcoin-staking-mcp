@@ -21,6 +21,7 @@ jobs:
       - run: npm ci
       - id: registry
         continue-on-error: true
+        shell: bash
         run: npm run registry:validate:live | tee registry-review.md
       - if: always()
         run: cat registry-review.md >> "$GITHUB_STEP_SUMMARY"

@@ -48,10 +48,15 @@ export function assessRoute(
   else if (availability !== "available") fit = "conditional";
 
   if (route.routeType === "native_l1_direct") {
-    if (profile.bitcoinPathPreference === "open_to_sbtc" && profile.assetHeld === "sbtc") {
+    if (profile.assetHeld === "sbtc") {
       unsupportedRequirements.push("This route requires native BTC on Bitcoin L1.");
       fit = "no_match";
-    } else reasons.push("This route preserves principal on Bitcoin L1.");
+    } else if (profile.assetHeld === "btc_l1" || profile.assetHeld === "both") {
+      reasons.push("This route preserves the user's native BTC principal on Bitcoin L1.");
+    } else {
+      missingEvidence.push("Asset held is needed to confirm that native BTC is available for this route.");
+      if (fit === "strong") fit = "conditional";
+    }
 
     if (profile.participantType !== "unknown" && profile.participantType !== "either" && !route.participantTypes.includes(profile.participantType)) {
       unsupportedRequirements.push(`The route does not list ${profile.participantType} participants.`);

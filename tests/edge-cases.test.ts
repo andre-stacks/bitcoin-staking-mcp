@@ -29,6 +29,7 @@ function expectsCode(code: string) {
 test("natural BTC and sBTC amounts convert exactly and conflicting representations are rejected", () => {
   assert.equal(btcAmountToSats("1 BTC"), "100000000");
   assert.equal(btcAmountToSats("0.00000001 sBTC"), "1");
+  assert.throws(() => btcAmountToSats("1.123456789"), /at most eight fractional digits/);
   const normalized = normalizeParticipantProfileAmount(ParticipantProfileSchema.parse({
     goal: "compare_options", liquidityNeed: "unknown", bitcoinPathPreference: "compare_both",
     keyControlPreference: "either", amountBtc: "12.34567890 BTC",
@@ -151,6 +152,7 @@ test("yield rejects conflicting principal forms, zero principal, and out-of-rang
   assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 10_001 }), expectsCode("INVALID_INPUT"));
   assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 0, annualRateBps: 100_001 }), expectsCode("INVALID_INPUT"));
   assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 0, btcPriceUsd: Number.POSITIVE_INFINITY }), expectsCode("INVALID_INPUT"));
+  assert.throws(() => simulateYield(bond, direct, { principalBtc: "1.123456789", feeBps: 0 }), expectsCode("INVALID_INPUT"));
 });
 
 test("direct-route fit enforces paired STX, amount boundaries, and a current custody path", async () => {
@@ -166,6 +168,10 @@ test("direct-route fit enforces paired STX, amount boundaries, and a current cus
   assert.equal(above.fit, "no_match");
   const noCustody = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "150", stxAvailable: "yes" }), [], new Date("2026-08-06T12:00:00.000Z"));
   assert.equal(noCustody.fit, "not_assessable");
+  const sbtcOnly = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, assetHeld: "sbtc", amountSats: "150", stxAvailable: "yes" }), paths, new Date("2026-08-06T12:00:00.000Z"));
+  assert.equal(sbtcOnly.fit, "no_match");
+  assert.ok(sbtcOnly.unsupportedRequirements.some((item) => /native BTC/.test(item)));
+  assert.ok(sbtcOnly.reasons.every((item) => !/preserves/.test(item)));
 });
 
 test("sBTC+STX pools distinguish yes, no, and unknown STX availability", async () => {

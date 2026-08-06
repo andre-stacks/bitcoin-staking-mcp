@@ -3,7 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BondManifestSchema, BondRegistrySchema, isReviewCurrent, reviewDueAt, type BondManifest, type SourceRef } from "../core/schemas.js";
-import { ServiceError } from "../core/errors.js";
+import { ServiceError, withTimeout } from "../core/errors.js";
 import { VersionedRegistryClient, registryHash, type RegistryEnvelope } from "./versioned-registry.js";
 
 function dataRoot(): string {
@@ -20,12 +20,15 @@ export class ManifestStore {
   private readonly now: () => Date;
   private readonly remoteEnabled: boolean;
   private readonly remoteRegistryUrl: string;
+  private readonly timeoutMs: number;
 
-  constructor(directory?: string, options: { now?: () => Date; fetchImpl?: typeof fetch; remoteEnabled?: boolean; remoteRegistryUrl?: string } = {}) {
+  constructor(directory?: string, options: { now?: () => Date; fetchImpl?: typeof fetch; remoteEnabled?: boolean; remoteRegistryUrl?: string; timeoutMs?: number } = {}) {
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.now = options.now ?? (() => new Date());
     this.remoteEnabled = options.remoteEnabled ?? process.env.BITCOIN_STAKING_DISABLE_REMOTE_REGISTRY !== "1";
     this.remoteRegistryUrl = options.remoteRegistryUrl ?? process.env.BITCOIN_STAKING_BOND_REGISTRY_URL ?? "https://raw.githubusercontent.com/andre-stacks/bitcoin-staking-mcp/main/data/bond-registry.json";
+    this.timeoutMs = options.timeoutMs ?? Number(process.env.BITCOIN_STAKING_UPSTREAM_TIMEOUT_MS ?? 8_000);
+    if (!Number.isFinite(this.timeoutMs) || this.timeoutMs <= 0) throw new ServiceError("INVALID_INPUT", "Manifest timeout must be a positive number of milliseconds.");
     this.directory = directory ?? process.env.BITCOIN_STAKING_DATA_DIR ?? resolve(dataRoot(), "bonds");
     if (!directory && !process.env.BITCOIN_STAKING_DATA_DIR) {
       this.registry = new VersionedRegistryClient({
@@ -34,6 +37,7 @@ export class ManifestStore {
         parse: (value) => BondRegistrySchema.parse(value),
         ...(options.now ? { now: options.now } : {}), ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
         remoteEnabled: this.remoteEnabled,
+        timeoutMs: this.timeoutMs,
       });
     }
   }
@@ -55,8 +59,9 @@ export class ManifestStore {
       const fallbackRaw = await readFile(resolve(dataRoot(), "bond-registry.json"), "utf8").catch((reason: unknown) => { throw new ServiceError("REGISTRY_UNAVAILABLE", `Remote manifests and bundled registry are unavailable: ${reason instanceof Error ? reason.message : String(reason)}`, true); });
       const fallback = BondRegistrySchema.parse(JSON.parse(fallbackRaw));
       const now = this.now();
+      if (!isReviewCurrent(fallback.reviewedAt, now, fallback.reviewCadenceDays)) throw new ServiceError("REGISTRY_UNAVAILABLE", `Remote manifests failed and bundled registry expired at ${reviewDueAt(fallback.reviewedAt, fallback.reviewCadenceDays)}.`, true);
       bonds = await Promise.all(fallback.bondFiles.map((name) => this.readManifest(name, "bundled_snapshot")));
-      metadata = { sourceMode: "bundled_snapshot", registryVersion: fallback.registryVersion, contentHash: registryHash(JSON.stringify(bonds)), fetchedAt: now.toISOString(), reviewedAt: fallback.reviewedAt, reviewDueAt: reviewDueAt(fallback.reviewedAt, fallback.reviewCadenceDays), reviewStatus: isReviewCurrent(fallback.reviewedAt, now, fallback.reviewCadenceDays) ? "current" : "needs_review" };
+      metadata = { sourceMode: "bundled_snapshot", registryVersion: fallback.registryVersion, contentHash: registryHash(JSON.stringify(bonds)), fetchedAt: now.toISOString(), reviewedAt: fallback.reviewedAt, reviewDueAt: reviewDueAt(fallback.reviewedAt, fallback.reviewCadenceDays), reviewStatus: "current", fallbackReason: `Remote manifest read failed: ${error instanceof Error ? error.message : String(error)}` };
     }
     this.assertUnique(bonds);
     metadata = { ...metadata, contentHash: registryHash(JSON.stringify(bonds)) };
@@ -88,7 +93,7 @@ export class ManifestStore {
       }
       if (sourceMode === "live_registry" && this.remoteEnabled) {
         const base = this.remoteRegistryUrl.replace(/\/[^/]+$/, "/");
-        const response = await this.fetchImpl(`${base}bonds/${name}`);
+        const response = await withTimeout(this.fetchImpl(`${base}bonds/${name}`), this.timeoutMs, `Bond manifest ${name} fetch`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         raw = await response.text();
       } else raw = await readFile(resolve(this.directory, name), "utf8");

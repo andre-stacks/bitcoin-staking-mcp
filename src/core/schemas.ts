@@ -7,7 +7,10 @@ const MAX_BITCOIN_SUPPLY_SATS = 2_100_000_000_000_000n;
 
 export function btcAmountToSats(value: string): string {
   const normalized = value.trim().replace(/\s*(?:s?btc)$/i, "");
-  const [whole = "0", fraction = ""] = normalized.split(".");
+  const match = /^(\d+)(?:\.(\d{1,8}))?$/.exec(normalized);
+  if (!match) throw new Error("BTC amount must be a non-negative decimal with at most eight fractional digits.");
+  const whole = match[1]!;
+  const fraction = match[2] ?? "";
   return (BigInt(whole) * 100_000_000n + BigInt(fraction.padEnd(8, "0"))).toString();
 }
 
@@ -371,6 +374,7 @@ export type RecommendationResult = z.infer<typeof RecommendationResultSchema>;
 export const RegistryMetadataSchema = z.object({
   sourceMode: RegistrySourceModeSchema, registryVersion: z.string(), contentHash: z.string(), fetchedAt: z.iso.datetime(),
   reviewedAt: z.iso.datetime(), reviewDueAt: z.iso.datetime(), reviewStatus: z.enum(["current", "needs_review"]),
+  fallbackReason: z.string().min(1).optional(),
 }).strict();
 export const LifecycleFilterSchema = z.enum(["upcoming", "open", "closed", "unknown"]);
 
