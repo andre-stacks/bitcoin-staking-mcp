@@ -15,22 +15,26 @@ The raw MCP tool catalog was documented but not translated into user goals. A ne
 
 Keep one user-facing concierge entry point. Do not turn fourteen implementation tools into commands a user must learn.
 
-The concierge now introduces two bond-scoped participation routes:
+Onboarding is determined by the user's intent, not simply whether this is the first message. A broad orientation request gets a concise explanation of Bitcoin staking, four user-facing concierge capabilities, and three useful starter questions. A request about timing, participation, economics, risk, custody, or liquidity proceeds directly to that workflow without replaying the general introduction.
+
+The two bond-scoped participation routes remain:
 
 1. Direct native-L1 bond for users who prioritize keeping BTC on Bitcoin L1.
 2. The approved StackingDAO sBTC pool for permissionless smaller-balance participation, with any stBTC option offered through the pool.
-The first response loads the upcoming opportunity and current custody paths, explains the routes in plain language, and asks which priority matters most. If the user already asks something, the agent proceeds directly and does not repeat the introduction.
 
-## First-run contract
+The concierge explains these routes when the user asks how to participate or compare options, not automatically in every first response.
 
-The first response must:
+## Intent-aware onboarding contract
 
-- identify the product as the Bitcoin Staking Concierge;
-- state the upcoming opportunity and two routes in plain language;
-- ask whether the user prioritizes L1, liquidity, or a smaller pooled position;
-- avoid a network-selection question;
-- make no factual protocol or product claim before reading MCP evidence;
-- call the market snapshot, bond-route, and direct-custody tools before making factual claims.
+For an empty invocation or a broad statement such as “I'd like to get started with Bitcoin staking” that contains no concrete question, amount, provider, or preference, the response must:
+
+- explain in one sentence that Bitcoin staking lets the user put BTC to work and earn rewards through the Stacks protocol;
+- list only four capabilities: finding opportunities, comparing participation paths, understanding rewards and risks, and building a personalized plan;
+- offer exactly three starter questions about the next bond, getting started, and choosing a participation option;
+- remain under 100 words;
+- avoid leading with a bond, route details, dates, protocol status, network selection, or a routing question.
+
+If the first message asks a specific question, the concierge must skip the general welcome and answer that intent directly. Current opportunity claims still require `get_market_snapshot`; route and custody tools are called only when those details are relevant.
 
 The installer must end with useful example questions, not only host-specific invocation syntax.
 
@@ -44,9 +48,12 @@ The welcome is approachable and direct. Once diligence begins, answers remain ne
 
 ## Acceptance criteria
 
-- Empty Codex and Claude concierge invocations call the same market snapshot and show the same two routes.
+- Empty and broad-orientation Codex and Claude invocations produce the same capability-first welcome.
+- “I'd like to get started with Bitcoin staking” does not lead with a bond, route, date, or protocol status.
+- “When is the next bond launching?” bypasses general onboarding and returns current opportunity evidence.
+- “How can I stake 0.25 BTC?” bypasses general onboarding and begins the participation workflow.
 - The phrase “What would you like your Bitcoin to do?” is not used as the opening.
-- A supplied request bypasses the introduction.
+- A specific supplied request bypasses the introduction.
 - Setup output includes at least one status/discovery prompt and one security prompt.
 - Capability discovery names all fourteen tools, including the market snapshot, bond-scoped routes, and native-L1 custody directory.
 - Existing provenance, abstention, read-only, and network-routing policies remain unchanged.

@@ -153,13 +153,58 @@ test("audit guidance stays audit-specific and does not inherit a prior custodian
   assert.doesNotMatch(JSON.stringify(content), /BitGo/i);
 });
 
-test("capabilities expose server and contract versions and concierge uses one routing question", async (context) => {
+test("capabilities expose versions and concierge prompt enforces intent-aware onboarding", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const resource = await client.readResource({ uri: "bitcoin-staking://capabilities" }); const text = (resource.contents[0] as any).text as string;
   assert.match(text, new RegExp(`Contract version: ${CONTRACT_VERSION}`)); assert.match(text, new RegExp(`Server version: ${SERVER_VERSION}`));
   assert.match(text, /Skill version: 0\.3\.0/); assert.match(text, /Registry version: 2026-08-06\.1/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
   const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: {} }); const content = prompt.messages[0]?.content;
-  assert.equal(content?.type, "text"); if (content?.type === "text") { assert.match(content.text, /call get_market_snapshot first/i); assert.match(content.text, /exactly two routes/i); assert.match(content.text, /keeping BTC on L1, permissionless smaller-balance access, or liquidity/i); assert.match(content.text, /Keep stBTC under the pool/i); assert.match(content.text, /show the sourced gross reward, label net reward unknown/i); assert.match(content.text, /prices may enrich the scenario, but do not replace missing rate or duration inputs/i); assert.match(content.text, /three-decimal display fields/i); assert.match(content.text, /final terms may change before launch/i); assert.match(content.text, /lead with the user-facing status in ordinary language/i); assert.match(content.text, /only caveats or unknowns that change the answer/i); assert.match(content.text, /Do not list unverified liquidity, redemption, borrowing, market, or DeFi details/i); assert.match(content.text, /Avoid stacked qualifiers and status jargon/i); }
+  assert.equal(content?.type, "text"); if (content?.type === "text") {
+    assert.match(content.text, /Onboarding follows the user's intent/i);
+    assert.match(content.text, /fewer than 100 words/i);
+    assert.match(content.text, /Bitcoin staking lets you put your BTC to work and earn rewards through the Stacks protocol/i);
+    assert.match(content.text, /Find current and upcoming opportunities/i);
+    assert.match(content.text, /Compare ways to participate/i);
+    assert.match(content.text, /Understand rewards, lockups, fees, and risks/i);
+    assert.match(content.text, /Build a personalized step-by-step participation plan/i);
+    assert.match(content.text, /When is the next bond launching/i);
+    assert.match(content.text, /How can I get started staking/i);
+    assert.match(content.text, /Which participation option is right for me/i);
+    assert.match(content.text, /Do not lead this general welcome with an upcoming bond/i);
+    assert.match(content.text, /specific question, skip the general welcome/i);
+    assert.match(content.text, /For opportunity or timing, call get_market_snapshot/i);
+    assert.match(content.text, /direct how-to-participate question/i);
+    assert.match(content.text, /exactly two bond enrollment routes when route detail is relevant/i);
+    assert.match(content.text, /Keep stBTC under the StackingDAO pool/i);
+    assert.match(content.text, /show the sourced gross reward, label net reward unknown/i);
+    assert.match(content.text, /prices may enrich the scenario, but do not replace missing rate or duration inputs/i);
+    assert.match(content.text, /three-decimal display fields/i);
+    assert.match(content.text, /final terms may change before launch/i);
+    assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
+    assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
+    assert.match(content.text, /Do not list unverified liquidity, redemption, borrowing, market, or DeFi details/i);
+    assert.match(content.text, /Avoid stacked qualifiers and status jargon/i);
+  }
+});
+
+test("concierge prompt preserves broad, timing, and amount-bearing first-message intent", async (context) => {
+  const { client, server } = await connectedClient(offlineService());
+  context.after(async () => { await client.close(); await server.close(); });
+  const requests = [
+    "I'd like to get started with Bitcoin staking",
+    "When is the next bond launching?",
+    "How can I stake 0.25 BTC?",
+  ];
+  for (const request of requests) {
+    const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request } });
+    const content = prompt.messages[0]?.content;
+    assert.equal(content?.type, "text");
+    if (content?.type === "text") {
+      assert.match(content.text, new RegExp(`Current user request: ${request.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+      assert.match(content.text, /Classify the newest request before responding/i);
+      assert.match(content.text, /If the request asks a specific question, skip the general welcome/i);
+    }
+  }
 });
 
 test("concierge prompt makes the current audit question override unrelated prior context", async (context) => {
@@ -172,7 +217,7 @@ test("concierge prompt makes the current audit question override unrelated prior
   const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text");
   if (content?.type === "text") {
-    assert.match(content.text, /current user request as the controlling scope/i);
+    assert.match(content.text, /newest user request as the controlling scope/i);
     assert.match(content.text, /audit-status question/i);
     assert.match(content.text, /Do not mention BitGo or another named integration unless the current request asks whether it was covered/i);
   }

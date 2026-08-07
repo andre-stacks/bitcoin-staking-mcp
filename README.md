@@ -56,13 +56,17 @@ To install only one host, use `--hosts codex` or `--hosts claude`. See [Installa
 
 ### First conversation
 
-Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, it loads the upcoming opportunity and the direct native-L1 and StackingDAO sBTC pool routes. stBTC is presented only as the pool's optional LST capability. It then asks which priority matters most.
+Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, or with a broad statement such as “I'd like to get started with Bitcoin staking,” it briefly explains Bitcoin staking, summarizes what the concierge can help with, and offers three useful starter questions. It does not make users learn bond routes before choosing a direction.
 
 Ask naturally. For example:
 
 ```text
-What is the current protocol status, and are any bonds available?
+When is the next bond launching?
+How can I get started staking?
+Which participation option is right for me?
 ```
+
+A specific first question bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow.
 
 The single concierge command is the user-facing entry point. Fourteen read-only MCP tools remain directly available to agents, developers, and MCP Inspector; users do not need to know their names.
 
