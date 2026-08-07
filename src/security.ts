@@ -185,7 +185,7 @@ const guidance = {
   early_exit: {
     question: "What changes if the participant exits before maturity?",
     answer:
-      "Early exit is available through a coordinated signing process. The participant provides unlock material, and the designated early-exit signer set approves the transaction. Exiting early forfeits undistributed yield for the remainder of the period. Any paired STX stays locked until the original unlock date.",
+      "Early exit is available before the bond ends. First, you submit an early-exit transaction on Stacks and approve it in your wallet. Once it confirms, you approve a Bitcoin transaction in your wallet to return the BTC to your address. The Bitcoin transaction also receives the security approval required by the bond before it is broadcast. You keep rewards already received. Rewards remaining in the bond are forfeited, and any paired STX stays locked until the original unlock date. Normal Stacks and Bitcoin network fees apply.",
     evidenceLevel: "protocol_verified",
     whatIsKnown: [
       "Normal maturity recovery does not require the early-exit signers.",

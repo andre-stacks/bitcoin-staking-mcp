@@ -56,7 +56,11 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /include a caveat only when it changes the answer/i);
   assert.match(skill, /State the supported capability first and explain how it works/i);
   assert.match(skill, /Do not manufacture a negative contrast around a supported feature/i);
-  assert.match(skill, /Early exit is available through a coordinated signing process/i);
+  assert.match(skill, /Explain what the user does and what happens next before naming protocol infrastructure/i);
+  assert.match(skill, /Early exit is available before the bond ends/i);
+  assert.match(skill, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
+  assert.match(skill, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
+  assert.match(skill, /Early Exit Coordinator.*for technical follow-up/i);
   assert.match(skill, /state it plainly in its own sentence after the mechanism/i);
   assert.match(skill, /do not list every unverified stBTC integration/i);
   assert.match(skill, /wallet- or custody-only question/i);
@@ -139,7 +143,11 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /surface a caveat only when it changes the conclusion/i);
   assert.match(standard, /State a supported capability first and explain how it works/i);
   assert.match(standard, /Do not manufacture a negative contrast around it/i);
-  assert.match(standard, /Early exit is available through a coordinated signing process/i);
+  assert.match(standard, /Explain what the user does and what happens next before naming protocol infrastructure/i);
+  assert.match(standard, /Early exit is available before the bond ends/i);
+  assert.match(standard, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
+  assert.match(standard, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
+  assert.match(standard, /Early Exit Coordinator.*for technical follow-up/i);
   assert.match(standard, /give it a separate plain sentence after the mechanism/i);
   assert.match(standard, /do not list every unverified liquidity/i);
   assert.match(standard, /wallet- or custody-only question/i);

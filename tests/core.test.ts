@@ -11,11 +11,15 @@ async function bondFile(name: string) { return BondManifestSchema.parse(JSON.par
 
 test("early-exit guidance leads with the supported mechanism without reflexive caveats", () => {
   const entry = getSecurityGuidance("early_exit").entries[0];
-  assert.match(entry.answer, /^Early exit is available through a coordinated signing process\./);
-  assert.match(entry.answer, /participant provides unlock material/i);
-  assert.match(entry.answer, /designated early-exit signer set approves the transaction/i);
-  assert.match(entry.answer, /forfeits undistributed yield/i);
+  assert.match(entry.answer, /^Early exit is available before the bond ends\./);
+  assert.match(entry.answer, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
+  assert.match(entry.answer, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
+  assert.match(entry.answer, /security approval required by the bond/i);
+  assert.match(entry.answer, /keep rewards already received/i);
+  assert.match(entry.answer, /rewards remaining in the bond are forfeited/i);
   assert.match(entry.answer, /paired STX stays locked until the original unlock date/i);
+  assert.match(entry.answer, /Normal Stacks and Bitcoin network fees apply/i);
+  assert.doesNotMatch(entry.answer, /coordinated signing|co-signed|reclaim transaction|unlock material|signer set|2-of-2/i);
   assert.doesNotMatch(entry.answer, /\b(?:but|however|rather than|not instant)\b/i);
 });
 

@@ -201,7 +201,11 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
     assert.match(content.text, /State a supported capability first and explain how it works/i);
     assert.match(content.text, /Do not manufacture a negative contrast around it/i);
-    assert.match(content.text, /Early exit is available through a coordinated signing process/i);
+    assert.match(content.text, /Explain user actions and outcomes before infrastructure terminology/i);
+    assert.match(content.text, /Early exit is available before the bond ends/i);
+    assert.match(content.text, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
+    assert.match(content.text, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
+    assert.match(content.text, /Early Exit Coordinator.*only when the user asks for technical detail/i);
     assert.match(content.text, /If a material limitation changes the decision, state it plainly in its own sentence after the mechanism/i);
     assert.match(content.text, /Do not list unverified liquidity, redemption, borrowing, market, or DeFi details/i);
     assert.match(content.text, /wallet- or custody-only question/i);

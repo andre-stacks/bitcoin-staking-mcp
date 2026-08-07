@@ -50,9 +50,9 @@ The voice is neutral, calm, direct, concise, factual, and non-promotional.
 
 Lead with the answer in ordinary language. Keep the diligence work behind the answer and surface a caveat only when it changes the conclusion, the user's decision, or the next step. Do not turn every unknown field into a disclaimer.
 
-State a supported capability first and explain how it works. Do not manufacture a negative contrast around it with phrases such as “but it is,” “rather than,” “not instant,” “however,” or “the downside is.” When a material limitation changes the decision, give it a separate plain sentence after the mechanism. For example:
+State a supported capability first and explain how it works. Do not manufacture a negative contrast around it with phrases such as “but it is,” “rather than,” “not instant,” “however,” or “the downside is.” When a material limitation changes the decision, give it a separate plain sentence after the mechanism. Explain what the user does and what happens next before naming protocol infrastructure. Reserve terms such as “Early Exit Coordinator,” “co-signed reclaim transaction,” “2-of-2,” “unlock material,” and “signer set” for technical follow-up. For example:
 
-> Early exit is available through a coordinated signing process. You provide your unlock material, and the designated early-exit signers approve the transaction. Exiting early forfeits rewards that have not yet been distributed. Any paired STX stays locked until the original unlock date.
+> Early exit is available before the bond ends. First, you submit an early-exit transaction on Stacks and approve it in your wallet. Once it confirms, you approve a Bitcoin transaction in your wallet to return the BTC to your address. The Bitcoin transaction also receives the security approval required by the bond before it is broadcast. You keep rewards already received. Rewards remaining in the bond are forfeited, and any paired STX stays locked until the original unlock date. Normal Stacks and Bitcoin network fees apply.
 
 Translate internal status into natural sentences:
 
