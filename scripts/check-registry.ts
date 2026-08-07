@@ -29,6 +29,8 @@ if (!genesis) errors.push("Genesis Bond is missing.");
 else {
   if (genesis.onChainBondIndex !== 1) errors.push("Genesis Bond must store PoX-5 bond period/index 1.");
   if (genesis.timing.startsRewardCycle !== undefined || genesis.timing.scheduledLaunchDate !== undefined) errors.push("Genesis protocol cycle and calendar estimate must be derived rather than stored.");
+  if (genesis.protocolTerms.unresolvedTerms.some((term) => /\bduration\b/i.test(term))) errors.push("Genesis must not treat the contract-fixed PoX-5 bond duration as unresolved.");
+  if (!genesis.sources.some((source) => source.id === "pox5-release-contract")) errors.push("Genesis must cite the pinned PoX-5 contract for its fixed 12-cycle duration.");
   if (!genesis.aliases.includes("genesis-bond-cycle-142")) errors.push("Genesis legacy ID alias is missing.");
   const routeTypes = genesis.participationRoutes.map((route) => route.routeType);
   if (routeTypes.length !== 2 || routeTypes[0] !== "native_l1_direct" || routeTypes[1] !== "sbtc_pool") errors.push("Genesis must expose the two stable route types.");

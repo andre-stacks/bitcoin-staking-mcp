@@ -15,7 +15,7 @@ import { ParticipantProfileSchema } from "../src/core/schemas.js";
 class OfflineProvider extends StacksProvider {
   override async getProtocolStatus(): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, chainId: this.chainId, contractId: "SP000000000000000000002Q6VF78.pox-5", pox5Active: true, currentBurnchainBlockHeight: 960000, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async listProtocolBonds(): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 960000, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
-  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 968400, currentBurnchainBlockHeight: 960000, remainingBurnBlocks: 8400, estimatedStartAt: "2026-10-03T20:00:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
+  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 968400, durationRewardCycles: 12, durationBurnBlocks: 25200, approximateDurationDays: 175, l1LockDurationBurnBlocks: 24150, approximateL1LockDurationDays: 167.7, endRewardCycle: 153 + bondIndex * 2, endBurnHeight: 993600, l1UnlockBurnHeight: 992550, currentBurnchainBlockHeight: 960000, remainingBurnBlocks: 8400, estimatedStartAt: "2026-10-03T20:00:00.000Z", estimatedEndAt: "2027-03-27T20:00:00.000Z", estimatedL1UnlockAt: "2027-03-20T13:00:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture.", durationEstimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
 }
 class FailingCustodyStore extends CustodyStore {
   override async readWithMetadata(): Promise<never> { throw new ServiceError("REGISTRY_UNAVAILABLE", "Custody registry offline.", true); }
@@ -39,6 +39,9 @@ test("Genesis exposes the two stable route types with the current planned pool e
   assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].poolOperator.id : null, "stackingdao");
   assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].lst?.tokenSymbol : null, "stBTC");
   assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].lst?.productStatus : null, "in_progress");
+  const direct = routes.routes.find((route) => route.routeType === "native_l1_direct");
+  assert.equal(direct?.routeType === "native_l1_direct" ? direct.enrollment.url : null, "https://www.stacks.co/institutional-bitcoin-staking");
+  assert.match(direct?.routeType === "native_l1_direct" ? direct.enrollment.method : "", /connects you with the Stacks team.*follow up to guide you through onboarding and the next allocation steps/i);
 });
 
 test("testnet snapshot reuses its live reads and route-only flows avoid a full snapshot", async () => {

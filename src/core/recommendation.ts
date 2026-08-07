@@ -97,7 +97,7 @@ export function assessRoute(
         unsupportedRequirements.push("The requested horizon is shorter than the bond lock.");
         fit = "no_match";
       } else {
-        missingEvidence.push("The requested horizon is shorter than the published reference period, while final lock duration remains unconfirmed.");
+        missingEvidence.push("The requested horizon is shorter than the published reference period; the exact calendar end remains block-time-dependent.");
         if (fit === "strong") fit = "conditional";
       }
     }

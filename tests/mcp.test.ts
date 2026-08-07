@@ -20,7 +20,7 @@ class OfflineProvider extends StacksProvider {
   override async getProtocolStatus(): Promise<any> { this.statusReads += 1; const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, chainId: this.chainId, contractId: this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78.pox-5" : "ST000000000000000000002AMW42H.pox-5", pox5Active: true, pox5Scheduled: false, currentBurnchainBlockHeight: 10, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async listProtocolBonds(): Promise<any> { this.bondScanReads += 1; const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 10, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async getOnChainBond(): Promise<any> { return undefined; }
-  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 100 + bondIndex * 4200, currentBurnchainBlockHeight: 10, remainingBurnBlocks: 4290, estimatedStartAt: "2026-09-05T14:00:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture using Bitcoin's ten-minute target.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
+  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 100 + bondIndex * 4200, durationRewardCycles: 12, durationBurnBlocks: 25200, approximateDurationDays: 175, l1LockDurationBurnBlocks: 24150, approximateL1LockDurationDays: 167.7, endRewardCycle: 153 + bondIndex * 2, endBurnHeight: 25300 + bondIndex * 4200, l1UnlockBurnHeight: 24250 + bondIndex * 4200, currentBurnchainBlockHeight: 10, remainingBurnBlocks: 4290, estimatedStartAt: "2026-09-05T14:00:00.000Z", estimatedEndAt: "2027-02-27T14:00:00.000Z", estimatedL1UnlockAt: "2027-02-20T07:00:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture using Bitcoin's ten-minute target.", durationEstimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
   override async getParticipantStatus(address: string): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { address, network: this.networkName, accountStatus: null, stakerInfo: null, bondMembership: null, bondAllowanceSats: null, requestedBondId: null, requestedBondDataStatus: null, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
 }
 class FailingProvider extends OfflineProvider { override async getProtocolStatus(): Promise<any> { throw new ServiceError("UPSTREAM_ERROR", "Live network unavailable.", true); } }
@@ -50,6 +50,8 @@ test("market snapshot grounds the first turn in two routes", async (context) => 
   assert.equal(result.isError, undefined); const content = result.structuredContent as any;
   assert.deepEqual(content.routes.map((route: any) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   assert.equal(content.bonds[0].protocolSchedule.startRewardCycle, 143);
+  assert.equal(content.bonds[0].protocolSchedule.durationRewardCycles, 12);
+  assert.equal(content.bonds[0].protocolSchedule.approximateDurationDays, 175);
   assert.match(content.precedence, /on-chain.*outranks owner/i);
   assert.ok(content.sources.some((source: any) => source.id === "custody-registry"));
 });
@@ -214,6 +216,15 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /specific question, skip the general welcome/i);
     assert.match(content.text, /For opportunity or timing, call get_market_snapshot/i);
     assert.match(content.text, /direct how-to-participate question/i);
+    assert.match(content.text, /Where do I sign up.*handoff intent/i);
+    assert.match(content.text, /direct native-L1 Bitcoin Staking path.*do not use an internal bond name/i);
+    assert.match(content.text, /primary CTA labeled 'Register your interest here'/i);
+    assert.match(content.text, /connects you with the Stacks team/i);
+    assert.match(content.text, /follow up to guide you through onboarding and the next allocation steps/i);
+    assert.match(content.text, /you'll be able to visit staking\.stacks\.co/i);
+    assert.match(content.text, /without adding enrollment, allocation, configuration, or availability caveats to the conclusion/i);
+    assert.match(content.text, /label the primary CTA 'Start enrollment'/i);
+    assert.match(content.text, /Do not restart route discovery/i);
     assert.match(content.text, /allocation and enrollment mechanics as silent background context, not an investor-facing checklist/i);
     assert.match(content.text, /Do not proactively mention address binding, allocation immutability, partial enrollment or top-ups, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs/i);
     assert.match(content.text, /only when the user asks about it, it materially changes the selected route or immediate next step, or it is needed to correct a false assumption/i);
@@ -263,7 +274,7 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /Call simulate_yield with a 1 BTC principal/i);
     assert.match(content.text, /do not calculate the worked return in prose/i);
     assert.match(content.text, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
-    assert.match(content.text, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
+    assert.match(content.text, /contract-fixed 12-cycle term is a stable protocol invariant/i);
     assert.match(content.text, /Invite the user to provide their BTC amount for a personalized estimate/i);
     assert.match(content.text, /Avoid stacked qualifiers and status jargon/i);
   }

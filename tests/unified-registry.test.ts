@@ -54,7 +54,13 @@ test("catalog search excludes scheduled, expired, and overdue records from curre
     fetchImpl: async () => new Response(JSON.stringify(snapshot), { status: 200, headers: { etag: '"filtered"' } }),
   });
   const result = await store.search();
-  assert.deepEqual(result.results.map((item) => item.id), ["genesis-bond-product", "stackingdao-stbtc", "zest-stbtc-borrowing"]);
+  assert.deepEqual(result.results.map((item) => item.id), [
+    "bitcoin-staking-application",
+    "genesis-bond-product",
+    "institutional-bitcoin-staking-access",
+    "stackingdao-stbtc",
+    "zest-stbtc-borrowing",
+  ]);
 });
 
 test("catalog search exposes Zest as a planned stBTC integration without live terms", async () => {
@@ -64,4 +70,20 @@ test("catalog search exposes Zest as a planned stBTC integration without live te
   assert.equal(result.results[0]?.kind, "integration");
   assert.equal(result.results[0]?.status, "planned");
   assert.match(result.results[0]?.summary ?? "", /rates.*eligibility.*LTV.*not yet published/i);
+});
+
+test("catalog distinguishes the live interest form from the planned staking application", async () => {
+  const store = new RegistryStore({ path, remoteEnabled: false, now: () => new Date("2026-08-06T12:00:00.000Z") });
+  const access = await store.search({ query: "signup" });
+  assert.deepEqual(access.results.map((item) => item.id), ["institutional-bitcoin-staking-access"]);
+  assert.equal(access.results[0]?.status, "available");
+  assert.match(access.results[0]?.summary ?? "", /stacks\.co\/institutional-bitcoin-staking/i);
+  assert.match(access.results[0]?.summary ?? "", /connects you with the Stacks team/i);
+  assert.match(access.results[0]?.summary ?? "", /follow up to guide you through onboarding and the next allocation steps/i);
+  assert.equal(access.results[0]?.sources[0]?.url, "https://www.stacks.co/institutional-bitcoin-staking");
+
+  const application = await store.search({ query: "staking.stacks.co" });
+  assert.deepEqual(application.results.map((item) => item.id), ["bitcoin-staking-application"]);
+  assert.equal(application.results[0]?.status, "planned");
+  assert.match(application.results[0]?.summary ?? "", /you will be able to visit https:\/\/staking\.stacks\.co/i);
 });

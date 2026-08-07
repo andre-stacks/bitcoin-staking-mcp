@@ -51,6 +51,15 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /If the user asks a specific question, skip the general welcome/i);
   assert.match(skill, /For opportunity or timing, call `get_market_snapshot`/i);
   assert.match(skill, /capability-only welcome does not need market data/i);
+  assert.match(skill, /Where do I sign up.*handoff intent/i);
+  assert.match(skill, /direct native-L1 Bitcoin Staking path.*do not use an internal bond name/i);
+  assert.match(skill, /primary CTA labeled “Register your interest here/i);
+  assert.match(skill, /connects you with the Stacks team/i);
+  assert.match(skill, /follow up to guide you through onboarding and the next allocation steps/i);
+  assert.match(skill, /you’ll be able to visit `staking\.stacks\.co`/i);
+  assert.match(skill, /do not add configuration or availability commentary to the conclusion/i);
+  assert.match(skill, /primary CTA labeled “Start enrollment/i);
+  assert.match(skill, /Do not restart route discovery/i);
   assert.match(skill, /newest user request as the controlling scope/i);
   assert.match(skill, /allocation and enrollment mechanics as silent background context, not an investor-facing checklist/i);
   assert.match(skill, /Do not proactively mention address binding, allocation immutability, partial enrollment or top-ups, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs/i);
@@ -87,7 +96,9 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /call `simulate_yield` with a 1 BTC principal/i);
   assert.match(skill, /do not calculate the return in prose/i);
   assert.match(skill, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
-  assert.match(skill, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
+  assert.match(skill, /every bond term is 12 reward cycles, approximately six months on mainnet/i);
+  assert.match(skill, /native-L1 unlock height.*one-half reward cycle before the bond ends/i);
+  assert.match(skill, /contract-fixed 12-cycle term is a stable protocol invariant/i);
   assert.match(skill, /Avoid stacked qualifiers, status jargon/i);
 });
 
@@ -161,6 +172,14 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /required Stacks registration is complete/i);
   assert.match(standard, /provider-specific setup requirements only when the user names that provider/i);
   assert.match(standard, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
+  assert.match(standard, /Where do I sign up.*handoff intent/i);
+  assert.match(standard, /direct native-L1 Bitcoin Staking path.*do not use an internal bond name/i);
+  assert.match(standard, /institutional access form as \*\*Register your interest here\*\*/i);
+  assert.match(standard, /connects you with the Stacks team/i);
+  assert.match(standard, /follow up to guide you through onboarding and the next allocation steps/i);
+  assert.match(standard, /you’ll be able to visit `staking\.stacks\.co`/i);
+  assert.match(standard, /verified enrollment link \*\*Start enrollment\*\*/i);
+  assert.match(standard, /never imply that a form was submitted/i);
   assert.match(standard, /without volunteering report availability/i);
   assert.match(standard, /Security starts with Bitcoin itself/i);
   assert.match(standard, /Security foundation.*Independent verification.*Bounded residual risk/is);
@@ -194,7 +213,9 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /use `simulate_yield` with a 1 BTC principal/i);
   assert.match(standard, /Do not infer the worked return in prose/i);
   assert.match(standard, /Planned product targets and public reference-model assumptions are not bond-specific terms; bond-specific terms are not proof of final on-chain configuration/i);
-  assert.match(standard, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
+  assert.match(standard, /every bond term at 12 reward cycles, approximately six months on mainnet/i);
+  assert.match(standard, /native-L1 unlock height.*one-half reward cycle before the bond ends/i);
+  assert.match(standard, /contract-fixed 12-cycle term is a stable protocol invariant/i);
   assert.match(standard, /stacked qualifiers and status jargon/i);
 });
 

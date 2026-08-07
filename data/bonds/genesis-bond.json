@@ -27,7 +27,7 @@
     "coverageBoundary": "Stacks PoX-5 Bitcoin Staking only; STX-only stacking and non-Stacks yield products are excluded.",
     "signerAndAdministrationControls": "Live PoX-5 state has precedence over owner-maintained product targets and enrollment status.",
     "audits": ["Use the current registry sources and live protocol state for security diligence."],
-    "unresolvedTerms": ["Current capacity, duration, fees, enrollment window, operators, and deployed integration details must come from the live registry."]
+    "unresolvedTerms": ["Current capacity, fees, enrollment window, operators, and deployed integration details must come from the live registry."]
   },
   "participationRoutes": [
     {
@@ -44,14 +44,17 @@
         "reviewCadenceDays": 7,
         "sourceIds": ["genesis-bond-owner-attestation"]
       },
-      "sourceIds": ["genesis-bond-owner-attestation", "sip-045"],
+      "sourceIds": ["genesis-bond-owner-attestation", "sip-045", "stacks-institutional-bitcoin-staking-access"],
       "summary": "Direct participation using a Bitcoin L1 timelock, subject to current eligibility, enrollment, and custody requirements.",
       "whitelist": { "required": true, "status": "unknown" },
       "participantTypes": ["institution"],
       "custodyPathIds": [],
       "pairedStx": { "required": false },
       "keyControl": "unknown",
-      "enrollment": { "method": "Consult the current registry for the approved enrollment flow." },
+      "enrollment": {
+        "method": "Register your interest through the Stacks institutional access form. Submitting the form connects you with the Stacks team. They will follow up to guide you through onboarding and the next allocation steps.",
+        "url": "https://www.stacks.co/institutional-bitcoin-staking"
+      },
       "recovery": { "status": "unconfirmed", "evidence": "Confirm current recovery requirements before participation." },
       "earlyExit": { "status": "unknown", "evidence": "No current bond-specific early-exit commitment is stored in the bundled fallback." }
     },
@@ -112,11 +115,14 @@
   ],
   "notes": [
     "Bond period 1 maps to reward Cycle 143 under PoX-5; the cycle and burn height are derived live and are not editable product fields.",
+    "PoX-5 fixes every bond term at 12 reward cycles, approximately six months on mainnet; exact calendar dates and the native-BTC unlock height are derived from live PoX cycle parameters.",
     "An approximate calendar date is derived from remaining burn blocks using Bitcoin's ten-minute target."
   ],
   "sources": [
     { "id": "genesis-bond-owner-attestation", "title": "Stacks Labs Genesis Bond owner attestation", "sourceType": "owner_attestation", "dataStatus": "published", "retrievedAt": "2026-08-06T00:00:00.000Z" },
     { "id": "sip-045", "title": "SIP-045: PoX-5 Bitcoin Staking initial program conditions", "url": "https://github.com/stacksgov/sips/blob/0b7cecaecdb6060a6fc19510f2e7dd8dde1d2fa1/sips/sip-045/sip-045-pox-5-bitcoin-staking.md", "sourceType": "official_docs", "dataStatus": "published" },
+    { "id": "pox5-release-contract", "title": "PoX-5 bond-duration constants in stacks-core 4.0.1", "url": "https://github.com/stacks-network/stacks-core/blob/4.0.1/stackslib/src/chainstate/stacks/boot/pox-5.clar#L72-L76", "sourceType": "source_code", "dataStatus": "published", "sourceVersion": "4.0.1" },
+    { "id": "stacks-institutional-bitcoin-staking-access", "title": "Stacks Institutional Bitcoin Staking access page", "url": "https://www.stacks.co/institutional-bitcoin-staking", "sourceType": "official_docs", "dataStatus": "published" },
     { "id": "bitcoin-staking-explained", "title": "Bitcoin Staking explained", "url": "https://www.stacks.co/blog/bitcoin-staking-explained-how-it-works-on-stacks", "sourceType": "official_docs", "dataStatus": "published" },
     { "id": "stackingdao-zest-vault-architecture", "title": "StackingDAO and Zest Protocol stBTC vault architecture note", "sourceType": "owner_attestation", "dataStatus": "published", "retrievedAt": "2026-08-06T00:00:00.000Z" }
   ],

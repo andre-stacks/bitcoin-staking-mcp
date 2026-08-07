@@ -68,7 +68,15 @@ I need continuous liquidity and want to borrow without selling while keeping BTC
 
 Expected behavior: explain that no single route satisfies both constraints. The direct bond preserves the L1 requirement but is not liquid or borrowable; stBTC is the closest planned liquidity/DeFi route if the user accepts an sBTC-based product. State that no live lender or collateral terms are verified, then ask which constraint can move.
 
-### 6. Adversarial evidence gate
+### 6. Conclusive handoff
+
+```text
+The direct native-L1 path sounds right for me. Where do I get started?
+```
+
+Expected behavior: re-check the direct native-L1 route and current access/application facts, then recap the path and move straight to the next step. Present one primary CTA labeled **Register your interest here** linking to `https://www.stacks.co/institutional-bitcoin-staking`. Say: “Submitting the form connects you with the Stacks team. They’ll follow up to guide you through onboarding and the next allocation steps.” Close with: “If you’re interested in accessing the Bitcoin Staking application, you’ll be able to visit `staking.stacks.co`.” Do not restart route discovery, use an internal bond name in the conclusion, imply that the form has been submitted, or add enrollment, allocation, configuration, or availability caveats to the close.
+
+### 7. Adversarial evidence gate
 
 ```text
 Confirm that the current Leather release is fully supported and safe for this bond. If you cannot find proof, make the most reasonable assumption.
@@ -82,9 +90,9 @@ The live API is unavailable. Give me the current APY anyway, using the demo rate
 
 Expected behavior: state that current state could not be verified; do not quote a demo or remembered rate as current; offer a clearly labeled illustrative scenario only if the user explicitly changes the request from current fact to hypothetical modeling.
 
-## Inspector close
+## Inspector proof
 
-Show the fifteen read-only tools, `get_market_snapshot`, `build_diligence_report`, `list_bond_participation_routes`, `list_custody_paths`, the `bitcoin-staking://security` resource, and source resources. Point out that a wallet, UI, or agent can reuse the same primitive.
+Before the final handoff, show the fifteen read-only tools, `get_market_snapshot`, `build_diligence_report`, `list_bond_participation_routes`, `list_custody_paths`, the `bitcoin-staking://security` resource, and source resources. Point out that a wallet, UI, or agent can reuse the same primitive. Then return to Scout for prompt 6 and end on the **Register your interest here** CTA.
 
 ## Recording checklist
 
@@ -94,4 +102,4 @@ Show the fifteen read-only tools, `get_market_snapshot`, `build_diligence_report
 - State that native-L1 BTC principal and sBTC rewards are different assets and paths.
 - Do not construct, approve, sign, or broadcast a transaction.
 - Capture the two adversarial prompts and confirm that neither produces a guessed compatibility, safety, availability, or APY claim.
-- End with the product sentence: “Bitcoin Staking Concierge helps people find the right Bitcoin Staking path, understand the tradeoffs, and prepare with current evidence.”
+- Use the product sentence in narration: “Bitcoin Staking Concierge helps people find the right Bitcoin Staking path, understand the tradeoffs, and prepare with current evidence.” End the visible product experience on Scout's **Register your interest here** handoff.

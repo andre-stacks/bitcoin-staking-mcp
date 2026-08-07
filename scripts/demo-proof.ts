@@ -87,8 +87,32 @@ async function main() {
     });
     section("6. LIQUIDITY AND BORROWING NO-MATCH", liquidityPlan);
 
+    const [genesis, accessFacts, applicationFacts] = await Promise.all([
+      call("get_bond", { bondId: "genesis-bond" }),
+      call("search_current_facts", { query: "institutional access", limit: 5 }),
+      call("search_current_facts", { query: "staking.stacks.co", limit: 5 }),
+    ]);
+    const genesisBond = genesis.bond as { participationRoutes: Array<Record<string, unknown>> };
+    const directRoute = genesisBond.participationRoutes.find((route) => route.routeType === "native_l1_direct");
+    const accessRecord = (accessFacts.results as Array<Record<string, unknown>>)[0];
+    const applicationRecord = (applicationFacts.results as Array<Record<string, unknown>>)[0];
+    section("7. CONCLUSIVE HANDOFF EVIDENCE", {
+      selectedPath: "Direct native-L1 Bitcoin Staking",
+      routeType: directRoute?.routeType,
+      primaryAction: {
+        label: "Register your interest here",
+        url: "https://www.stacks.co/institutional-bitcoin-staking",
+        summary: accessRecord?.summary,
+        sources: accessRecord?.sources,
+      },
+      applicationAccess: {
+        message: "If you are interested in accessing the Bitcoin Staking application, you will be able to visit https://staking.stacks.co.",
+        sources: applicationRecord?.sources,
+      },
+    });
+
     const tools = await client.listTools();
-    section("7. REUSABLE MCP PRIMITIVE", {
+    section("8. REUSABLE MCP PRIMITIVE", {
       toolCount: tools.tools.length,
       tools: tools.tools.map((tool) => ({ name: tool.name, annotations: tool.annotations })),
     });

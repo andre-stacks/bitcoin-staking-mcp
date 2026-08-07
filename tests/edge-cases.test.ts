@@ -86,6 +86,7 @@ test("bond schema rejects invalid limits, paired-STX terms, reward fields, and c
 test("open routes cannot omit usability-critical enrollment and pool evidence", async () => {
   const direct = await genesis();
   Object.assign(direct.participationRoutes[0], { productStatus: "production", enrollmentStatus: "open" });
+  delete direct.participationRoutes[0].enrollment.url;
   assert.equal(BondManifestSchema.safeParse(direct).success, false, "open direct route needs an enrollment URL");
 
   const pool = await genesis();

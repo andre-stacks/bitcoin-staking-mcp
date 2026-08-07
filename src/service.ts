@@ -270,8 +270,11 @@ export class BitcoinStakingService {
     const assessmentStatus = bond.lifecycleStatus === "upcoming" && (scheduledDate || (protocolSchedule && !("status" in protocolSchedule)))
       ? "upcoming_bond_scheduled" as const
       : "published_bond_assessed" as const;
+    const protocolL1LockDurationDays = protocolSchedule && !("status" in protocolSchedule)
+      ? Math.round(protocolSchedule.approximateL1LockDurationDays)
+      : null;
     const derivedTiming = protocolSchedule && !("status" in protocolSchedule)
-      ? `Protocol eligibility begins in Cycle ${protocolSchedule.startRewardCycle} at burn height ${protocolSchedule.startBurnHeight}; the current calendar estimate is ${protocolSchedule.estimatedStartAt} and is approximate.`
+      ? `Protocol eligibility begins in Cycle ${protocolSchedule.startRewardCycle} at burn height ${protocolSchedule.startBurnHeight}. PoX-5 fixes the term at ${protocolSchedule.durationRewardCycles} reward cycles, ending in Cycle ${protocolSchedule.endRewardCycle}; the calendar estimates are approximate.`
       : null;
     const bottomLine = derivedTiming
       ? `${bond.title}: ${derivedTiming} Product enrollment and on-chain configuration remain separate checks.`
@@ -280,7 +283,7 @@ export class BitcoinStakingService {
       : `${bond.title} is published for diligence. Route availability and final economics must be confirmed from current product and on-chain state.`;
     const nextDiligenceSteps = [
       "Choose a currently supported custody path for direct native-L1 participation, or review a current registry-published pool route.",
-      "Confirm the final bond duration and every applicable fee before treating a gross projection as a net-return scenario.",
+      "Use the protocol-derived 12-cycle term and confirm every applicable fee before treating a gross projection as a net-return scenario.",
       "Reconcile enrollment and on-chain configuration before funding.",
     ];
     return {
@@ -314,7 +317,14 @@ export class BitcoinStakingService {
         eligibility: { whitelist: route.whitelist, participantTypes: route.participantTypes, minimumSats: route.minimumSats ?? null, maximumSats: route.maximumSats ?? null },
         custody: { custodyPathIds: route.custodyPathIds, keyControl: route.keyControl },
         pairedStx: route.pairedStx,
-        timelock: { lockDurationDays: bond!.timing.lockDurationDays ?? null, unlockHeight: bond!.timing.unlockHeight ?? null },
+        timelock: {
+          lockDurationDays: bond!.timing.lockDurationDays ?? protocolL1LockDurationDays,
+          unlockHeight: bond!.timing.unlockHeight ?? (
+            protocolSchedule && !("status" in protocolSchedule)
+              ? String(protocolSchedule.l1UnlockBurnHeight)
+              : null
+          ),
+        },
         recovery: route.recovery,
         earlyExit: route.earlyExit,
       } : {

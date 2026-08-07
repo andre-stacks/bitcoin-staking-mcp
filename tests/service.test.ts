@@ -51,7 +51,7 @@ class SnapshotProvider extends RecordingProvider {
     return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 1, scannedBondIndices: [0], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt };
   }
   override async getOnChainBond(): Promise<any> { return undefined; }
-  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 100, currentBurnchainBlockHeight: 1, remainingBurnBlocks: 99, estimatedStartAt: "2026-08-07T11:30:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
+  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 100, durationRewardCycles: 12, durationBurnBlocks: 25200, approximateDurationDays: 175, l1LockDurationBurnBlocks: 24150, approximateL1LockDurationDays: 167.7, endRewardCycle: 153 + bondIndex * 2, endBurnHeight: 25300, l1UnlockBurnHeight: 24250, currentBurnchainBlockHeight: 1, remainingBurnBlocks: 99, estimatedStartAt: "2026-08-07T11:30:00.000Z", estimatedEndAt: "2027-01-29T11:30:00.000Z", estimatedL1UnlockAt: "2027-01-22T04:30:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture.", durationEstimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
 }
 
 function publishedTestnetManifest() {

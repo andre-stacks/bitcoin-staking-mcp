@@ -30,6 +30,20 @@ const stackingDaoZestSource = {
   dataStatus: "published" as const,
   retrievedAt: reviewedAt,
 };
+const institutionalAccessSource = {
+  id: "stacks-institutional-bitcoin-staking-access",
+  title: "Stacks Institutional Bitcoin Staking access page",
+  url: "https://www.stacks.co/institutional-bitcoin-staking",
+  sourceType: "official_docs" as const,
+  dataStatus: "published" as const,
+};
+const stakingApplicationSource = {
+  id: "staking-application-owner-attestation",
+  title: "Stacks Bitcoin Staking application destination owner attestation",
+  sourceType: "owner_attestation" as const,
+  dataStatus: "published" as const,
+  retrievedAt: reviewedAt,
+};
 const attestation = {
   scope: "Genesis Bond product identity and corrected PoX-5 period mapping",
   ownerOrganization: "Stacks Labs",
@@ -76,6 +90,44 @@ const content = ConciergeRegistryContentSchema.parse({
         sourceIds: [stackingDaoZestSource.id],
       },
     },
+    {
+      id: "institutional-bitcoin-staking-access",
+      title: "Register your interest in Bitcoin Staking",
+      summary: "Register your interest at https://www.stacks.co/institutional-bitcoin-staking. Submitting the form connects you with the Stacks team. They will follow up to guide you through onboarding and the next allocation steps.",
+      aliases: ["bitcoin-staking-interest-form", "institutional-access-request"],
+      tags: ["bitcoin-staking", "institutional", "access", "interest", "signup", "onboarding"],
+      relatedIds: ["genesis-bond", "genesis-native-l1-direct"],
+      category: "product",
+      status: "available",
+      effectiveAt: reviewedAt,
+      sourceIds: [institutionalAccessSource.id],
+      attestation: {
+        scope: "Current Institutional Bitcoin Staking access request",
+        ownerOrganization: "Stacks Labs",
+        reviewedAt,
+        reviewCadenceDays: 7,
+        sourceIds: [institutionalAccessSource.id],
+      },
+    },
+    {
+      id: "bitcoin-staking-application",
+      title: "Bitcoin Staking landing page and application",
+      summary: "If you are interested in accessing the Bitcoin Staking application, you will be able to visit https://staking.stacks.co.",
+      aliases: ["staking-stacks-co"],
+      tags: ["bitcoin-staking", "application", "landing-page", "planned"],
+      relatedIds: ["genesis-bond"],
+      category: "product",
+      status: "planned",
+      effectiveAt: reviewedAt,
+      sourceIds: [stakingApplicationSource.id],
+      attestation: {
+        scope: "Planned Bitcoin Staking landing page and application destination",
+        ownerOrganization: "Stacks Labs",
+        reviewedAt,
+        reviewCadenceDays: 7,
+        sourceIds: [stakingApplicationSource.id],
+      },
+    },
   ],
   integrations: [{
     id: "zest-stbtc-borrowing",
@@ -99,7 +151,7 @@ const content = ConciergeRegistryContentSchema.parse({
     network: "mainnet",
     status: "planned",
   }],
-  sources: [source, stackingDaoZestSource],
+  sources: [source, stackingDaoZestSource, institutionalAccessSource, stakingApplicationSource],
 });
 const contentHash = registryContentHash(content);
 const snapshot = ConciergeRegistrySnapshotSchema.parse({
