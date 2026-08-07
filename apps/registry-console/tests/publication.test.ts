@@ -8,8 +8,10 @@ import type { RegistryBackend, RegistryState } from "../lib/store";
 class MemoryBackend implements RegistryBackend {
   state: RegistryState = { publishedSnapshot: seedSnapshot, draft: null, revisions: [] };
   blobs = new Map<string, typeof seedSnapshot>();
+  writes: Array<Record<string, unknown>> = [];
   async readState() { return structuredClone(this.state); }
   async writeItems(items: Record<string, unknown>) {
+    this.writes.push(structuredClone(items));
     this.state = {
       ...this.state,
       ...(items.publishedSnapshot === undefined ? {} : { publishedSnapshot: items.publishedSnapshot }),
@@ -73,11 +75,14 @@ test("draft, validation, publish, diff, discard, and rollback preserve immutable
   assert.equal(backend.state.publishedSnapshot?.content.facts[0]?.summary, "Updated without an MCP release.");
   assert.equal(backend.blobs.size, 2);
   assert.deepEqual(backend.state.revisions.map((entry) => entry.revision), [first.snapshot.revision, seedSnapshot.revision]);
+  backend.writes = [];
   const rolled = await rollbackToRevision(backend, seedSnapshot.revision, "publisher@stackslabs.com", new Date("2026-08-07T10:02:00.000Z"));
   assert.notEqual(rolled.snapshot.revision, seedSnapshot.revision);
   assert.notEqual(rolled.snapshot.revision, first.snapshot.revision);
   assert.equal(backend.state.publishedSnapshot?.content.facts[0]?.summary, seedSnapshot.content.facts[0]?.summary);
   assert.equal(backend.blobs.size, 3);
+  assert.equal(backend.writes.length, 1);
+  assert.deepEqual(Object.keys(backend.writes[0]!).sort(), ["draft", "publicationMetadata", "publishedSnapshot", "revisionIndex"]);
   await saveDraft(backend, changed, "publisher@stackslabs.com"); await discardDraft(backend); assert.equal(backend.state.draft, null);
 });
 

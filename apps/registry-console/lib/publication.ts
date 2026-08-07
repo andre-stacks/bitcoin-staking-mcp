@@ -91,10 +91,14 @@ export async function saveDraft(backend: RegistryBackend, input: unknown, publis
 
 export async function discardDraft(backend: RegistryBackend): Promise<void> { await backend.writeItems({ draft: null }); }
 
-export async function publishDraft(backend: RegistryBackend, publisher: string, now = new Date()) {
-  const state = await backend.readState();
-  if (!state.draft) throw new Error("No saved draft to publish.");
-  const snapshot = createSnapshot(state.draft.content, publisher, now);
+async function publishContent(
+  backend: RegistryBackend,
+  state: Awaited<ReturnType<RegistryBackend["readState"]>>,
+  content: unknown,
+  publisher: string,
+  now: Date,
+) {
+  const snapshot = createSnapshot(content, publisher, now);
   const priorRevision = state.publishedSnapshot && !state.revisions.some((item) => item.revision === state.publishedSnapshot?.revision)
     ? {
         revision: state.publishedSnapshot.revision,
@@ -112,11 +116,19 @@ export async function publishDraft(backend: RegistryBackend, publisher: string, 
   return { snapshot, revision };
 }
 
+export async function publishDraft(backend: RegistryBackend, publisher: string, now = new Date()) {
+  const state = await backend.readState();
+  if (!state.draft) throw new Error("No saved draft to publish.");
+  return publishContent(backend, state, state.draft.content, publisher, now);
+}
+
 export async function rollbackToRevision(backend: RegistryBackend, revisionId: string, publisher: string, now = new Date()) {
   const state = await backend.readState();
   const revision = state.revisions.find((item) => item.revision === revisionId);
   if (!revision) throw new Error(`Unknown revision: ${revisionId}`);
   const prior = ConciergeRegistrySnapshotSchema.parse(await backend.readRevision(revision.blobPathname));
-  await saveDraft(backend, prior.content, publisher, now);
-  return publishDraft(backend, publisher, new Date(now.getTime() + 1));
+  // Rollback must be a single Global Config mutation. Global Config reads are
+  // eventually consistent, so saving a draft and immediately rereading it can
+  // observe the pre-write state and fail even though the draft write succeeded.
+  return publishContent(backend, state, prior.content, publisher, new Date(now.getTime() + 1));
 }
