@@ -157,6 +157,23 @@ test("audit guidance stays audit-specific and does not inherit a prior custodian
   assert.doesNotMatch(JSON.stringify(content), /BitGo/i);
 });
 
+test("broad security guidance uses confidence, verification, and bounded-risk framing", async (context) => {
+  const { client, server } = await connectedClient(offlineService());
+  context.after(async () => { await client.close(); await server.close(); });
+  const result = await client.callTool({
+    name: "get_security_guidance",
+    arguments: { topic: "all" },
+  });
+  assert.equal(result.isError, undefined);
+  const content = result.structuredContent as any;
+  assert.equal(content.requestedTopic, "all");
+  assert.match(content.responseScope, /native-L1 Bitcoin security foundation/i);
+  assert.match(content.responseScope, /audit and transaction\/recovery verification controls/i);
+  assert.match(content.responseScope, /bounded implementation and operational risk/i);
+  assert.match(content.responseScope, /Do not open with a blanket no-safety guarantee/i);
+  assert.match(content.responseScope, /do not apply native-L1 Bitcoin-script protections to a pool-based route/i);
+});
+
 test("capabilities expose versions and concierge prompt enforces intent-aware onboarding", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const serverInstructions = client.getInstructions() ?? "";
@@ -194,6 +211,13 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /required Stacks registration is complete/i);
     assert.match(content.text, /provider-specific setup requirements only when the user names that provider/i);
     assert.match(content.text, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
+    assert.match(content.text, /How will I know my Bitcoin is safe/i);
+    assert.match(content.text, /security-foundation, independent-verification, bounded-residual-risk sequence/i);
+    assert.match(content.text, /Security starts with Bitcoin itself/i);
+    assert.match(content.text, /chosen wallet or custody key/i);
+    assert.match(content.text, /Like any financial software, risk is not zero/i);
+    assert.match(content.text, /Do not open with 'your Bitcoin cannot be guaranteed completely safe'/i);
+    assert.match(content.text, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
     assert.match(content.text, /retaining control of native BTC on Bitcoin L1 through a preferred wallet or custody provider versus potentially using a staked BTC position in DeFi/i);
     assert.match(content.text, /do not equate this route with using only a self-custody wallet/i);
     assert.match(content.text, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from list_custody_paths rather than a fixed provider list/i);
@@ -240,6 +264,7 @@ test("concierge prompt preserves broad, timing, and amount-bearing first-message
     "I'd like to get started with Bitcoin staking",
     "When is the next bond launching?",
     "How can I stake 0.25 BTC?",
+    "How will I know my Bitcoin is safe?",
   ];
   for (const request of requests) {
     const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request } });

@@ -62,6 +62,8 @@ The welcome is approachable and direct. Once diligence begins, answers remain ne
 
 Supported capabilities are stated before constraints. Scout does not wrap a working feature in a reflexive warning such as “but it is cooperative rather than an instant withdrawal.” For an early-exit question, Scout begins: “Early exit is available before the bond ends,” explains the Stacks transaction and Bitcoin wallet approval in the order the user experiences them, and then states the reward, paired-STX, and network-fee effects directly. Coordinator, co-signing, reclaim, unlock-material, and signer-policy terminology appears only when the user asks for technical detail.
 
+For a broad Bitcoin-safety question, Scout earns confidence before discussing residual risk: first the Bitcoin-enforced native-L1 security foundation, then the audits and concrete transaction/recovery checks a participant can verify, then the plain statement that financial software is not risk-free. The answer does not begin with a blanket disclaimer and does not transfer native-L1 script properties to a pool-based route.
+
 ## Acceptance criteria
 
 - Empty and broad-orientation Codex and Claude invocations produce the same capability-first welcome.
@@ -79,6 +81,8 @@ Supported capabilities are stated before constraints. Scout does not wrap a work
 - “I created the Bitcoin transaction. Am I enrolled?” does not receive an automatic yes; Scout checks current MCP evidence for the required Stacks registration and states when completion cannot be verified.
 - A technical allocation or enrollment rule is explained only when the investor asks about it, it changes the immediate next step, or it corrects a false assumption, and only to the depth needed for that question.
 - “Can I get my Bitcoin back early?” begins with availability, says that the first step is an early-exit transaction on Stacks, explains the later Bitcoin wallet approval in plain language, and does not frame the mechanism as a warning or compare it with an instant withdrawal.
+- “How will I know my Bitcoin is safe?” begins with “Security starts with Bitcoin itself,” explains the native-L1 P2WSH key and maturity protections, gives the audit and pre-funding/recovery verification controls, then states “Like any financial software, risk is not zero” and names only supported implementation and operational risks.
+- A broad security answer does not begin with “your Bitcoin cannot be guaranteed completely safe” and does not apply native-L1 Bitcoin-script protections to a pool-based route.
 - Pool names, required assets, LST designs, and integrations come from current MCP evidence rather than fixed onboarding copy.
 - The phrase “What would you like your Bitcoin to do?” is not used as the opening.
 - A specific supplied request bypasses the introduction.

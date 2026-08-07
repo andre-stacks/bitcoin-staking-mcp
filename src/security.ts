@@ -230,6 +230,8 @@ export function getSecurityGuidance(topic: SecurityTopic | "all" = "all") {
     responseScope:
       topic === "audit_status"
         ? "Keep the response audit-specific. Do not carry forward named wallets, custodians, borrowing goals, or other entities from earlier turns unless the current request explicitly reconnects them to audit coverage."
+        : topic === "all"
+          ? "For a broad Bitcoin-safety question, lead with the sourced native-L1 Bitcoin security foundation, then independent audit and transaction/recovery verification controls, then bounded implementation and operational risk. Do not open with a blanket no-safety guarantee, and do not apply native-L1 Bitcoin-script protections to a pool-based route."
         : "Answer only the requested security topic and introduce another product or entity only when the current request makes it relevant.",
     entries,
     dataStatus: "derived" as const,

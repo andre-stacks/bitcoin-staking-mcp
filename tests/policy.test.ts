@@ -56,6 +56,12 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /provider-specific setup requirements only when the user names that provider/i);
   assert.match(skill, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(skill, /Has the protocol been audited/i);
+  assert.match(skill, /Security confidence sequence/i);
+  assert.match(skill, /Security starts with Bitcoin itself/i);
+  assert.match(skill, /security foundation.*Independent verification.*Bounded residual risk/is);
+  assert.match(skill, /Like any financial software, risk is not zero/i);
+  assert.match(skill, /Do not open a broad safety answer with “your Bitcoin cannot be guaranteed completely safe”/i);
+  assert.match(skill, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
   assert.match(skill, /without volunteering report-availability/i);
   assert.match(skill, /reports have not been published publicly yet/i);
   assert.match(skill, /Bitcoin Staking team for access/i);
@@ -150,6 +156,11 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /provider-specific setup requirements only when the user names that provider/i);
   assert.match(standard, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(standard, /without volunteering report availability/i);
+  assert.match(standard, /Security starts with Bitcoin itself/i);
+  assert.match(standard, /Security foundation.*Independent verification.*Bounded residual risk/is);
+  assert.match(standard, /Like any financial software, risk is not zero/i);
+  assert.match(standard, /Do not open a broad safety answer with “your Bitcoin cannot be guaranteed completely safe”/i);
+  assert.match(standard, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
   assert.match(standard, /reports have not been published publicly yet/i);
   assert.match(standard, /Bitcoin Staking team for access/i);
   assert.match(standard, /Do not introduce BitGo or any other named integration/i);

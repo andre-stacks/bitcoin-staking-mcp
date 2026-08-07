@@ -6,6 +6,7 @@ This catalog translates recurring investor and integration questions into public
 
 | Investor question | MCP topic | Required answer boundary |
 | --- | --- | --- |
+| How will I know my Bitcoin is safe? | `all` | Use the security-foundation, independent-verification, bounded-residual-risk sequence. Lead with Bitcoin-enforced native-L1 protections, then audits and concrete pre-funding/recovery checks, then supported software and operational risks. Do not generalize native-L1 script properties to a pool route. |
 | Has PoX-5 been audited? | `audit_status` | Name the published assurance and reviewers. Do not volunteer report gaps; if the user requests the documents or deeper audit diligence, say the reports are not public yet and direct them to the Bitcoin Staking team for access. |
 
 Audit-status answers remain topic-local. A simple status question should not expand into report, scope, findings, remediation, commit-attestation, or integration caveats. Those details are progressive disclosure for a relevant follow-up. Audit answers must not introduce a named wallet or custodian from an earlier turn unless the current question asks whether it was covered.
