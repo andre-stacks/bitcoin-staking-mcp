@@ -3,8 +3,8 @@
   "reviewedAt": "2026-08-06T00:00:00.000Z",
   "reviewCadenceDays": 7,
   "reviewDueAt": "2026-08-13T00:00:00.000Z",
-  "revision": "rev-20260806000000000-1ff4bceed435",
-  "contentHash": "sha256:1ff4bceed4355c7460d10856954caa3442ab1439ff05c6cdbcb6c75d98d0dc3a",
+  "revision": "rev-20260806000000000-8b976e584675",
+  "contentHash": "sha256:8b976e5846758955fb6e5182259e9f573497b2dd9171acbe47562630c2f92078",
   "publishedAt": "2026-08-06T00:00:00.000Z",
   "publishedBy": "Stacks Labs registry team",
   "content": {
@@ -120,13 +120,14 @@
             },
             "sourceIds": [
               "genesis-bond-owner-attestation",
-              "bitcoin-staking-explained"
+              "bitcoin-staking-explained",
+              "stackingdao-zest-vault-architecture"
             ],
-            "summary": "Permissionless participation through an approved sBTC pool; current operators and capabilities are registry-managed facts.",
+            "summary": "Permissionless participation through StackingDAO's planned sBTC pool and stBTC liquid-staking design.",
             "routeType": "sbtc_pool",
             "poolOperator": {
-              "id": "registry-managed",
-              "name": "See current registry"
+              "id": "stackingdao",
+              "name": "StackingDAO"
             },
             "permissionless": true,
             "investorInputs": "sbtc_only",
@@ -140,6 +141,49 @@
               "method": "Consult the current registry.",
               "timing": "Not present in the bundled fallback.",
               "status": "unverified"
+            },
+            "lst": {
+              "tokenSymbol": "stBTC",
+              "productStatus": "in_progress",
+              "verification": [
+                "product_owner_confirmed"
+              ],
+              "attestation": {
+                "scope": "StackingDAO stBTC design and planned Zest Protocol use",
+                "ownerOrganization": "StackingDAO and Zest Protocol",
+                "reviewedAt": "2026-08-06T00:00:00.000Z",
+                "reviewCadenceDays": 7,
+                "sourceIds": [
+                  "stackingdao-zest-vault-architecture"
+                ]
+              },
+              "transferable": true,
+              "redemption": {
+                "method": "Planned withdrawals use an idle buffer, with an asynchronous cooldown path when reserves are insufficient.",
+                "timing": "The architecture targets about one reward cycle for cooldown and describes an express path with a fee.",
+                "status": "unverified"
+              },
+              "liquidityEvidence": {
+                "status": "unverified",
+                "description": "The architecture targets a liquid stBTC token and planned Zest collateral use; deployed market liquidity is not yet verified.",
+                "sourceIds": [
+                  "stackingdao-zest-vault-architecture"
+                ]
+              },
+              "oracleEvidence": {
+                "status": "unverified",
+                "description": "Zest ratio-aware pricing is planned, but the final stBTC oracle and risk configuration remain prerequisites.",
+                "sourceIds": [
+                  "stackingdao-zest-vault-architecture"
+                ]
+              },
+              "supportedMarkets": [
+                "Zest Protocol (planned)"
+              ],
+              "verifiedDefiIntegrations": [],
+              "sourceIds": [
+                "stackingdao-zest-vault-architecture"
+              ]
             }
           }
         ],
@@ -168,6 +212,13 @@
             "url": "https://www.stacks.co/blog/bitcoin-staking-explained-how-it-works-on-stacks",
             "sourceType": "official_docs",
             "dataStatus": "published"
+          },
+          {
+            "id": "stackingdao-zest-vault-architecture",
+            "title": "StackingDAO and Zest Protocol stBTC vault architecture note",
+            "sourceType": "owner_attestation",
+            "dataStatus": "published",
+            "retrievedAt": "2026-08-06T00:00:00.000Z"
           }
         ],
         "verifiedAt": "2026-08-06T00:00:00.000Z"
@@ -490,13 +541,94 @@
         },
         "category": "product",
         "status": "in_progress"
+      },
+      {
+        "id": "stackingdao-stbtc",
+        "title": "StackingDAO stBTC",
+        "summary": "StackingDAO is developing stBTC as an sBTC-backed liquid-staking token for PoX-5. The design includes a withdrawal buffer and a cooldown path, with final contracts, fees, and redemption parameters still pending.",
+        "aliases": [
+          "stbtc"
+        ],
+        "tags": [
+          "stackingdao",
+          "stbtc",
+          "lst",
+          "sbtc"
+        ],
+        "relatedIds": [
+          "genesis-bond",
+          "genesis-sbtc-pool"
+        ],
+        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "sourceIds": [
+          "stackingdao-zest-vault-architecture"
+        ],
+        "attestation": {
+          "scope": "StackingDAO stBTC product design",
+          "ownerOrganization": "StackingDAO and Zest Protocol",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "stackingdao-zest-vault-architecture"
+          ]
+        },
+        "category": "product",
+        "status": "in_progress"
       }
     ],
-    "integrations": [],
+    "integrations": [
+      {
+        "id": "zest-stbtc-borrowing",
+        "title": "Planned Zest Protocol stBTC borrowing and lending path",
+        "summary": "StackingDAO and Zest Protocol plan to support stBTC as collateral for sBTC borrowing and a leveraged stBTC yield vault. Interest rates, eligibility, final LTV, liquidation settings, oracle configuration, market depth, deployed contracts, and launch availability are not yet published.",
+        "aliases": [
+          "zest-stbtc",
+          "stbtc-zest"
+        ],
+        "tags": [
+          "zest",
+          "stackingdao",
+          "stbtc",
+          "borrowing",
+          "lending",
+          "planned"
+        ],
+        "relatedIds": [
+          "genesis-bond",
+          "genesis-sbtc-pool",
+          "stackingdao-stbtc"
+        ],
+        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "sourceIds": [
+          "stackingdao-zest-vault-architecture"
+        ],
+        "attestation": {
+          "scope": "Planned Zest Protocol support for StackingDAO stBTC",
+          "ownerOrganization": "StackingDAO and Zest Protocol",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "stackingdao-zest-vault-architecture"
+          ]
+        },
+        "partnerId": "zest-protocol",
+        "productId": "stackingdao-stbtc",
+        "role": "planned stBTC collateral, sBTC borrowing, and yield-vault infrastructure",
+        "network": "mainnet",
+        "status": "planned"
+      }
+    ],
     "sources": [
       {
         "id": "genesis-bond-owner-attestation",
         "title": "Stacks Labs Genesis Bond owner attestation",
+        "sourceType": "owner_attestation",
+        "dataStatus": "published",
+        "retrievedAt": "2026-08-06T00:00:00.000Z"
+      },
+      {
+        "id": "stackingdao-zest-vault-architecture",
+        "title": "StackingDAO and Zest Protocol stBTC vault architecture note",
         "sourceType": "owner_attestation",
         "dataStatus": "published",
         "retrievedAt": "2026-08-06T00:00:00.000Z"

@@ -115,7 +115,7 @@ test("invalid work can be saved privately but cannot validate or publish", async
   await saveDraft(backend, invalid, "publisher@stackslabs.com", new Date("2026-08-07T11:00:00.000Z"));
   assert.equal(backend.state.draft?.content && typeof backend.state.draft.content === "object", true);
   const diff = diffSummary(seedSnapshot, backend.state.draft);
-  assert.equal(diff.sections.facts?.after, 1);
+  assert.equal(diff.sections.facts?.after, seedSnapshot.content.facts.length);
   assert.throws(() => validatePublishableContent(invalid, new Date("2026-08-07T11:01:00.000Z")));
   await assert.rejects(publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-07T11:02:00.000Z")));
   assert.equal(backend.state.publishedSnapshot?.revision, seedSnapshot.revision);

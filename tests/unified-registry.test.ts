@@ -54,5 +54,14 @@ test("catalog search excludes scheduled, expired, and overdue records from curre
     fetchImpl: async () => new Response(JSON.stringify(snapshot), { status: 200, headers: { etag: '"filtered"' } }),
   });
   const result = await store.search();
-  assert.deepEqual(result.results.map((item) => item.id), ["genesis-bond-product"]);
+  assert.deepEqual(result.results.map((item) => item.id), ["genesis-bond-product", "stackingdao-stbtc", "zest-stbtc-borrowing"]);
+});
+
+test("catalog search exposes Zest as a planned stBTC integration without live terms", async () => {
+  const store = new RegistryStore({ path, remoteEnabled: false, now: () => new Date("2026-08-06T12:00:00.000Z") });
+  const result = await store.search({ query: "Zest" });
+  assert.deepEqual(result.results.map((item) => item.id), ["zest-stbtc-borrowing"]);
+  assert.equal(result.results[0]?.kind, "integration");
+  assert.equal(result.results[0]?.status, "planned");
+  assert.match(result.results[0]?.summary ?? "", /rates.*eligibility.*LTV.*not yet published/i);
 });

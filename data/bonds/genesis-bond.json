@@ -69,14 +69,45 @@
         "reviewCadenceDays": 7,
         "sourceIds": ["genesis-bond-owner-attestation"]
       },
-      "sourceIds": ["genesis-bond-owner-attestation", "bitcoin-staking-explained"],
-      "summary": "Permissionless participation through an approved sBTC pool; current operators and capabilities are registry-managed facts.",
-      "poolOperator": { "id": "registry-managed", "name": "See current registry" },
+      "sourceIds": ["genesis-bond-owner-attestation", "bitcoin-staking-explained", "stackingdao-zest-vault-architecture"],
+      "summary": "Permissionless participation through StackingDAO's planned sBTC pool and stBTC liquid-staking design.",
+      "poolOperator": { "id": "stackingdao", "name": "StackingDAO" },
       "permissionless": true,
       "investorInputs": "sbtc_only",
       "rewardAccounting": { "method": "Consult the current registry for current accounting details.", "rewardAsset": "unknown", "status": "unverified" },
       "contracts": [],
-      "withdrawalTerms": { "method": "Consult the current registry.", "timing": "Not present in the bundled fallback.", "status": "unverified" }
+      "withdrawalTerms": { "method": "Consult the current registry.", "timing": "Not present in the bundled fallback.", "status": "unverified" },
+      "lst": {
+        "tokenSymbol": "stBTC",
+        "productStatus": "in_progress",
+        "verification": ["product_owner_confirmed"],
+        "attestation": {
+          "scope": "StackingDAO stBTC design and planned Zest Protocol use",
+          "ownerOrganization": "StackingDAO and Zest Protocol",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": ["stackingdao-zest-vault-architecture"]
+        },
+        "transferable": true,
+        "redemption": {
+          "method": "Planned withdrawals use an idle buffer, with an asynchronous cooldown path when reserves are insufficient.",
+          "timing": "The architecture targets about one reward cycle for cooldown and describes an express path with a fee.",
+          "status": "unverified"
+        },
+        "liquidityEvidence": {
+          "status": "unverified",
+          "description": "The architecture targets a liquid stBTC token and planned Zest collateral use; deployed market liquidity is not yet verified.",
+          "sourceIds": ["stackingdao-zest-vault-architecture"]
+        },
+        "oracleEvidence": {
+          "status": "unverified",
+          "description": "Zest ratio-aware pricing is planned, but the final stBTC oracle and risk configuration remain prerequisites.",
+          "sourceIds": ["stackingdao-zest-vault-architecture"]
+        },
+        "supportedMarkets": ["Zest Protocol (planned)"],
+        "verifiedDefiIntegrations": [],
+        "sourceIds": ["stackingdao-zest-vault-architecture"]
+      }
     }
   ],
   "notes": [
@@ -86,7 +117,8 @@
   "sources": [
     { "id": "genesis-bond-owner-attestation", "title": "Stacks Labs Genesis Bond owner attestation", "sourceType": "owner_attestation", "dataStatus": "published", "retrievedAt": "2026-08-06T00:00:00.000Z" },
     { "id": "sip-045", "title": "SIP-045: PoX-5 Bitcoin Staking initial program conditions", "url": "https://github.com/stacksgov/sips/blob/0b7cecaecdb6060a6fc19510f2e7dd8dde1d2fa1/sips/sip-045/sip-045-pox-5-bitcoin-staking.md", "sourceType": "official_docs", "dataStatus": "published" },
-    { "id": "bitcoin-staking-explained", "title": "Bitcoin Staking explained", "url": "https://www.stacks.co/blog/bitcoin-staking-explained-how-it-works-on-stacks", "sourceType": "official_docs", "dataStatus": "published" }
+    { "id": "bitcoin-staking-explained", "title": "Bitcoin Staking explained", "url": "https://www.stacks.co/blog/bitcoin-staking-explained-how-it-works-on-stacks", "sourceType": "official_docs", "dataStatus": "published" },
+    { "id": "stackingdao-zest-vault-architecture", "title": "StackingDAO and Zest Protocol stBTC vault architecture note", "sourceType": "owner_attestation", "dataStatus": "published", "retrievedAt": "2026-08-06T00:00:00.000Z" }
   ],
   "verifiedAt": "2026-08-06T00:00:00.000Z"
 }

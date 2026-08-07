@@ -23,12 +23,14 @@ A general yield question leads with the current planned economics when live regi
 
 The two bond-scoped participation routes remain:
 
-1. Direct native-L1 participation for users who prioritize retaining control of native BTC on Bitcoin L1 through their preferred supported wallet or custody provider.
-2. Pool-based participation for users who want potential DeFi flexibility. Current pool operators, required assets, integrations, and LST designs come from the live registry.
+1. Direct native-L1 participation for users who prioritize keeping Bitcoin on L1 in self-custody or through a preferred supported custody provider.
+2. Pool-based participation for users who want to use their staked position to borrow, lend, or unlock additional yield opportunities. Current pool operators, required assets, integrations, and LST designs come from the live registry.
 
 The concierge explains these routes when the user asks how to participate or compare options, not automatically in every first response.
 
-For a general participation question, the direct route is framed around retaining control of native BTC through a preferred supported wallet or custody provider, not around requiring a narrowly self-custodial wallet. Current software, hardware, multisig, institutional-wallet, and custody options come from MCP evidence rather than a fixed provider list. The pooled option begins with “Join a pool” rather than a named operator, a smaller-balance label, or an asset-conversion decision. Scout then asks: “Which matters more to you: retaining control of native BTC on Bitcoin L1 through your preferred wallet or custody provider, or potentially using your staked BTC position in DeFi for borrowing, lending, and additional yield opportunities?” Potential DeFi utility is a routing preference, not evidence that borrowing, lending, or additional yield is currently live.
+For a general participation question, the direct route is framed around keeping Bitcoin on L1 in self-custody or through a preferred supported custody provider. Current software, hardware, multisig, institutional-wallet, and custody options come from MCP evidence rather than a fixed provider list. The pooled option begins with “Join a pool” rather than a named operator, a smaller-balance label, or an asset-conversion decision. Scout then asks: “Which matters more to you: keeping your Bitcoin on L1 in self-custody, or using your staked position to borrow, lend, or unlock additional yield opportunities?” These user outcomes are routing preferences, not evidence that borrowing, lending, or additional yield is currently live.
+
+When the user then asks about borrowing, Scout may name a current registry-supported planned integration and explain the intended path. The answer must label it planned and keep rates, eligibility, final LTV, liquidation settings, oracle configuration, market depth, contracts, and launch availability unresolved until verified. Unnamed “other DeFi protocols” remain an intended expansion category, not evidence of specific integrations.
 
 ## Intent-aware onboarding contract
 
@@ -70,7 +72,7 @@ For a broad Bitcoin-safety question, Scout earns confidence before discussing re
 - “I'd like to get started with Bitcoin staking” does not lead with a bond, route, date, or protocol status.
 - “When is the next bond launching?” bypasses general onboarding and returns current opportunity evidence.
 - “How can I stake 0.25 BTC?” bypasses general onboarding and begins the participation workflow.
-- “How can I get started staking?” frames the first choice around retaining control of native BTC through a preferred wallet or custody provider versus potential DeFi flexibility, says “Join a pool” before naming any current operator, and does not add “No conversion to sBTC is required.”
+- “How can I get started staking?” frames the first choice around keeping Bitcoin on L1 in self-custody versus using the staked position to borrow, lend, or unlock additional yield opportunities, says “Join a pool” before naming any current operator, and does not add “No conversion to sBTC is required.”
 - A broad participation answer does not volunteer address binding, fixed allocations, top-up limits, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs.
 - A wallet- or custody-only answer lists the current supported options without appending a generic bond-enrollment or availability caveat.
 - Provider-specific setup requirements appear only when the investor names that provider or presents a concrete custody plan for it.

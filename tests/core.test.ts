@@ -26,7 +26,7 @@ test("early-exit guidance leads with the supported mechanism without reflexive c
   assert.doesNotMatch(entry.answer, /but it is cooperative rather than an instant withdrawal/i);
 });
 
-test("Genesis v2 publishes stable direct L1 and registry-managed pool route types", async () => {
+test("Genesis v2 publishes stable direct L1 and planned StackingDAO pool route types", async () => {
   const bond = await bondFile("genesis-bond.json");
   assert.equal(bond.schemaVersion, 2);
   assert.equal(bond.economics.rewardAsset, "unknown");
@@ -34,9 +34,11 @@ test("Genesis v2 publishes stable direct L1 and registry-managed pool route type
   const pool = bond.participationRoutes[1];
   assert.equal(pool?.routeType, "sbtc_pool");
   if (pool?.routeType === "sbtc_pool") {
-    assert.equal(pool.poolOperator.id, "registry-managed");
+    assert.equal(pool.poolOperator.id, "stackingdao");
     assert.equal(pool.investorInputs, "sbtc_only");
-    assert.equal(pool.lst, undefined);
+    assert.equal(pool.lst?.tokenSymbol, "stBTC");
+    assert.equal(pool.lst?.productStatus, "in_progress");
+    assert.deepEqual(pool.lst?.verifiedDefiIntegrations, []);
   }
   assert.equal(bond.participationRoutes.some((route) => (route.routeType as string) === "liquid_staking_token"), false);
   assert.equal(bond.participationRoutes[0]?.routeType, "native_l1_direct");
@@ -96,7 +98,7 @@ test("pool and optional LST fees are applied sequentially", async () => {
   assert.equal(route.routeType, "sbtc_pool");
   if (route.routeType !== "sbtc_pool" || !route.lst) return;
   const complete = { ...route, feeBps: 1000, lst: { ...route.lst, feeBps: 500 } };
-  const result = simulateYield({ ...bond, timing: { ...bond.timing, lockDurationDays: 365 } }, complete, { principalSats: "100000000", includeLst: true });
+  const result = simulateYield(bond, complete, { principalSats: "100000000", durationDays: 365, annualRateBps: 300, includeLst: true });
   assert.equal(result.grossRewardSats, "3000000");
   assert.equal(result.routeFeeSats, "300000");
   assert.equal(result.lstFeeSats, "135000");

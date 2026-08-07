@@ -92,13 +92,21 @@ test("open routes cannot omit usability-critical enrollment and pool evidence", 
   Object.assign(pool.participationRoutes[1], { productStatus: "production", enrollmentStatus: "open" });
   assert.equal(BondManifestSchema.safeParse(pool).success, false, "open pool needs contracts, fee, verified accounting/withdrawal, and enrollment URL");
 
-  const noPublishedLst = await genesis();
-  assert.equal(noPublishedLst.participationRoutes[1].lst, undefined, "current LST claims must come from the registry");
+  const plannedLst = await genesis();
+  const plannedPool = plannedLst.participationRoutes[1];
+  assert.equal(plannedPool.routeType, "sbtc_pool");
+  if (plannedPool.routeType === "sbtc_pool") assert.equal(plannedPool.lst?.productStatus, "in_progress", "planned LST claims must remain distinct from live integrations");
 });
 
-test("bundled Genesis does not encode current borrowing integrations", async () => {
+test("bundled Genesis distinguishes planned stBTC use from live borrowing integrations", async () => {
   const bond = await genesis();
-  assert.equal(bond.participationRoutes[1].lst, undefined);
+  const pool = bond.participationRoutes[1];
+  assert.equal(pool.routeType, "sbtc_pool");
+  if (pool.routeType !== "sbtc_pool") return;
+  assert.equal(pool.lst?.tokenSymbol, "stBTC");
+  assert.equal(pool.lst?.productStatus, "in_progress");
+  assert.deepEqual(pool.lst?.supportedMarkets, ["Zest Protocol (planned)"]);
+  assert.deepEqual(pool.lst?.verifiedDefiIntegrations, []);
 });
 
 test("availability dimensions handle exact freshness boundary and every terminal state", async () => {
@@ -121,7 +129,8 @@ test("yield requires rate and duration, while unknown fees leave net economics p
   assert.ok(poolWithoutFee.grossRewardSats);
   assert.equal(poolWithoutFee.netRewardSats, undefined);
   assert.throws(() => simulateYield(bond, direct, { principalSats: "100000000", feeBps: 0, includeLst: true }), expectsCode("INVALID_INPUT"));
-  assert.throws(() => simulateYield(bond, { ...pool, feeBps: 0 }, { principalSats: "100000000", durationDays: 365, annualRateBps: 300, includeLst: true }), expectsCode("INVALID_INPUT"));
+  const poolWithUnknownLstFee = simulateYield(bond, { ...pool, feeBps: 0 }, { principalSats: "100000000", durationDays: 365, annualRateBps: 300, includeLst: true });
+  assert.equal(poolWithUnknownLstFee.netRewardSats, undefined);
 
   const noDuration = structuredClone(bond);
   delete noDuration.economics.referenceModel;

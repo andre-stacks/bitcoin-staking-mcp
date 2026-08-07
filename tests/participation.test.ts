@@ -31,13 +31,14 @@ class CountingProvider extends OfflineProvider {
 const now = () => new Date("2026-08-06T12:00:00.000Z");
 function service(date = now) { return new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices: new CoinGeckoPriceProvider({ now: date, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200, headers: { "content-type": "application/json" } }) }), now: date }); }
 
-test("Genesis exposes the two stable route types without hard-coded current operators", async () => {
+test("Genesis exposes the two stable route types with the current planned pool evidence", async () => {
   const routes = await service().listBondParticipationRoutes({ bondId: "genesis-bond" });
   assert.deepEqual(routes.routes.map((route) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   const pools = routes.routes.filter((route) => route.routeType === "sbtc_pool");
   assert.equal(pools.length, 1);
-  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].poolOperator.id : null, "registry-managed");
-  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].lst : null, undefined);
+  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].poolOperator.id : null, "stackingdao");
+  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].lst?.tokenSymbol : null, "stBTC");
+  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].lst?.productStatus : null, "in_progress");
 });
 
 test("testnet snapshot reuses its live reads and route-only flows avoid a full snapshot", async () => {
@@ -121,6 +122,7 @@ test("liquidity-seeking user sees stBTC conditionally and borrowing is not infer
   assert.ok(pool.missingEvidence.some((item) => /redemption and market-liquidity/i.test(item)));
   const borrowing = await service().compareStakingPaths({ goal: "borrow_without_selling", assetHeld: "sbtc", participantType: "individual", whitelistStatus: "unknown", liquidityNeed: "access_anytime", bitcoinPathPreference: "open_to_sbtc", keyControlPreference: "self_controlled" });
   assert.ok(borrowing.assessments.every((item) => item.fit === "no_match"));
+  assert.ok(borrowing.assessments.some((item) => item.reasons.some((reason) => /stBTC.*Zest Protocol.*not yet verified/i.test(reason))));
   assert.ok(borrowing.assessments.some((item) => item.unsupportedRequirements.some((reason) => /named live lender/i.test(reason))));
 });
 

@@ -200,6 +200,9 @@ export function assessRoute(
         isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays);
       const lender = lstCurrent ? route.lst?.verifiedDefiIntegrations.find((item) => (item.capability === "borrowing" || item.capability === "lending") && item.status === "live" && item.collateralTerms) : undefined;
       if (!lender) {
+        if (route.lst?.productStatus === "in_progress" && route.lst.supportedMarkets.length > 0) {
+          reasons.push(`The current plan points to ${route.lst.tokenSymbol} borrowing or lending through ${route.lst.supportedMarkets.join(", ")}; launch availability and final collateral terms are not yet verified.`);
+        }
         unsupportedRequirements.push("No named live lender with sourced collateral terms is verified.");
         fit = "no_match";
       }
