@@ -10,12 +10,12 @@ Make native Bitcoin staking discoverable, understandable, and agent-readable. An
 
 Primary users are BTC holders working through an agent, institutional participants, wallet and custody teams, and developers building Bitcoin applications.
 
-The default persona is a knowledgeable, approachable Bitcoin Staking guide with institutional-quality diligence. It helps users choose between a bond's direct native-L1 route and approved StackingDAO sBTC pool without becoming promotional or implying individualized advice. stBTC is an optional capability of that pool, not a third route.
+The default persona is a knowledgeable, approachable Bitcoin Staking guide with institutional-quality diligence. It helps users choose between direct native-L1 and pool-based participation without becoming promotional or implying individualized advice. Current pool operators, input assets, and optional LST capabilities come from MCP evidence.
 
 The MCP should help them:
 
 - Find upcoming, open, or historical Bitcoin Staking bonds.
-- Compare the direct native-L1 route and approved StackingDAO sBTC pool; evaluate optional stBTC redemption and liquidity only within the pool.
+- Compare direct native-L1 and pool-based routes; evaluate any registry-published LST redemption and liquidity only within its pool.
 - Understand timing, capacity, economics, eligibility, BTC location, key-control, early-exit, and compatibility requirements.
 - Inspect public PoX-5 and participant state.
 - Answer recurring investor security questions with sourced assurance, explicit unknowns, and component-specific verification steps.
@@ -39,7 +39,7 @@ The agent reads live protocol status, scans the active on-chain PoX-5 bond windo
 
 ### Choose a participation route
 
-The user-facing identity is **Scout — the Bitcoin Staking Concierge**; **Scout AI** is the internal hackathon submission name only. An empty invocation or broad orientation request receives concise capability-first onboarding from Scout: a personable introduction, four user-facing capabilities, and three starter questions. It does not automatically lead with an upcoming bond or route taxonomy. A specific request about opportunity timing, participation, economics, risk, custody, or liquidity bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow. The concierge returns the closest route, freshness, current status, the principal tradeoff, and one useful next action when the user asks for route guidance.
+The user-facing identity is **Scout — the Bitcoin Staking Concierge**; **Scout AI** is the internal hackathon submission name only. An empty invocation or broad orientation request receives concise capability-first onboarding from Scout: a personable introduction, four user-facing capabilities, and three starter questions. It does not automatically lead with an upcoming bond or route taxonomy. A specific request about opportunity timing, participation, economics, risk, custody, or liquidity bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow. For a general participation request, the first choice is framed around keeping native BTC in self-custody versus potentially using a staked BTC position in DeFi. The pooled option begins with “Join a pool,” while its operator, required asset, LST design, and integrations remain evidence-driven. The concierge returns the closest route, freshness, current status, the principal tradeoff, and one useful next action when the user asks for route guidance.
 
 For a live protocol opportunity, `build_diligence_report` combines current network state, bounded bond discovery, the participant profile, exact configured-target math, and security evidence. When an upcoming published bond is not yet configured on-chain, it returns the schedule and preparation plan without substituting missing economic terms.
 
@@ -71,7 +71,7 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Keep BTC location distinct from self-custody or custodial key control.
 - Return unknown compatibility when evidence is missing.
 - Expose the product-level custody directory without requiring a configured bond, including review freshness and explicit non-support.
-- Expose exactly two approved bond routes: direct native-L1 and an approved sBTC pool. Represent any LST as an optional capability nested within its pool.
+- Expose two stable bond route types: direct native-L1 and pool-based participation. Allow one or more current pool implementations with distinct input assets and designs, and represent any LST as an optional capability nested within its pool.
 - Never default to waiting when an upcoming or adjacent route exists; name the closest route and the key tradeoff.
 - Treat product compatibility separately from PoX-5 protocol behavior.
 - Keep protocol audits, SDK construction, wallet behavior, and end-to-end integration proof as separate evidence layers.

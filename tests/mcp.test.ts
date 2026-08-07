@@ -178,8 +178,15 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /specific question, skip the general welcome/i);
     assert.match(content.text, /For opportunity or timing, call get_market_snapshot/i);
     assert.match(content.text, /direct how-to-participate question/i);
-    assert.match(content.text, /exactly two bond enrollment routes when route detail is relevant/i);
-    assert.match(content.text, /Keep stBTC under the StackingDAO pool/i);
+    assert.match(content.text, /keeping native BTC in self-custody versus potentially using a staked BTC position in DeFi/i);
+    assert.match(content.text, /Describe the pooled route first as 'Join a pool'/i);
+    assert.match(content.text, /Which matters more to you: keeping native BTC in self-custody/i);
+    assert.match(content.text, /two stable route types when route detail is relevant/i);
+    assert.match(content.text, /multiple pools with different input assets, operators, and LST designs/i);
+    assert.match(content.text, /current pool names, requirements, token designs, terms, and integrations from MCP evidence/i);
+    assert.doesNotMatch(content.text, /native-L1 direct for larger allowlisted institutional participation/i);
+    assert.doesNotMatch(content.text, /permissionless sBTC pooling through StackingDAO/i);
+    assert.match(content.text, /without adding 'No conversion to sBTC is required\.'/i);
     assert.match(content.text, /show the sourced gross reward, label net reward unknown/i);
     assert.match(content.text, /prices may enrich the scenario, but do not replace missing rate or duration inputs/i);
     assert.match(content.text, /three-decimal display fields/i);

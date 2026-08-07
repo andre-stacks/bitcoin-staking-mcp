@@ -13,8 +13,13 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /closest participation route/i);
   assert.match(skill, /Never default to “wait”/i);
   assert.match(skill, /list_bond_participation_routes/);
-  assert.match(skill, /StackingDAO sBTC pool/i);
-  assert.match(skill, /stBTC.*under the StackingDAO pool/i);
+  assert.match(skill, /two stable route types/i);
+  assert.match(skill, /multiple pools with different inputs and LST designs/i);
+  assert.match(skill, /keeping native BTC in self-custody versus potentially using a staked BTC position in DeFi/i);
+  assert.match(skill, /Describe the pooled route first as “Join a pool”/i);
+  assert.match(skill, /Which matters more to you: keeping native BTC in self-custody/i);
+  assert.match(skill, /current named integration and sourced terms/i);
+  assert.match(skill, /Do not add “No conversion to sBTC is required\.”/i);
   assert.match(skill, /For BitGo/i);
   assert.match(skill, /direct native-L1 bond is not borrowable/i);
   assert.match(skill, /Do not fill missing terms from memory/i);
@@ -114,6 +119,9 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /Lead with the answer in ordinary language/i);
   assert.match(standard, /surface a caveat only when it changes the conclusion/i);
   assert.match(standard, /do not list every unverified liquidity/i);
+  assert.match(standard, /Describe the pooled option first as “Join a pool”/i);
+  assert.match(standard, /Which matters more to you: keeping native BTC in self-custody/i);
+  assert.match(standard, /multiple pools with different input assets and LST designs/i);
   assert.match(standard, /Final terms may change before launch/i);
   assert.match(standard, /stacked qualifiers and status jargon/i);
 });

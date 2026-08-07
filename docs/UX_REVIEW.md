@@ -21,10 +21,12 @@ Onboarding is determined by the user's intent, not simply whether this is the fi
 
 The two bond-scoped participation routes remain:
 
-1. Direct native-L1 bond for users who prioritize keeping BTC on Bitcoin L1.
-2. The approved StackingDAO sBTC pool for permissionless smaller-balance participation, with any stBTC option offered through the pool.
+1. Direct native-L1 participation for users who prioritize keeping native BTC in self-custody.
+2. Pool-based participation for users who want potential DeFi flexibility. Current pool operators, required assets, and LST designs come from MCP evidence.
 
 The concierge explains these routes when the user asks how to participate or compare options, not automatically in every first response.
+
+For a general participation question, the pooled option begins with “Join a pool” rather than a named operator, a smaller-balance label, or an asset-conversion decision. Scout then asks: “Which matters more to you: keeping native BTC in self-custody, or potentially using your staked BTC position in DeFi for borrowing, lending, and additional yield opportunities?” Potential DeFi utility is a routing preference, not evidence that borrowing, lending, or additional yield is currently live.
 
 ## Intent-aware onboarding contract
 
@@ -56,6 +58,8 @@ The welcome is approachable and direct. Once diligence begins, answers remain ne
 - “I'd like to get started with Bitcoin staking” does not lead with a bond, route, date, or protocol status.
 - “When is the next bond launching?” bypasses general onboarding and returns current opportunity evidence.
 - “How can I stake 0.25 BTC?” bypasses general onboarding and begins the participation workflow.
+- “How can I get started staking?” frames the first choice around self-custody versus potential DeFi flexibility, says “Join a pool” before naming any current operator, and does not add “No conversion to sBTC is required.”
+- Pool names, required assets, LST designs, and integrations come from current MCP evidence rather than fixed onboarding copy.
 - The phrase “What would you like your Bitcoin to do?” is not used as the opening.
 - A specific supplied request bypasses the introduction.
 - Setup output includes at least one status/discovery prompt and one security prompt.
