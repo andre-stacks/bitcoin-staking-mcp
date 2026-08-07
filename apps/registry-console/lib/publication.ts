@@ -7,6 +7,8 @@ import {
 } from "bitcoin-staking-mcp";
 import type { RegistryBackend, RegistryDraft, RevisionEntry } from "./store";
 
+export const PUBLIC_PUBLISHER_IDENTITY = "Stacks Labs registry team";
+
 function jsonObject(input: unknown): Record<string, unknown> {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Draft content must be a JSON object.");
   return input as Record<string, unknown>;
@@ -65,7 +67,7 @@ export function createSnapshot(contentInput: unknown, now = new Date()): Concier
     revision: `rev-${stamp}-${contentHash.slice(7, 19)}`,
     contentHash,
     publishedAt: now.toISOString(),
-    publishedBy: "Stacks Labs registry team",
+    publishedBy: PUBLIC_PUBLISHER_IDENTITY,
     content,
   });
 }

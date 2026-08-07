@@ -30,7 +30,9 @@ test("mutation guard enforces same origin and CSRF", async () => {
 });
 
 test("public registry is anonymous, supports ETag 304, and excludes draft state", async () => {
-  const state: RegistryState = { publishedSnapshot: seedSnapshot, draft: { content: { ...seedSnapshot.content, facts: [] }, savedAt: "2026-08-07T00:00:00.000Z", savedBy: "publisher@stackslabs.com" }, revisions: [] };
+  const legacySnapshot = structuredClone(seedSnapshot);
+  legacySnapshot.publishedBy = "personal.publisher@stackslabs.com";
+  const state: RegistryState = { publishedSnapshot: legacySnapshot, draft: { content: { ...seedSnapshot.content, facts: [] }, savedAt: "2026-08-07T00:00:00.000Z", savedBy: "publisher@stackslabs.com" }, revisions: [] };
   const backend: RegistryBackend = { readState: async () => state, writeItems: async () => {}, archive: async () => "", readRevision: async () => seedSnapshot };
   setRegistryBackendForTests(backend);
   const first = await registryGet(new NextRequest("https://registry.example/api/v1/registry"));
