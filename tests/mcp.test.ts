@@ -149,6 +149,10 @@ test("audit guidance stays audit-specific and does not inherit a prior custodian
   const content = result.structuredContent as any;
   assert.equal(content.requestedTopic, "audit_status");
   assert.match(content.responseScope, /audit-specific|requested security topic/i);
+  assert.equal(content.entries[0].answer, "Yes. The PoX-5 codebase was audited by Trail of Bits and Clarity Alliance, with additional review by Asymmetric Research.");
+  assert.match(content.entries[0].responseScope, /without volunteering report-availability/i);
+  assert.match(content.entries[0].whatIsNotProven[0], /have not been published publicly yet/i);
+  assert.match(content.entries[0].whatIsNotProven[0], /Contact the Bitcoin Staking team/i);
   assert.ok(content.entries[0].verificationChecklist.every((step: string) => !/wallet|custod|integration/i.test(step)));
   assert.doesNotMatch(JSON.stringify(content), /BitGo/i);
 });
@@ -229,7 +233,10 @@ test("concierge prompt makes the current audit question override unrelated prior
   assert.equal(content?.type, "text");
   if (content?.type === "text") {
     assert.match(content.text, /newest user request as the controlling scope/i);
-    assert.match(content.text, /audit-status question/i);
+    assert.match(content.text, /Has the protocol been audited/i);
+    assert.match(content.text, /without volunteering report-availability/i);
+    assert.match(content.text, /reports have not been published publicly yet/i);
+    assert.match(content.text, /Bitcoin Staking team for access/i);
     assert.match(content.text, /Do not mention BitGo or another named integration unless the current request asks whether it was covered/i);
   }
 });

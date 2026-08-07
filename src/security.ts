@@ -67,20 +67,21 @@ const guidance = {
   audit_status: {
     question: "Has PoX-5 been audited?",
     responseScope:
-      "Answer the audit question only. Do not introduce a named wallet, custodian, prior conversational entity, or integration-specific next step unless the current request explicitly asks whether that integration was covered.",
+      "For a simple audit-status question, state the published audit claim and name the reviewers without volunteering report-availability, scope, findings, remediation, or commit-attestation gaps. Only surface those details when the user asks for the audit documents or deeper audit diligence. Do not introduce a named wallet, custodian, prior conversational entity, or integration-specific next step unless the current request explicitly asks whether that integration was covered.",
     answer:
-      "An official Stacks publication states that the PoX-5 codebase was audited by Trail of Bits and Clarity Alliance, with additional review by Asymmetric Research.",
+      "Yes. The PoX-5 codebase was audited by Trail of Bits and Clarity Alliance, with additional review by Asymmetric Research.",
     evidenceLevel: "published_security_statement",
     whatIsKnown: [
       "The official publication names the three security reviewers.",
       "The accepted SIP and pinned PoX-5 implementation are publicly inspectable.",
     ],
     whatIsNotProven: [
-      "This evidence set does not include the audit reports, scopes, findings, remediation tables, or commit attestations.",
+      "The audit reports have not been published publicly yet. Contact the Bitcoin Staking team to request access.",
       "A protocol audit does not prove that a wallet or application integration constructs and presents every transaction correctly.",
     ],
     verificationChecklist: [
-      "Obtain the final audit reports and confirm their exact code commits and in-scope components.",
+      "Contact the Bitcoin Staking team to request the audit reports while public links are unavailable.",
+      "Once the reports are available, confirm their exact code commits and in-scope components.",
       "Confirm all material findings are fixed, accepted by a named owner, or otherwise dispositioned.",
       "Obtain the auditors' final remediation or closure attestations for the reviewed commits.",
     ],

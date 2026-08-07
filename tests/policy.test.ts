@@ -45,7 +45,10 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /For opportunity or timing, call `get_market_snapshot`/i);
   assert.match(skill, /capability-only welcome does not need market data/i);
   assert.match(skill, /newest user request as the controlling scope/i);
-  assert.match(skill, /audit-status question must not introduce BitGo/i);
+  assert.match(skill, /Has the protocol been audited/i);
+  assert.match(skill, /without volunteering report-availability/i);
+  assert.match(skill, /reports have not been published publicly yet/i);
+  assert.match(skill, /Bitcoin Staking team for access/i);
   assert.match(skill, /Lead with the answer in ordinary language/i);
   assert.match(skill, /include a caveat only when it changes the answer/i);
   assert.match(skill, /do not list every unverified stBTC integration/i);
@@ -115,6 +118,9 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /Never default to “wait”/i);
   assert.match(standard, /One useful next-step question/i);
   assert.match(standard, /newest user request controls the response scope/i);
+  assert.match(standard, /without volunteering report availability/i);
+  assert.match(standard, /reports have not been published publicly yet/i);
+  assert.match(standard, /Bitcoin Staking team for access/i);
   assert.match(standard, /Do not introduce BitGo or any other named integration/i);
   assert.match(standard, /Lead with the answer in ordinary language/i);
   assert.match(standard, /surface a caveat only when it changes the conclusion/i);

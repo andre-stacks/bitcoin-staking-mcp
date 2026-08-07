@@ -53,7 +53,7 @@ The user supplies a public Stacks address. The server validates the address loca
 
 ### Answer security diligence
 
-The concierge classifies audit, timelock, Leather, pre-funding, recovery, and early-exit questions into deterministic security topics. Every answer states what is known, what remains unproven, and how to verify the exact wallet/application path. Sanitized investor questions guide coverage; private conversations are never returned or treated as evidence.
+The concierge classifies audit, timelock, Leather, pre-funding, recovery, and early-exit questions into deterministic security topics. It applies progressive disclosure: a simple audit-status answer names the published assurance and reviewers, while report availability, scope, findings, remediation, and commit attestations appear only when the user asks for the documents or deeper audit diligence. Other material security answers state what is known, what remains unproven, and how to verify the exact wallet/application path. Sanitized investor questions guide coverage; private conversations are never returned or treated as evidence.
 
 ## Functional requirements
 
