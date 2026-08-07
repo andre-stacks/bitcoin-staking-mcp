@@ -46,13 +46,14 @@ function attestations(content: ConciergeRegistryContent) {
 
 export function validatePublishableContent(input: unknown, now = new Date()): ConciergeRegistryContent {
   const content = ConciergeRegistryContentSchema.parse(input);
+  if (new Date(content.reviewedAt).getTime() > now.getTime()) throw new Error("Future registry review timestamp is not publishable.");
   for (const attestation of attestations(content)) {
     if (new Date(attestation.reviewedAt).getTime() > now.getTime()) throw new Error(`Future owner attestation is not publishable: ${attestation.scope}`);
   }
   return content;
 }
 
-export function createSnapshot(contentInput: unknown, publisher: string, now = new Date()): ConciergeRegistrySnapshot {
+export function createSnapshot(contentInput: unknown, now = new Date()): ConciergeRegistrySnapshot {
   const content = validatePublishableContent(contentInput, now);
   const contentHash = registryContentHash(content);
   const stamp = now.toISOString().replace(/[-:.TZ]/g, "");
@@ -64,9 +65,24 @@ export function createSnapshot(contentInput: unknown, publisher: string, now = n
     revision: `rev-${stamp}-${contentHash.slice(7, 19)}`,
     contentHash,
     publishedAt: now.toISOString(),
-    publishedBy: publisher,
+    publishedBy: "Stacks Labs registry team",
     content,
   });
+}
+
+async function archiveIdempotently(backend: RegistryBackend, snapshot: ConciergeRegistrySnapshot): Promise<string> {
+  try {
+    return await backend.archive(snapshot);
+  } catch (archiveError) {
+    const pathname = `revisions/${snapshot.revision}.json`;
+    try {
+      const existing = ConciergeRegistrySnapshotSchema.parse(await backend.readRevision(pathname));
+      if (JSON.stringify(existing) === JSON.stringify(snapshot)) return pathname;
+    } catch {
+      // Preserve the original archive failure when the object does not exist or is invalid.
+    }
+    throw archiveError;
+  }
 }
 
 export function diffSummary(current: ConciergeRegistrySnapshot | null, draft: RegistryDraft | null): RegistryDiff {
@@ -98,18 +114,18 @@ async function publishContent(
   publisher: string,
   now: Date,
 ) {
-  const snapshot = createSnapshot(content, publisher, now);
+  const snapshot = createSnapshot(content, now);
   const priorRevision = state.publishedSnapshot && !state.revisions.some((item) => item.revision === state.publishedSnapshot?.revision)
     ? {
         revision: state.publishedSnapshot.revision,
         contentHash: state.publishedSnapshot.contentHash,
         publishedAt: state.publishedSnapshot.publishedAt,
         publishedBy: state.publishedSnapshot.publishedBy,
-        blobPathname: await backend.archive(state.publishedSnapshot),
+        blobPathname: await archiveIdempotently(backend, state.publishedSnapshot),
       }
     : null;
-  const blobPathname = await backend.archive(snapshot);
-  const revision: RevisionEntry = { revision: snapshot.revision, contentHash: snapshot.contentHash, publishedAt: snapshot.publishedAt, publishedBy: snapshot.publishedBy, blobPathname };
+  const blobPathname = await archiveIdempotently(backend, snapshot);
+  const revision: RevisionEntry = { revision: snapshot.revision, contentHash: snapshot.contentHash, publishedAt: snapshot.publishedAt, publishedBy: publisher, blobPathname };
   const revisions = [revision, ...(priorRevision ? [priorRevision] : []), ...state.revisions]
     .filter((entry, index, entries) => entries.findIndex((candidate) => candidate.revision === entry.revision) === index);
   await backend.writeItems({ publishedSnapshot: snapshot, publicationMetadata: revision, revisionIndex: revisions, draft: null });

@@ -165,7 +165,7 @@ export const NativeL1DirectRouteSchema = z.object({
     status: z.enum(["available", "not_available", "unknown"]),
   }).strict(),
   participantTypes: z.array(z.enum(["institution", "individual"])).min(1),
-  custodyPathIds: z.array(IdSchema),
+  custodyPathIds: z.array(IdSchema).describe("Optional route restriction: an empty list uses every current path approved by the native-L1 custody registry; a non-empty list restricts the route to those path IDs."),
   minimumSats: SatsSchema.optional(),
   maximumSats: SatsSchema.optional(),
   pairedStx: z.object({ required: z.boolean(), minimumValueRatioBps: z.number().int().min(0).max(10_000).optional() }).strict(),
@@ -447,7 +447,7 @@ export const ConciergeRegistrySnapshotSchema = z.object({
   revision: z.string().min(1),
   contentHash: z.string().regex(/^sha256:[a-f0-9]{64}$/),
   publishedAt: z.iso.datetime(),
-  publishedBy: z.string().email(),
+  publishedBy: z.string().min(1),
   content: ConciergeRegistryContentSchema,
 }).strict().superRefine((value, context) => {
   const { content: _content, ...metadata } = value;

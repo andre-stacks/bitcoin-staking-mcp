@@ -6,7 +6,10 @@ interface TokenResponse { access_token: string; id_token: string; expires_in: nu
 interface UserInfo { sub: string; email?: string; email_verified?: boolean; name?: string; preferred_username?: string }
 
 function same(left: string | null, right: string | undefined): boolean {
-  return Boolean(left && right && left.length === right.length && crypto.timingSafeEqual(Buffer.from(left), Buffer.from(right)));
+  if (!left || !right) return false;
+  const leftBytes = Buffer.from(left);
+  const rightBytes = Buffer.from(right);
+  return leftBytes.length === rightBytes.length && crypto.timingSafeEqual(leftBytes, rightBytes);
 }
 
 export async function GET(request: NextRequest) {

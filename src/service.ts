@@ -47,7 +47,12 @@ export class BitcoinStakingService {
   constructor(dependencies: ServiceDependencies = {}) {
     this.now = dependencies.now ?? (() => new Date());
     this.registry = dependencies.registry ?? new RegistryStore({ now: this.now });
-    const useDeprecatedRegistries = !process.env.BITCOIN_STAKING_REGISTRY_URL && Boolean(process.env.BITCOIN_STAKING_BOND_REGISTRY_URL || process.env.BITCOIN_STAKING_CUSTODY_REGISTRY_URL);
+    const useDeprecatedRegistries = !process.env.BITCOIN_STAKING_REGISTRY_URL && Boolean(
+      process.env.BITCOIN_STAKING_BOND_REGISTRY_URL ||
+      process.env.BITCOIN_STAKING_CUSTODY_REGISTRY_URL ||
+      process.env.BITCOIN_STAKING_DATA_DIR ||
+      process.env.BITCOIN_STAKING_CUSTODY_REGISTRY_PATH
+    );
     this.manifests = dependencies.manifests ?? new ManifestStore(undefined, { now: this.now, ...(useDeprecatedRegistries ? {} : { registryStore: this.registry }) });
     this.custody = dependencies.custody ?? new CustodyStore(undefined, { now: this.now, ...(useDeprecatedRegistries ? {} : { registryStore: this.registry }) });
     this.stacks = dependencies.stacks ?? new StacksProvider();

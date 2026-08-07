@@ -6,7 +6,7 @@
   "revision": "rev-20260806000000000-1ff4bceed435",
   "contentHash": "sha256:1ff4bceed4355c7460d10856954caa3442ab1439ff05c6cdbcb6c75d98d0dc3a",
   "publishedAt": "2026-08-06T00:00:00.000Z",
-  "publishedBy": "registry-bootstrap@stackslabs.com",
+  "publishedBy": "Stacks Labs registry team",
   "content": {
     "schemaVersion": 3,
     "reviewedAt": "2026-08-06T00:00:00.000Z",

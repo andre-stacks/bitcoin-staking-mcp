@@ -66,8 +66,12 @@ export default function RegistryEditor({ session }: { session: PublisherSession 
     } catch (error) { setMessage(error instanceof Error ? error.message : String(error)); throw error; }
     finally { setBusy(false); }
   }
-  async function save() { await mutate("/api/admin/draft", "PUT", { content: compose() }); await refresh(); }
-  async function validate() { await mutate("/api/admin/validate", "POST", { content: compose() }); }
+  async function runEditorAction(action: () => Promise<void>) {
+    try { await action(); }
+    catch (error) { setMessage(error instanceof Error ? error.message : String(error)); }
+  }
+  async function save() { await runEditorAction(async () => { await mutate("/api/admin/draft", "PUT", { content: compose() }); await refresh(); }); }
+  async function validate() { await runEditorAction(async () => { await mutate("/api/admin/validate", "POST", { content: compose() }); }); }
   async function diff() { const response = await fetch("/api/admin/diff", { cache: "no-store" }); const result = await response.json(); setMessage(pretty(result)); }
   async function publish() { await mutate("/api/admin/publish", "POST"); await refresh(); }
   async function discard() { await mutate("/api/admin/draft", "DELETE"); await refresh(); }
@@ -77,7 +81,7 @@ export default function RegistryEditor({ session }: { session: PublisherSession 
   return <main className="shell">
     <p className="eyebrow">Scout control plane</p><h1>Live Knowledge Registry</h1>
     <div className="meta"><span>Publisher: {session.email}</span><span>Published revision: {publishedRevision}</span><span>{dirty ? "Unsaved local edits" : "Editor matches loaded state"}</span></div>
-    {content && <div className="toolbar"><label>Registry reviewed at (UTC) <input type="datetime-local" value={content.reviewedAt.slice(0, 16)} onChange={(event) => setContent({ ...content, reviewedAt: new Date(`${event.target.value}:00.000Z`).toISOString() })} /></label><span>Review deadline: {new Date(new Date(content.reviewedAt).getTime() + 7 * 86_400_000).toISOString()}</span></div>}
+    {content && <div className="toolbar"><label>Registry reviewed at (UTC) <input type="datetime-local" value={content.reviewedAt.slice(0, 16)} onChange={(event) => { if (event.target.value) setContent({ ...content, reviewedAt: new Date(`${event.target.value}:00.000Z`).toISOString() }); }} /></label><span>Review deadline: {new Date(new Date(content.reviewedAt).getTime() + 7 * 86_400_000).toISOString()}</span></div>}
     <div className="toolbar">
       <button disabled={busy || !text} onClick={save}>Save draft</button>
       <button disabled={busy || !text} className="secondary" onClick={validate}>Validate</button>

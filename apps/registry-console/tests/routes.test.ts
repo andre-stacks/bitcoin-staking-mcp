@@ -70,6 +70,9 @@ test("OAuth authorization uses PKCE and invalid callbacks fail closed", async ()
   const denied = await callback(request("/api/auth/callback?state=wrong"));
   assert.equal(denied.status, 400);
   assert.deepEqual(await denied.json(), { error: "Invalid OAuth callback." });
+  const multibyte = await callback(request("/api/auth/callback?code=test&state=%C3%A9", { headers: { cookie: "oauth_state=a; oauth_nonce=n; oauth_code_verifier=v" } }));
+  assert.equal(multibyte.status, 400);
+  assert.deepEqual(await multibyte.json(), { error: "Invalid OAuth callback." });
 });
 
 test("admin routes deny anonymous and non-allowlisted sessions without exposing private state", async () => {
@@ -120,6 +123,8 @@ test("draft, validation, diff, publish, discard, and rollback routes enforce aut
   assert.equal(published.status, 200);
   const publishedBody = await published.json();
   assert.notEqual(publishedBody.snapshot.revision, seedSnapshot.revision);
+  assert.equal(publishedBody.snapshot.publishedBy, "Stacks Labs registry team");
+  assert.equal(backend.state.revisions[0]?.publishedBy, "publisher@stackslabs.com");
   assert.equal(backend.state.revisions.some((entry) => entry.revision === seedSnapshot.revision), true);
   assert.equal(backend.blobs.size, 2);
 

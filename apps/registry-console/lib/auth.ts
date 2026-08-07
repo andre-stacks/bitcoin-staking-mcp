@@ -51,7 +51,7 @@ export async function currentSession(): Promise<PublisherSession | null> {
 export async function requirePublisher(request: NextRequest): Promise<PublisherSession> {
   const session = await readSession(request.cookies.get(SESSION_COOKIE)?.value);
   if (!session) throw Object.assign(new Error("Authentication required."), { status: 401 });
-  if (!session.publisher) throw Object.assign(new Error("This account has read-only access."), { status: 403 });
+  if (!session.publisher || !publisherEmails().has(session.email.trim().toLowerCase())) throw Object.assign(new Error("This account has read-only access."), { status: 403 });
   return session;
 }
 

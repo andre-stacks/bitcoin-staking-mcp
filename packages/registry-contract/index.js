@@ -11,5 +11,5 @@ export const RegistryPublicationMetadataSchema = z.object({
   revision: z.string().min(1),
   contentHash: z.string().regex(/^sha256:[a-f0-9]{64}$/),
   publishedAt: z.iso.datetime(),
-  publishedBy: z.string().email(),
+  publishedBy: z.string().min(1),
 }).strict();

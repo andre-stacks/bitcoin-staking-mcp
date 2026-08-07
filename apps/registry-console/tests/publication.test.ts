@@ -9,8 +9,10 @@ class MemoryBackend implements RegistryBackend {
   state: RegistryState = { publishedSnapshot: seedSnapshot, draft: null, revisions: [] };
   blobs = new Map<string, typeof seedSnapshot>();
   writes: Array<Record<string, unknown>> = [];
+  failWrites = 0;
   async readState() { return structuredClone(this.state); }
   async writeItems(items: Record<string, unknown>) {
+    if (this.failWrites > 0) { this.failWrites -= 1; throw new Error("simulated config write failure"); }
     this.writes.push(structuredClone(items));
     this.state = {
       ...this.state,
@@ -53,6 +55,9 @@ test("partner product roles are independently addressable and future attestation
   content.integrations.pop();
   content.integrations[0]!.attestation.reviewedAt = "2026-08-08T00:00:00.000Z";
   assert.throws(() => validatePublishableContent(content, new Date("2026-08-07T00:00:00.000Z")), /Future owner attestation/);
+  content.integrations[0]!.attestation.reviewedAt = "2026-08-07T00:00:00.000Z";
+  content.reviewedAt = "2026-08-08T00:00:00.000Z";
+  assert.throws(() => validatePublishableContent(content, new Date("2026-08-07T00:00:00.000Z")), /Future registry review timestamp/);
 });
 
 test("registry-wide IDs and related record references are unique and resolvable", () => {
@@ -73,6 +78,8 @@ test("draft, validation, publish, diff, discard, and rollback preserve immutable
   const first = await publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-07T10:01:00.000Z"));
   assert.equal(backend.state.draft, null);
   assert.equal(backend.state.publishedSnapshot?.content.facts[0]?.summary, "Updated without an MCP release.");
+  assert.equal(backend.state.publishedSnapshot?.publishedBy, "Stacks Labs registry team");
+  assert.equal(backend.state.revisions[0]?.publishedBy, "publisher@stackslabs.com");
   assert.equal(backend.blobs.size, 2);
   assert.deepEqual(backend.state.revisions.map((entry) => entry.revision), [first.snapshot.revision, seedSnapshot.revision]);
   backend.writes = [];
@@ -84,6 +91,21 @@ test("draft, validation, publish, diff, discard, and rollback preserve immutable
   assert.equal(backend.writes.length, 1);
   assert.deepEqual(Object.keys(backend.writes[0]!).sort(), ["draft", "publicationMetadata", "publishedSnapshot", "revisionIndex"]);
   await saveDraft(backend, changed, "publisher@stackslabs.com"); await discardDraft(backend); assert.equal(backend.state.draft, null);
+});
+
+test("publish retries reuse identical immutable archives after a partial config-write failure", async () => {
+  const backend = new MemoryBackend();
+  const changed = structuredClone(seedSnapshot.content);
+  changed.facts[0]!.summary = "Retry the same deterministic publication.";
+  const now = new Date("2026-08-07T10:10:00.000Z");
+  await saveDraft(backend, changed, "publisher@stackslabs.com", now);
+  backend.failWrites = 1;
+  await assert.rejects(publishDraft(backend, "publisher@stackslabs.com", now), /simulated config write failure/);
+  assert.equal(backend.blobs.size, 2);
+  const retried = await publishDraft(backend, "publisher@stackslabs.com", now);
+  assert.equal(backend.state.publishedSnapshot?.revision, retried.snapshot.revision);
+  assert.deepEqual(backend.state.revisions.map((entry) => entry.revision), [retried.snapshot.revision, seedSnapshot.revision]);
+  assert.equal(backend.blobs.size, 2);
 });
 
 test("invalid work can be saved privately but cannot validate or publish", async () => {

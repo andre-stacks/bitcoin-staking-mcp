@@ -19,6 +19,8 @@ Global Config keys are:
 
 Each publish validates the full draft, hashes canonical content, writes a new private `revisions/<revision>.json` object, and updates all Global Config publication keys in one batch. Rollback reads an immutable private object and publishes its content as a new revision.
 
+Public snapshots contain only the display identity `Stacks Labs registry team`. The authenticated publisher email remains in the private revision index and admin console. For native-L1 routes, an empty `custodyPathIds` list means the route adds no restriction beyond the current product-wide custody registry; a non-empty list narrows compatibility to the listed path IDs. It does not turn an unavailable or overdue custody path into an approved one.
+
 ## Local validation
 
 ```bash
