@@ -6,6 +6,8 @@ The registry console is implemented in `apps/registry-console`. Deployment, prod
 
 Create one project under the Stacks Labs Vercel team with Root Directory `apps/registry-console`. Connect one Global Config store (formerly Edge Config) and one private Blob store. Register a Sign in with Vercel application whose callback is `/api/auth/callback` and enable `openid`, `email`, and `profile`.
 
+Connect Global Config to all environments and the private Blob store to Production and Preview. This lets branch previews exercise the real persistence path while production deployment remains a separate approval gate.
+
 Configure the variables listed in `apps/registry-console/.env.example`. `VERCEL_API_TOKEN` should be limited to the team and permissions needed to update the selected Global Config. `PUBLISHER_EMAILS` is a comma-separated allowlist. Users with a valid Vercel account but an email outside that list receive read-only denial. `EDGE_CONFIG` and `EDGE_CONFIG_ID` remain supported as deprecated compatibility names for one release.
 
 Global Config keys are:
