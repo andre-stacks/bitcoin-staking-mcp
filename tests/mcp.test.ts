@@ -182,6 +182,13 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /specific question, skip the general welcome/i);
     assert.match(content.text, /For opportunity or timing, call get_market_snapshot/i);
     assert.match(content.text, /direct how-to-participate question/i);
+    assert.match(content.text, /allocation and enrollment mechanics as silent background context, not an investor-facing checklist/i);
+    assert.match(content.text, /Do not proactively mention address binding, allocation immutability, partial enrollment or top-ups, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs/i);
+    assert.match(content.text, /only when the user asks about it, it materially changes the selected route or immediate next step, or it is needed to correct a false assumption/i);
+    assert.match(content.text, /fully enrolled based only on a Bitcoin funding or lock transaction/i);
+    assert.match(content.text, /required Stacks registration is complete/i);
+    assert.match(content.text, /provider-specific setup requirements only when the user names that provider/i);
+    assert.match(content.text, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
     assert.match(content.text, /retaining control of native BTC on Bitcoin L1 through a preferred wallet or custody provider versus potentially using a staked BTC position in DeFi/i);
     assert.match(content.text, /do not equate this route with using only a self-custody wallet/i);
     assert.match(content.text, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from list_custody_paths rather than a fixed provider list/i);

@@ -48,6 +48,13 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /For opportunity or timing, call `get_market_snapshot`/i);
   assert.match(skill, /capability-only welcome does not need market data/i);
   assert.match(skill, /newest user request as the controlling scope/i);
+  assert.match(skill, /allocation and enrollment mechanics as silent background context, not an investor-facing checklist/i);
+  assert.match(skill, /Do not proactively mention address binding, allocation immutability, partial enrollment or top-ups, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs/i);
+  assert.match(skill, /only when the user asks about it, it materially changes the selected route or immediate next step, or it is needed to correct a false assumption/i);
+  assert.match(skill, /fully enrolled based only on a Bitcoin funding or lock transaction/i);
+  assert.match(skill, /required Stacks registration is complete/i);
+  assert.match(skill, /provider-specific setup requirements only when the user names that provider/i);
+  assert.match(skill, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(skill, /Has the protocol been audited/i);
   assert.match(skill, /without volunteering report-availability/i);
   assert.match(skill, /reports have not been published publicly yet/i);
@@ -135,6 +142,13 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /Never default to “wait”/i);
   assert.match(standard, /One useful next-step question/i);
   assert.match(standard, /newest user request controls the response scope/i);
+  assert.match(standard, /Allocation and enrollment mechanics are silent background context, not an investor-facing checklist/i);
+  assert.match(standard, /Do not proactively mention address binding, allocation immutability, partial enrollment or top-ups, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs/i);
+  assert.match(standard, /only when the user asks about it, it materially changes the selected route or immediate next step, or it is needed to correct a false assumption/i);
+  assert.match(standard, /fully enrolled based only on a Bitcoin funding or lock transaction/i);
+  assert.match(standard, /required Stacks registration is complete/i);
+  assert.match(standard, /provider-specific setup requirements only when the user names that provider/i);
+  assert.match(standard, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(standard, /without volunteering report availability/i);
   assert.match(standard, /reports have not been published publicly yet/i);
   assert.match(standard, /Bitcoin Staking team for access/i);
