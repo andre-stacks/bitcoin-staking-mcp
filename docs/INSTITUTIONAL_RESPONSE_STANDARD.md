@@ -74,8 +74,8 @@ Do not open a broad safety answer with “your Bitcoin cannot be guaranteed comp
 
 Translate internal status into natural sentences:
 
-- Prefer “No Bitcoin staking bond is open yet. The Genesis Bond is scheduled for August 26.”
-- Avoid “PoX-5 is active, but the bond is not yet configured on-chain and enrollment remains scheduled—not open.” Mention on-chain configuration only when the user asks about readiness or when it changes whether they can participate.
+- Say whether a bond is open and, when one is scheduled, name it and use the current date returned by MCP evidence.
+- Avoid stacking protocol activation, on-chain configuration, schedule, and enrollment fields into one sentence. Mention on-chain configuration only when the user asks about readiness or when it changes whether they can participate. Never retain a current launch date in this standard.
 
 Keep each LST nested under the pool that issues it, but do not force that taxonomy into every answer. Pool operators, required assets, token designs, and integrations must come from current MCP evidence so the response remains valid as additional pools launch.
 
@@ -87,11 +87,9 @@ For general opportunity questions, do not list every unverified liquidity, redem
 
 For a wallet- or custody-only question, answer with the current supported options. Do not append a generic caveat that wallet support does not establish bond enrollment or availability; mention enrollment only when the user asks about it or it changes which wallet can be used.
 
-When current evidence returns the planned 3% annualized, roughly six-month model, use the approved planned reward framing and lead constructively:
+When current evidence supports planned economics, use this positive structure: state the returned annualized rate and approximate term, name the returned reward asset, use `simulate_yield` with a 1 BTC principal for the deterministic gross-return example before applicable fees, and invite the user to provide their amount. Do not infer the worked return in prose.
 
-> Bitcoin Staking is currently planned to offer a 3% annualized rate for roughly six months, with rewards available in BTC or sBTC. For every 1 BTC staked, the expected gross return over the six-month term is approximately 0.015 BTC, before any applicable fees. Final terms will be confirmed when each bond is published on-chain.
-
-Do not restate the expected six-month return as 1.5% growth. If the user has not supplied an amount, invite them to provide one for a gross-return estimate.
+Label the evidence state explicitly. Planned product targets and public reference-model assumptions are not bond-specific terms; bond-specific terms are not proof of final on-chain configuration. Never retain a current rate, duration, reward asset, fee, capacity, or worked return in this standard.
 
 Prefer:
 

@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { ServiceError } from "../src/core/errors.js";
 import { CONTRACT_VERSION, EXPECTED_TOOL_NAMES, SERVER_VERSION, SKILL_VERSION, createBitcoinStakingMcpServer } from "../src/mcp/server.js";
 import { StacksProvider } from "../src/providers/stacks.js";
 import { CoinGeckoPriceProvider } from "../src/providers/coingecko.js";
+import { ManifestStore } from "../src/providers/manifest-store.js";
 import { BitcoinStakingService } from "../src/service.js";
 import { SuccessfulToolOutputSchemas, YieldOutputSchema } from "../src/mcp/output-schemas.js";
 
@@ -232,7 +234,7 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /show the sourced gross reward, label net reward unknown/i);
     assert.match(content.text, /prices may enrich the scenario, but do not replace missing rate or duration inputs/i);
     assert.match(content.text, /three-decimal display fields/i);
-    assert.match(content.text, /Use the exact planned-yield framing above when the current evidence matches it/i);
+    assert.match(content.text, /positive planned-yield structure above with values returned by current MCP evidence and deterministic calculations/i);
     assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
     assert.match(content.text, /State a supported capability first and explain how it works/i);
@@ -247,13 +249,76 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /wallet- or custody-only question/i);
     assert.match(content.text, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
     assert.match(content.text, /Do not narrate the absence of an amount-related rejection/i);
-    assert.match(content.text, /planned to offer a 3% annualized rate for roughly six months/i);
-    assert.match(content.text, /rewards available in BTC or sBTC/i);
-    assert.match(content.text, /expected gross return over the six-month term is approximately 0\.015 BTC/i);
-    assert.match(content.text, /Do not describe this as 1\.5% growth over the term/i);
-    assert.match(content.text, /Final terms will be confirmed when each bond is published on-chain/i);
-    assert.match(content.text, /Invite the user to provide their BTC amount for an estimate/i);
+    assert.match(content.text, /State the returned annualized rate, approximate term, and reward asset/i);
+    assert.match(content.text, /Call simulate_yield with a 1 BTC principal/i);
+    assert.match(content.text, /do not calculate the worked return in prose/i);
+    assert.match(content.text, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
+    assert.match(content.text, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
+    assert.match(content.text, /Invite the user to provide their BTC amount for a personalized estimate/i);
     assert.match(content.text, /Avoid stacked qualifiers and status jargon/i);
+  }
+});
+
+test("alternate schedule and economics flow from runtime evidence rather than prompt copy", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "bitcoin-staking-runtime-facts-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond-cycle-142.json"), "utf8"));
+  bond.timing = { ...bond.timing, scheduledLaunchDate: "2026-09-17", startsRewardCycle: 145 };
+  bond.economics = {
+    ...bond.economics,
+    targetRateBps: 425,
+    rewardAsset: "BTC",
+    termsStatus: "reference_program_model",
+    referenceModel: {
+      ...bond.economics.referenceModel,
+      annualTargetRateBps: 425,
+      bondingPeriodCycles: 7,
+      daysPerCycle: 13,
+      bondingPeriodDays: 91,
+    },
+  };
+  await writeFile(join(directory, "alternate-bond.json"), JSON.stringify(bond), "utf8");
+
+  const service = new BitcoinStakingService({
+    manifests: new ManifestStore(directory, { now: offlineNow }),
+    stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
+    testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }),
+    prices: offlinePrices(),
+    now: offlineNow,
+  });
+  const { client, server } = await connectedClient(service);
+  context.after(async () => { await client.close(); await server.close(); });
+
+  const bondsResult = await client.callTool({ name: "list_bonds", arguments: {} });
+  assert.equal(bondsResult.isError, undefined);
+  const listed = bondsResult.structuredContent as any;
+  assert.equal(listed.bonds[0].scheduledLaunchDate, "2026-09-17");
+  assert.equal(listed.bonds[0].timing.startsRewardCycle, 145);
+  assert.equal(listed.bonds[0].economics.targetRateBps, 425);
+  assert.equal(listed.bonds[0].economics.rewardAsset, "BTC");
+  assert.equal(listed.bonds[0].economics.termsStatus, "reference_program_model");
+
+  const yieldResult = await client.callTool({
+    name: "simulate_yield",
+    arguments: { bondId: bond.id, routeId: bond.participationRoutes[0].id, principalSats: "100000000", feeBps: 0 },
+  });
+  assert.equal(yieldResult.isError, undefined, JSON.stringify(yieldResult.content));
+  const scenario = yieldResult.structuredContent as any;
+  assert.equal(scenario.annualRateBps, 425);
+  assert.equal(scenario.durationDays, 91);
+  assert.equal(scenario.rewardAsset, "BTC");
+  assert.equal(scenario.grossRewardSats, "1059589");
+  assert.equal(scenario.grossRewardDisplay, "0.011 BTC");
+  assert.equal(scenario.availability, "published_reference_model_scenario");
+  assert.equal(scenario.modelContext.sourceStatus, "reference_not_final_bond_terms");
+
+  const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request: "When is the next bond and what is the yield?" } });
+  const content = prompt.messages[0]?.content;
+  assert.equal(content?.type, "text");
+  if (content?.type === "text") {
+    assert.match(content.text, /use the current launch date returned by MCP evidence/i);
+    assert.match(content.text, /Call simulate_yield with a 1 BTC principal/i);
+    assert.match(content.text, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
   }
 });
 

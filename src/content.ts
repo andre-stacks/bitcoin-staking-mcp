@@ -46,7 +46,7 @@ All tools are informational and read-only. They cannot construct, sign, or broad
 
 export const YIELD_METHODOLOGY = `# Yield methodology
 
-The production beta performs deterministic scenario analysis. It never predicts BTC or STX prices and never invents missing economics. The versioned Protocol Bonds public model supplies a 3% target APY, 5% paired-STX value ratio, and 12-cycle (~174-day) reference period for pre-launch Genesis scenarios. These are reference-model assumptions, not final on-chain bond terms.
+The production beta performs deterministic scenario analysis. It never predicts BTC or STX prices and never invents missing economics. A duration and annual rate must come from current MCP evidence or explicit user inputs; current terms are not retained in this static resource. Planned product targets, public reference-model assumptions, bond-specific terms, and final on-chain configured terms remain distinct.
 
 For a BTC- or sBTC-denominated target-principal-rate model:
 

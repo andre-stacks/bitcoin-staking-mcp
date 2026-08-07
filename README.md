@@ -34,7 +34,7 @@ The concierge is an approachable Bitcoin Staking guide with institutional-qualit
 
 The answer policy is evidence-gated. The concierge may use only current MCP structured output and MCP resources for factual claims. It does not complete missing answers from model memory, infer wallet support from protocol behavior, treat an audit statement as end-to-end wallet proof, or substitute demo data after a live-read failure. When the corpus cannot answer a question, it says: “This MCP does not currently verify that,” and identifies the missing evidence.
 
-The published product registry currently lists the Genesis Bond as slated for August 26, 2026 in Cycle 142. Its versioned [public economic model](https://btc-staking-public-dashboard.vercel.app/) uses a 3% BTC target APY, a 5% minimum STX value ratio, and a 12-cycle (~174-day) reference period. Yield scenarios use current CoinGecko prices to calculate paired STX units. A sourced rate and duration support a gross projection; when an applicable fee is missing, net yield remains unknown. The bond remains `upcoming` until on-chain configuration and enrollment are verified.
+The published product registry supplies the Genesis Bond's current schedule, reward cycle, and economic evidence at runtime. Scout keeps planned product timing, public reference-model assumptions, bond-specific terms, and final on-chain configured terms distinct. Yield scenarios use sourced rate and duration inputs plus current CoinGecko prices for paired-STX calculations. When an applicable fee is missing, the supported gross projection remains available and net yield remains unknown.
 
 ## Quick start
 
@@ -185,7 +185,7 @@ Which Bitcoin staking opportunities are currently available or coming next? Sepa
 ```
 
 ```text
-Using the current public reference model, assess the 12-cycle gross reward scenario for 25 BTC. If an applicable fee is missing, keep net reward unknown, and separate model assumptions from final configured terms.
+Using the current public reference model, assess the gross reward scenario for 25 BTC. If an applicable fee is missing, keep net reward unknown, and separate model assumptions from bond-specific and final configured terms.
 ```
 
 ```text

@@ -28,9 +28,9 @@ What Bitcoin staking opportunities are currently available or coming next? Use t
 
 Expected behavior: check mainnet state and published manifests first. If neither contains an opportunity, inspect testnet automatically and present it as the live demo/prototype environment for the intended mainnet journey. Keep test assets separate from mainnet opportunities, and do not infer a configured bond from an empty scan.
 
-Current expected product result: show the Genesis Bond as slated for August 26, 2026 in Cycle 142, distinguish that schedule from on-chain configuration, and explain what a participant can prepare now.
+Current expected product result: show the Genesis Bond using the schedule and reward cycle returned by current MCP evidence, distinguish planned timing from on-chain configuration, and explain what a participant can prepare now.
 
-For a 25 BTC scenario, use the sourced public-model duration, 3% reference target, and 5% paired-STX value ratio. If an applicable fee remains unknown, show the gross reward and label net reward as pending rather than assuming a zero fee.
+For a 25 BTC scenario, use only the rate, duration, reward asset, and paired-STX requirement returned by current MCP evidence or explicitly supplied as scenario inputs. Preserve whether the inputs are planned, reference-model, bond-specific, or configured. If an applicable fee remains unknown, show the gross reward and label net reward as pending rather than assuming a zero fee.
 
 ### 2. Generic institutional diligence
 

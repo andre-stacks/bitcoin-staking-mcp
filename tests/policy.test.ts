@@ -78,11 +78,11 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /do not list every unverified stBTC integration/i);
   assert.match(skill, /wallet- or custody-only question/i);
   assert.match(skill, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
-  assert.match(skill, /planned to offer a 3% annualized rate for roughly six months/i);
-  assert.match(skill, /rewards available in BTC or sBTC/i);
-  assert.match(skill, /expected gross return over the six-month term is approximately 0\.015 BTC/i);
-  assert.match(skill, /Do not describe this as 1\.5% growth over the term/i);
-  assert.match(skill, /Final terms will be confirmed when each bond is published on-chain/i);
+  assert.match(skill, /returned annualized rate and approximate term/i);
+  assert.match(skill, /call `simulate_yield` with a 1 BTC principal/i);
+  assert.match(skill, /do not calculate the return in prose/i);
+  assert.match(skill, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
+  assert.match(skill, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
   assert.match(skill, /Avoid stacked qualifiers, status jargon/i);
 });
 
@@ -127,7 +127,7 @@ test("concierge skill remains orchestration-only", async () => {
   );
 
   assert.doesNotMatch(skill, /targetRateBps|stxValueRatio|minUstxRatioBps/);
-  assert.match(skill, /public model/i);
+  assert.match(skill, /public reference-model/i);
   assert.match(skill, /CoinGecko prices may enrich the scenario/i);
   assert.match(skill, /three-decimal display fields/i);
   assert.match(skill, /show the gross reward.*net reward as unknown/i);
@@ -182,11 +182,39 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /software, hardware, multisig, institutional-wallet, and custody options from current MCP evidence rather than a fixed provider list/i);
   assert.match(standard, /Do not narrate that the amount did not trigger a rejection/i);
   assert.match(standard, /multiple pools with different input assets and LST designs/i);
-  assert.match(standard, /planned to offer a 3% annualized rate for roughly six months/i);
-  assert.match(standard, /expected gross return over the six-month term is approximately 0\.015 BTC/i);
-  assert.match(standard, /Do not restate the expected six-month return as 1\.5% growth/i);
-  assert.match(standard, /Final terms will be confirmed when each bond is published on-chain/i);
+  assert.match(standard, /returned annualized rate and approximate term/i);
+  assert.match(standard, /use `simulate_yield` with a 1 BTC principal/i);
+  assert.match(standard, /Do not infer the worked return in prose/i);
+  assert.match(standard, /Planned product targets and public reference-model assumptions are not bond-specific terms; bond-specific terms are not proof of final on-chain configuration/i);
+  assert.match(standard, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
   assert.match(standard, /stacked qualifiers and status jargon/i);
+});
+
+test("static Scout policy surfaces do not retain current schedule or economics", async () => {
+  const paths = [
+    ".agents/skills/bitcoin-staking-concierge/SKILL.md",
+    "README.md",
+    "docs/DEMO_RUNBOOK.md",
+    "docs/INSTITUTIONAL_RESPONSE_STANDARD.md",
+    "docs/TECHNICAL_SPEC.md",
+    "docs/UX_REVIEW.md",
+    "src/content.ts",
+    "src/institutional.ts",
+    "src/mcp/server.ts",
+  ];
+  const forbidden = [
+    /\b(?:January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}(?:, \d{4})?\b/i,
+    /\b20\d{2}-\d{2}-\d{2}\b/,
+    /\b\d+(?:\.\d+)?% annualized\b/i,
+    /\broughly \w+(?:-\w+)? months?\b/i,
+    /\bgross (?:return|reward)[^.\n]*\b0\.\d+ BTC\b/i,
+  ];
+  for (const path of paths) {
+    const surface = await readFile(resolve(path), "utf8");
+    for (const pattern of forbidden) {
+      assert.doesNotMatch(surface, pattern, `${path} retains a time-sensitive product fact`);
+    }
+  }
 });
 
 test("nightly registry validation preserves pipeline failures", async () => {
