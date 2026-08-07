@@ -1,5 +1,7 @@
 # Hackathon Demo Runbook
 
+Submit the project as **Scout AI**. In the recorded product experience, introduce it as **Scout — the Bitcoin Staking Concierge**.
+
 This runbook is state-aware. The dedicated PoX-5 testnet may be scheduled, active without a configured bond, or active with a configured bond. The demo treats all three as valid live evidence and never substitutes demo terms for missing chain state.
 
 ## Preflight

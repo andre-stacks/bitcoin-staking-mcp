@@ -15,6 +15,8 @@ The raw MCP tool catalog was documented but not translated into user goals. A ne
 
 Keep one user-facing concierge entry point. Do not turn fourteen implementation tools into commands a user must learn.
 
+The user-facing identity is **Scout — the Bitcoin Staking Concierge**. **Scout AI** is reserved for the internal hackathon submission and is not used as the concierge's name in onboarding. The repository, package, MCP server, prompt identifier, and skill invocation retain their existing technical names.
+
 Onboarding is determined by the user's intent, not simply whether this is the first message. A broad orientation request introduces Scout, the Bitcoin Staking Concierge, gives a concise explanation of how Scout can help, and offers three useful starter questions. A request about timing, participation, economics, risk, custody, or liquidity proceeds directly to that workflow without replaying the general introduction.
 
 The two bond-scoped participation routes remain:

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Scout — Bitcoin Staking Concierge"
+  display_name: "Scout — the Bitcoin Staking Concierge"
   short_description: "Explore Bitcoin staking with Scout"
   default_prompt: "Use $bitcoin-staking-concierge to introduce Scout, show what it can help me with, and help me choose a next step."

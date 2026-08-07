@@ -54,9 +54,21 @@ test("Codex skill metadata presents Scout as the Bitcoin Staking Concierge", asy
     "utf8",
   );
 
-  assert.match(metadata, /display_name: "Scout — Bitcoin Staking Concierge"/);
+  assert.match(metadata, /display_name: "Scout — the Bitcoin Staking Concierge"/);
   assert.match(metadata, /Explore Bitcoin staking with Scout/);
   assert.match(metadata, /introduce Scout/);
+});
+
+test("hackathon and user-facing names remain distinct", async () => {
+  const [plan, uxReview] = await Promise.all([
+    readFile(resolve("docs/HACKATHON_PLAN.md"), "utf8"),
+    readFile(resolve("docs/UX_REVIEW.md"), "utf8"),
+  ]);
+
+  assert.match(plan, /Submission name: \*\*Scout AI\*\*/);
+  assert.match(plan, /Scout — the Bitcoin Staking Concierge/);
+  assert.match(uxReview, /Scout AI.*internal hackathon submission/i);
+  assert.match(uxReview, /not used as the concierge's name in onboarding/i);
 });
 
 test("README examples stay network-agnostic", async () => {

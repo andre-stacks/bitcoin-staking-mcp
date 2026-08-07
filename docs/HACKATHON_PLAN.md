@@ -1,5 +1,7 @@
 # Bitcoin Staking MCP — Hackathon Delivery Plan
 
+Submission name: **Scout AI**. In the product experience, Scout remains **Scout — the Bitcoin Staking Concierge**. The submission name does not rename the repository, package, MCP server, prompt identifier, or skill invocation.
+
 Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, custom UI, and transaction preparation are deferred.
 
 ## Milestones
