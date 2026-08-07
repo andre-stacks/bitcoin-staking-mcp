@@ -11,6 +11,7 @@ async function bondFile(name: string) { return BondManifestSchema.parse(JSON.par
 test("Genesis v2 publishes exactly direct L1 and StackingDAO pool routes", async () => {
   const bond = await bondFile("genesis-bond-cycle-142.json");
   assert.equal(bond.schemaVersion, 2);
+  assert.deepEqual(bond.economics.rewardAssetOptions, ["BTC", "sBTC"]);
   assert.deepEqual(bond.participationRoutes.map((route) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   const pool = bond.participationRoutes[1];
   assert.equal(pool?.routeType, "sbtc_pool");

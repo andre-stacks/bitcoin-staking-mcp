@@ -21,6 +21,7 @@
   "economics": {
     "targetRateBps": 300,
     "rewardAsset": "sBTC",
+    "rewardAssetOptions": ["BTC", "sBTC"],
     "rewardModel": "target_principal_rate",
     "rewardSource": "Bond rewards distributed by the PoX-5 signer-manager, capped by available rewards.",
     "termsStatus": "reference_program_model",

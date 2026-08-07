@@ -54,7 +54,11 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /do not list every unverified stBTC integration/i);
   assert.match(skill, /wallet- or custody-only question/i);
   assert.match(skill, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
-  assert.match(skill, /Final terms may change before launch/i);
+  assert.match(skill, /planned to offer a 3% annualized rate for roughly six months/i);
+  assert.match(skill, /rewards available in BTC or sBTC/i);
+  assert.match(skill, /expected gross return over the six-month term is approximately 0\.015 BTC/i);
+  assert.match(skill, /Do not describe this as 1\.5% growth over the term/i);
+  assert.match(skill, /Final terms will be confirmed when each bond is published on-chain/i);
   assert.match(skill, /Avoid stacked qualifiers, status jargon/i);
 });
 
@@ -132,7 +136,10 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /Describe the pooled option first as “Join a pool”/i);
   assert.match(standard, /Which matters more to you: keeping native BTC in self-custody/i);
   assert.match(standard, /multiple pools with different input assets and LST designs/i);
-  assert.match(standard, /Final terms may change before launch/i);
+  assert.match(standard, /planned to offer a 3% annualized rate for roughly six months/i);
+  assert.match(standard, /expected gross return over the six-month term is approximately 0\.015 BTC/i);
+  assert.match(standard, /Do not restate the expected six-month return as 1\.5% growth/i);
+  assert.match(standard, /Final terms will be confirmed when each bond is published on-chain/i);
   assert.match(standard, /stacked qualifiers and status jargon/i);
 });
 

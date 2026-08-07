@@ -47,6 +47,8 @@ For a live protocol opportunity, `build_diligence_report` combines current netwo
 
 The user supplies a BTC/sBTC principal naturally and the service converts it to sats. A gross calculation is returned when duration and rate are sourced or explicitly supplied. Missing route or selected-LST fees leave net yield unknown. CoinGecko BTC and STX prices are the default source for paired-STX units; price failure does not block an otherwise complete sats-denominated scenario. Public-model inputs remain distinct from final configured bond terms.
 
+For a general yield question without an amount, the agent should lead with registry-backed planned economics instead of only reporting that final terms are missing. When supported by current evidence, it states the annualized rate, approximate term, available reward assets, and a 1 BTC gross-return example, then invites the user to provide an amount. Planned terms remain distinct from final on-chain configuration.
+
 ### Check public state
 
 The user supplies a public Stacks address. The server validates the address locally, then reads account, staking, bond membership, and applicable allowlist state. It never implies control of the address.

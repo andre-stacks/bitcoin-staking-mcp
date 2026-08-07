@@ -199,6 +199,7 @@ export const EconomicsSchema = z.object({
   targetRateBps: z.number().int().nonnegative().max(100_000).optional(),
   managerFeeBps: z.number().int().nonnegative().max(10_000).optional(),
   rewardAsset: z.enum(["BTC", "sBTC", "STX", "unknown"]),
+  rewardAssetOptions: z.array(z.enum(["BTC", "sBTC", "STX"])).min(1).optional(),
   rewardModel: z.enum(["target_principal_rate", "fixed_reward_units", "unknown"]),
   rewardSource: z.string().min(1).optional(),
   termsStatus: z.enum(["bond_specific", "reference_program_model", "demo"]).optional(),
@@ -287,6 +288,8 @@ export const BondManifestV2Schema = z.object({
   if (value.timing.startsRewardCycle !== undefined && value.timing.endsRewardCycle !== undefined && value.timing.startsRewardCycle > value.timing.endsRewardCycle) context.addIssue({ code: "custom", path: ["timing", "endsRewardCycle"], message: "endsRewardCycle must not precede startsRewardCycle." });
   if (value.economics.rewardModel === "fixed_reward_units" && value.economics.fixedRewardUnits === undefined) context.addIssue({ code: "custom", path: ["economics", "fixedRewardUnits"], message: "Fixed-unit reward models require fixedRewardUnits." });
   if (value.economics.rewardModel === "target_principal_rate" && value.economics.targetRateBps === undefined && value.economics.referenceModel === undefined) context.addIssue({ code: "custom", path: ["economics", "targetRateBps"], message: "Target-principal-rate models require a bond rate or sourced reference model." });
+  if (value.economics.rewardAssetOptions && new Set(value.economics.rewardAssetOptions).size !== value.economics.rewardAssetOptions.length) context.addIssue({ code: "custom", path: ["economics", "rewardAssetOptions"], message: "Reward-asset options must be unique." });
+  if (value.economics.rewardAssetOptions && value.economics.rewardAsset !== "unknown" && !value.economics.rewardAssetOptions.includes(value.economics.rewardAsset)) context.addIssue({ code: "custom", path: ["economics", "rewardAsset"], message: "The modeled reward asset must be one of the published reward-asset options." });
   if (value.enrollmentStatus === "open" && value.productStatus !== "production") context.addIssue({ code: "custom", path: ["productStatus"], message: "Open bond enrollment requires production product status." });
   if (value.enrollmentStatus === "open" && !value.verification.includes("product_owner_confirmed")) context.addIssue({ code: "custom", path: ["verification"], message: "Open bond enrollment requires product-owner confirmation." });
   const routeIds = value.participationRoutes.map((route) => route.id);
