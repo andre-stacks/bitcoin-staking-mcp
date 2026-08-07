@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ServiceError } from "../src/core/errors.js";
-import { RegistryStore } from "../src/providers/registry-store.js";
+import { RegistryStore, registryContentHash } from "../src/providers/registry-store.js";
 
 const path = resolve("data/registry-snapshot.json");
 const raw = await readFile(path, "utf8");
@@ -35,4 +35,24 @@ test("legacy bond aliases and catalog search resolve from the same atomic snapsh
   assert.equal(catalog.registryRevision.startsWith("rev-"), true);
   assert.deepEqual(catalog.results.map((result) => result.id), ["genesis-bond-product"]);
   assert.equal(catalog.results[0]?.effectiveFreshness, "current");
+});
+
+test("catalog search excludes scheduled, expired, and overdue records from current answers", async () => {
+  const snapshot = JSON.parse(raw);
+  const base = snapshot.content.facts[0];
+  snapshot.content.facts.push(
+    { ...base, id: "scheduled-product", title: "Scheduled Product", relatedIds: ["genesis-bond"], effectiveAt: "2026-08-08T00:00:00.000Z" },
+    { ...base, id: "expired-notice", title: "Expired Notice", category: "announcement", relatedIds: ["genesis-bond"], effectiveAt: "2026-08-01T00:00:00.000Z", expiresAt: "2026-08-07T11:59:59.000Z" },
+    { ...base, id: "overdue-product", title: "Overdue Product", relatedIds: ["genesis-bond"], attestation: { ...base.attestation, reviewedAt: "2026-07-01T00:00:00.000Z" } },
+  );
+  snapshot.contentHash = registryContentHash(snapshot.content);
+  const store = new RegistryStore({
+    path,
+    remoteUrl: "https://registry.example/api/v1/registry",
+    remoteEnabled: true,
+    now: () => new Date("2026-08-07T12:00:00.000Z"),
+    fetchImpl: async () => new Response(JSON.stringify(snapshot), { status: 200, headers: { etag: '"filtered"' } }),
+  });
+  const result = await store.search();
+  assert.deepEqual(result.results.map((item) => item.id), ["genesis-bond-product"]);
 });

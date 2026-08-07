@@ -175,8 +175,11 @@ test("public response standard matches the guided, evidence-bound contract", asy
 
 test("nightly registry validation preserves pipeline failures", async () => {
   const workflow = await readFile(resolve(".github/workflows/custody-registry-review.yml"), "utf8");
+  const checker = await readFile(resolve("scripts/check-registry.ts"), "utf8");
   assert.match(workflow, /id: registry[\s\S]+run: npm run registry:validate:live \| tee registry-review\.md/);
   assert.match(workflow, /steps\.registry\.outcome == 'failure'/);
+  assert.match(checker, /for \(const source of sources\.filter\(\(item\) => item\.url\)\)/);
+  assert.doesNotMatch(checker, /sourceType === "public_manifest"|sourceType === "demo_manifest"/);
 });
 
 test("legacy diligence implementation is absent from source and packaged build output", async () => {

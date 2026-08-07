@@ -35,6 +35,13 @@ test("MCP exposes the complete 15-tool read-only production contract", async (co
   for (const tool of tools) assert.equal(tool.annotations?.openWorldHint, liveRegistryReads.has(tool.name), `${tool.name} openWorldHint`);
 });
 
+test("catalog search rejects unknown status filters before querying the registry", async (context) => {
+  const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
+  const result = await client.callTool({ name: "search_current_facts", arguments: { status: "definitely-not-a-status" } });
+  assert.equal(result.isError, true);
+  assert.match(JSON.stringify(result.content), /status|invalid/i);
+});
+
 test("market snapshot grounds the first turn in two routes", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const result = await client.callTool({ name: "get_market_snapshot", arguments: { network: "mainnet" } });

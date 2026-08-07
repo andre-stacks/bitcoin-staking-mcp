@@ -352,6 +352,7 @@ export type BondRegistry = z.output<typeof BondRegistrySchema>;
 export const CatalogCategorySchema = z.enum(["project", "product", "announcement"]);
 export const CatalogStatusSchema = z.enum(["planned", "in_progress", "available", "paused", "completed", "retired", "unknown"]);
 export const IntegrationStatusSchema = z.enum(["planned", "in_integration", "tested", "available", "paused", "retired", "unknown"]);
+export const CurrentFactStatusSchema = z.union([CatalogStatusSchema, IntegrationStatusSchema]);
 
 const CurrentRecordShape = {
   id: IdSchema,
@@ -414,9 +415,22 @@ export const ConciergeRegistryContentSchema = z.object({
       aliases.add(alias);
     }
   };
-  value.bonds.forEach((item, index) => register(item.id, item.aliases, ["bonds", index, "id"]));
+  value.bonds.forEach((item, index) => {
+    register(item.id, item.aliases, ["bonds", index, "id"]);
+    item.participationRoutes.forEach((route, routeIndex) => register(route.id, [], ["bonds", index, "participationRoutes", routeIndex, "id"]));
+  });
+  value.custody.paths.forEach((item, index) => register(item.id, [], ["custody", "paths", index, "id"]));
   value.facts.forEach((item, index) => register(item.id, item.aliases, ["facts", index, "id"]));
   value.integrations.forEach((item, index) => register(item.id, item.aliases, ["integrations", index, "id"]));
+  const integrationDimensions = new Set<string>();
+  value.integrations.forEach((item, index) => {
+    const key = [item.partnerId, item.productId, item.role, item.network ?? "all-networks"].map((part) => part.toLocaleLowerCase()).join("|");
+    if (integrationDimensions.has(key)) context.addIssue({ code: "custom", path: ["integrations", index], message: `Duplicate partner/product/role/network integration: ${key}` });
+    integrationDimensions.add(key);
+  });
+  [...value.facts, ...value.integrations].forEach((item) => item.relatedIds.forEach((relatedId) => {
+    if (!ids.has(relatedId)) context.addIssue({ code: "custom", path: [item.id, "relatedIds"], message: `Missing related record ID: ${relatedId}` });
+  }));
   validateUniqueSourceIds(value.sources, context);
   validateReferences(value.facts, value.sources, context, "facts");
   validateReferences(value.integrations, value.sources, context, "integrations");

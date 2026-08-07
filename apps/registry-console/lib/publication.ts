@@ -7,6 +7,34 @@ import {
 } from "bitcoin-staking-mcp";
 import type { RegistryBackend, RegistryDraft, RevisionEntry } from "./store";
 
+function jsonObject(input: unknown): Record<string, unknown> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Draft content must be a JSON object.");
+  return input as Record<string, unknown>;
+}
+
+function draftContent(input: unknown): Record<string, unknown> {
+  const content = jsonObject(input);
+  for (const section of ["bonds", "facts", "integrations", "sources"] as const) {
+    if (!Array.isArray(content[section])) throw new Error(`Draft ${section} must be an array.`);
+  }
+  if (!content.custody || typeof content.custody !== "object" || Array.isArray(content.custody)) throw new Error("Draft custody must be an object.");
+  if (typeof content.reviewedAt !== "string") throw new Error("Draft reviewedAt must be a string.");
+  return content;
+}
+
+function sectionValue(input: unknown, section: "bonds" | "facts" | "integrations" | "sources" | "custody"): unknown {
+  const content = jsonObject(input);
+  if (section !== "custody") return content[section] ?? [];
+  return content.custody && typeof content.custody === "object" && !Array.isArray(content.custody)
+    ? (content.custody as Record<string, unknown>).paths ?? []
+    : undefined;
+}
+
+function sectionCount(value: unknown): number | null { return Array.isArray(value) ? value.length : null; }
+
+interface DiffSection { before: number; after: number | null; changed: boolean }
+export interface RegistryDiff { changed: boolean; sections: Partial<Record<"bonds" | "facts" | "integrations" | "sources" | "custody", DiffSection>>; message?: string }
+
 function attestations(content: ConciergeRegistryContent) {
   return [
     ...content.bonds.flatMap((bond) => [bond.attestation, ...bond.participationRoutes.flatMap((route) => [route.attestation, ...(route.routeType === "sbtc_pool" && route.lst ? [route.lst.attestation] : [])])]),
@@ -41,21 +69,21 @@ export function createSnapshot(contentInput: unknown, publisher: string, now = n
   });
 }
 
-export function diffSummary(current: ConciergeRegistrySnapshot | null, draft: RegistryDraft | null) {
+export function diffSummary(current: ConciergeRegistrySnapshot | null, draft: RegistryDraft | null): RegistryDiff {
   if (!draft) return { changed: false, sections: {}, message: "No saved draft." };
   const previous = current?.content;
   const sections = Object.fromEntries((["bonds", "facts", "integrations", "sources"] as const).map((section) => {
     const before = previous?.[section] ?? [];
-    const after = draft.content[section];
-    return [section, { before: before.length, after: after.length, changed: JSON.stringify(before) !== JSON.stringify(after) }];
-  }));
+    const after = sectionValue(draft.content, section);
+    return [section, { before: before.length, after: sectionCount(after), changed: JSON.stringify(before) !== JSON.stringify(after) }];
+  })) as Record<"bonds" | "facts" | "integrations" | "sources", DiffSection>;
   const custodyBefore = previous?.custody.paths ?? [];
-  const custodyAfter = draft.content.custody.paths;
-  return { changed: !previous || JSON.stringify(previous) !== JSON.stringify(draft.content), sections: { ...sections, custody: { before: custodyBefore.length, after: custodyAfter.length, changed: JSON.stringify(custodyBefore) !== JSON.stringify(custodyAfter) } } };
+  const custodyAfter = sectionValue(draft.content, "custody");
+  return { changed: !previous || JSON.stringify(previous) !== JSON.stringify(draft.content), sections: { ...sections, custody: { before: custodyBefore.length, after: sectionCount(custodyAfter), changed: JSON.stringify(custodyBefore) !== JSON.stringify(custodyAfter) } } };
 }
 
 export async function saveDraft(backend: RegistryBackend, input: unknown, publisher: string, now = new Date()): Promise<RegistryDraft> {
-  const content = ConciergeRegistryContentSchema.parse(input);
+  const content = structuredClone(draftContent(input));
   const draft = { content, savedAt: now.toISOString(), savedBy: publisher };
   await backend.writeItems({ draft });
   return draft;
@@ -67,9 +95,19 @@ export async function publishDraft(backend: RegistryBackend, publisher: string, 
   const state = await backend.readState();
   if (!state.draft) throw new Error("No saved draft to publish.");
   const snapshot = createSnapshot(state.draft.content, publisher, now);
+  const priorRevision = state.publishedSnapshot && !state.revisions.some((item) => item.revision === state.publishedSnapshot?.revision)
+    ? {
+        revision: state.publishedSnapshot.revision,
+        contentHash: state.publishedSnapshot.contentHash,
+        publishedAt: state.publishedSnapshot.publishedAt,
+        publishedBy: state.publishedSnapshot.publishedBy,
+        blobPathname: await backend.archive(state.publishedSnapshot),
+      }
+    : null;
   const blobPathname = await backend.archive(snapshot);
   const revision: RevisionEntry = { revision: snapshot.revision, contentHash: snapshot.contentHash, publishedAt: snapshot.publishedAt, publishedBy: snapshot.publishedBy, blobPathname };
-  const revisions = [revision, ...state.revisions].slice(0, 250);
+  const revisions = [revision, ...(priorRevision ? [priorRevision] : []), ...state.revisions]
+    .filter((entry, index, entries) => entries.findIndex((candidate) => candidate.revision === entry.revision) === index);
   await backend.writeItems({ publishedSnapshot: snapshot, publicationMetadata: revision, revisionIndex: revisions, draft: null });
   return { snapshot, revision };
 }

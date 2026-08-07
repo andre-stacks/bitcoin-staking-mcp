@@ -57,7 +57,6 @@ const sources = [...new Map([
 if (live) {
   errors.push(...freshnessIssues);
   for (const source of sources.filter((item) => item.url)) {
-    if (source.sourceType === "public_manifest" || source.sourceType === "demo_manifest") continue;
     try {
       let response = await fetch(source.url!, { method: "HEAD", headers: { "User-Agent": "bitcoin-staking-mcp-registry-review/0.4.0" }, signal: AbortSignal.timeout(15_000) });
       if (response.status === 405) response = await fetch(source.url!, { method: "GET", headers: { "User-Agent": "bitcoin-staking-mcp-registry-review/0.4.0" }, signal: AbortSignal.timeout(15_000) });

@@ -34,6 +34,10 @@ test("public registry is anonymous, supports ETag 304, and excludes draft state"
   const body = await first.json(); assert.equal("draft" in body, false); assert.equal("publisherEmails" in body, false);
   const second = await registryGet(new NextRequest("https://registry.example/api/v1/registry", { headers: { "if-none-match": first.headers.get("etag")! } }));
   assert.equal(second.status, 304);
+  const weak = await registryGet(new NextRequest("https://registry.example/api/v1/registry", { headers: { "if-none-match": `"other", W/${first.headers.get("etag")!}` } }));
+  assert.equal(weak.status, 304);
+  const wildcard = await registryGet(new NextRequest("https://registry.example/api/v1/registry", { headers: { "if-none-match": "*" } }));
+  assert.equal(wildcard.status, 304);
   const health = await healthGet();
   assert.ok(health.status === 200 || health.status === 503);
   const healthBody = await health.json();
@@ -41,5 +45,21 @@ test("public registry is anonymous, supports ETag 304, and excludes draft state"
   assert.equal(healthBody.reviewDueAt, seedSnapshot.reviewDueAt);
   assert.equal("draft" in healthBody, false);
   assert.equal("publisherEmails" in healthBody, false);
+  setRegistryBackendForTests(undefined);
+});
+
+test("public registry and health fail closed on a stored content-hash mismatch", async () => {
+  const tampered = structuredClone(seedSnapshot);
+  tampered.content.facts[0]!.summary = "Tampered after hashing.";
+  const state: RegistryState = { publishedSnapshot: tampered, draft: null, revisions: [] };
+  const backend: RegistryBackend = { readState: async () => state, writeItems: async () => {}, archive: async () => "", readRevision: async () => tampered };
+  setRegistryBackendForTests(backend);
+  const registry = await registryGet(new NextRequest("https://registry.example/api/v1/registry"));
+  assert.equal(registry.status, 503);
+  assert.equal(registry.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await registry.json(), { error: "Published registry is unavailable or invalid." });
+  const health = await healthGet();
+  assert.equal(health.status, 503);
+  assert.deepEqual(await health.json(), { status: "unavailable", reason: "Published registry is invalid." });
   setRegistryBackendForTests(undefined);
 });

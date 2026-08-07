@@ -1,9 +1,9 @@
 import { get as getBlob, put } from "@vercel/blob";
 import { createClient } from "@vercel/global-config";
 import { REGISTRY_EDGE_CONFIG_KEYS } from "@bitcoin-staking/registry-contract";
-import type { ConciergeRegistryContent, ConciergeRegistrySnapshot } from "bitcoin-staking-mcp";
+import type { ConciergeRegistrySnapshot } from "bitcoin-staking-mcp";
 
-export interface RegistryDraft { content: ConciergeRegistryContent; savedAt: string; savedBy: string }
+export interface RegistryDraft { content: unknown; savedAt: string; savedBy: string }
 export interface RevisionEntry { revision: string; contentHash: string; publishedAt: string; publishedBy: string; blobPathname: string }
 export interface RegistryState { publishedSnapshot: ConciergeRegistrySnapshot | null; draft: RegistryDraft | null; revisions: RevisionEntry[] }
 

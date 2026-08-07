@@ -5,8 +5,16 @@ import type { ConciergeRegistryContent } from "bitcoin-staking-mcp";
 import type { PublisherSession } from "../lib/auth";
 import type { RevisionEntry } from "../lib/store";
 
-type Section = "bonds" | "custody" | "facts" | "integrations" | "sources";
-const labels: Record<Section, string> = { bonds: "Bonds", custody: "Custody paths", facts: "Projects, products & notices", integrations: "Partners & integrations", sources: "Sources" };
+type Section = "bonds" | "custody" | "projects" | "products" | "notices" | "integrations" | "sources";
+const labels: Record<Section, string> = {
+  bonds: "Bonds",
+  custody: "Custody paths",
+  projects: "Projects",
+  products: "Products",
+  notices: "Notices",
+  integrations: "Partners & integrations",
+  sources: "Sources",
+};
 
 export default function RegistryEditor({ session }: { session: PublisherSession }) {
   const [content, setContent] = useState<ConciergeRegistryContent | null>(null);
@@ -23,14 +31,29 @@ export default function RegistryEditor({ session }: { session: PublisherSession 
     if (!response.ok) { setMessage(body.error ?? "Unable to load registry."); return; }
     const value = body.editorContent as ConciergeRegistryContent;
     setContent(value);
-    setText({ bonds: pretty(value.bonds), custody: pretty(value.custody), facts: pretty(value.facts), integrations: pretty(value.integrations), sources: pretty(value.sources) });
+    setText({
+      bonds: pretty(value.bonds),
+      custody: pretty(value.custody),
+      projects: pretty(value.facts.filter((fact) => fact.category === "project")),
+      products: pretty(value.facts.filter((fact) => fact.category === "product")),
+      notices: pretty(value.facts.filter((fact) => fact.category === "announcement")),
+      integrations: pretty(value.integrations),
+      sources: pretty(value.sources),
+    });
     setRevisions(body.revisions ?? []);
     setPublishedRevision(body.publishedSnapshot?.revision ?? "none");
     setMessage(body.draft ? `Draft saved ${body.draft.savedAt} by ${body.draft.savedBy}.` : "No saved draft.");
   }
   function compose(): ConciergeRegistryContent {
     if (!content || !text) throw new Error("Registry is not loaded.");
-    return { ...content, bonds: JSON.parse(text.bonds), custody: JSON.parse(text.custody), facts: JSON.parse(text.facts), integrations: JSON.parse(text.integrations), sources: JSON.parse(text.sources) };
+    return {
+      ...content,
+      bonds: JSON.parse(text.bonds),
+      custody: JSON.parse(text.custody),
+      facts: [...JSON.parse(text.projects), ...JSON.parse(text.products), ...JSON.parse(text.notices)],
+      integrations: JSON.parse(text.integrations),
+      sources: JSON.parse(text.sources),
+    };
   }
   async function mutate(path: string, method: string, body?: unknown) {
     setBusy(true);
