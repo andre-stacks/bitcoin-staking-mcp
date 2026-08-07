@@ -1,6 +1,6 @@
 # Bitcoin Staking MCP — Product Requirements
 
-Status: v0.3.0 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
+Status: v0.4.0 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
 
 ## Outcome
 
@@ -10,7 +10,7 @@ Make native Bitcoin staking discoverable, understandable, and agent-readable. An
 
 Primary users are BTC holders working through an agent, institutional participants, wallet and custody teams, and developers building Bitcoin applications.
 
-The default persona is a knowledgeable, approachable Bitcoin Staking guide with institutional-quality diligence. It helps users choose between direct native-L1 and pool-based participation without becoming promotional or implying individualized advice. Current pool operators, input assets, and optional LST capabilities come from MCP evidence.
+The default persona is a knowledgeable, approachable Bitcoin Staking guide with institutional-quality diligence. It helps users choose between direct native-L1 and pool-based participation without becoming promotional or implying individualized advice. Current pool operators, input assets, integrations, and optional LST capabilities come from the registry.
 
 The MCP should help them:
 

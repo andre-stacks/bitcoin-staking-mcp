@@ -129,7 +129,7 @@ export function assessRoute(
 
     const viableCustodyPaths = custodyPaths.filter((path) =>
       path.status === "available" &&
-      route.custodyPathIds.includes(path.id) &&
+      (route.custodyPathIds.length === 0 || route.custodyPathIds.includes(path.id)) &&
       isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays)
     );
     if (viableCustodyPaths.length === 0) {
@@ -143,7 +143,7 @@ export function assessRoute(
       if (path && current && path.status === "not_currently_supported") {
         unsupportedRequirements.push(`${path.name} is currently confirmed as unsupported for this route.`);
         fit = "no_match";
-      } else if (!path || path.status !== "available" || !route.custodyPathIds.includes(path.id) || !current) {
+      } else if (!path || path.status !== "available" || (route.custodyPathIds.length > 0 && !route.custodyPathIds.includes(path.id)) || !current) {
         missingEvidence.push(`${profile.walletOrCustodian} is not a current approved custody path for this route.`);
         if (fit === "strong") fit = "conditional";
       } else reasons.push(`${path.name} is a current approved custody path.`);

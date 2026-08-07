@@ -6,6 +6,7 @@ export * from "./providers/manifest-store.js";
 export * from "./providers/custody-store.js";
 export * from "./providers/coingecko.js";
 export * from "./providers/versioned-registry.js";
+export * from "./providers/registry-store.js";
 export * from "./providers/stacks.js";
 export * from "./service.js";
 export * from "./security.js";

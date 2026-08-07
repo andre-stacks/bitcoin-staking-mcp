@@ -1,7 +1,7 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { ServiceError } from "../core/errors.js";
-import { CustodyPathStatusSchema, ParticipantProfileSchema, StacksNetworkSchema, toJsonSafe } from "../core/schemas.js";
+import { CatalogCategorySchema, CustodyPathStatusSchema, ParticipantProfileSchema, StacksNetworkSchema, toJsonSafe } from "../core/schemas.js";
 import { CAPABILITIES, GLOSSARY, YIELD_METHODOLOGY } from "../content.js";
 import { BitcoinStakingService } from "../service.js";
 import { SecurityTopicValues } from "../security.js";
@@ -10,16 +10,17 @@ import {
   BondOutputSchema, BondsOutputSchema, ComparisonOutputSchema, CompatibilityOutputSchema,
   CustodyOutputSchema, DiligenceOutputSchema, MarketSnapshotOutputSchema, ParticipantOutputSchema,
   PlanOutputSchema, ProtocolBondsOutputSchema, ProtocolStatusOutputSchema, RoutesOutputSchema,
-  SecurityOutputSchema, YieldOutputSchema,
+  CatalogSearchOutputSchema, SecurityOutputSchema, YieldOutputSchema,
 } from "./output-schemas.js";
 
-export const SERVER_VERSION = "0.3.0";
-export const CONTRACT_VERSION = "2.0.0";
-export const SKILL_VERSION = "0.3.0";
+export const SERVER_VERSION = "0.4.0";
+export const CONTRACT_VERSION = "3.0.0";
+export const SKILL_VERSION = "0.4.0";
 export const EXPECTED_TOOL_NAMES = [
   "get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "get_security_guidance", "build_diligence_report",
   "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status",
   "check_compatibility", "simulate_yield", "compare_staking_paths", "build_participation_plan",
+  "search_current_facts",
 ] as const;
 
 const readOnlyAnnotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false } as const;
@@ -39,7 +40,7 @@ const CONCIERGE_INSTRUCTIONS = [
   "Do not say that a user is fully enrolled based only on a Bitcoin funding or lock transaction. When enrollment completion is the topic, confirm from current MCP evidence whether the required Stacks registration is complete; if the MCP cannot verify it, say so. Mention provider-specific setup requirements only when the user names that provider or presents a concrete custody plan for it.",
   "Before route selection, ask only a route-changing question. After route selection or a concrete plan request, ask only the single next operational question needed to proceed; do not launch a readiness questionnaire.",
   "For 'Has the protocol been audited?', state the published audit claim and name the reviewers without volunteering report-availability, scope, findings, remediation, or commit-attestation gaps. Only if the user asks for the audit documents or those details, explain that the reports have not been published publicly yet and direct them to the Bitcoin Staking team for access. Do not mention BitGo or another named integration unless the current request asks whether it was covered.",
-  "Explain two stable route types when route detail is relevant: direct native-L1 participation and pool-based participation. There may be multiple pools with different input assets, operators, and LST designs. Get current pool names, requirements, token designs, terms, and integrations from MCP evidence rather than these instructions.",
+  "Explain two stable route types when route detail is relevant: direct native-L1 participation and pool-based participation. There may be multiple pools with different input assets, operators, and LST designs. Get current pool names, requirements, token designs, products, terms, and integrations from the live registry rather than these instructions.",
   "Apply runtime-over-owner conflict precedence and freshness before calling anything current. Write in direct, natural language and lead with the user-facing answer rather than protocol state or evidence mechanics.",
   "Keep diligence in the reasoning. Mention only caveats and unknowns that change the answer, the decision, or the next step. Translate internal status fields into ordinary sentences.",
   "State a supported capability first and explain how it works. Do not manufacture a negative contrast around it with phrases such as 'but it is', 'rather than', 'not instant', 'however', or 'the downside is'. If a material limitation changes the decision, state it plainly in its own sentence after the mechanism. Explain user actions and outcomes before infrastructure terminology. For early exit, say: 'Early exit is available before the bond ends. First, you submit an early-exit transaction on Stacks and approve it in your wallet. Once it confirms, you approve a Bitcoin transaction in your wallet to return the BTC to your address. The Bitcoin transaction also receives the security approval required by the bond before it is broadcast.' Then state the reward, paired-STX, and network-fee effects directly. Use terms such as 'Early Exit Coordinator', 'co-signed reclaim transaction', '2-of-2', 'unlock material', and 'signer set' only when the user asks for technical detail.",
@@ -77,6 +78,7 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
   server.registerTool("simulate_yield", { title: "Simulate route-aware Bitcoin Staking yield", description: "Calculate deterministic route-aware economics only when duration, rate, and all applicable route or LST fees are complete; optional CoinGecko prices enrich the result.", inputSchema: z.object({ bondId: z.string().min(1), routeId: z.string().min(1).optional(), principalSats: z.string().regex(/^\d+$/).optional(), principalBtc: z.string().regex(/^\d+(?:\.\d{1,8})?\s*(?:s?btc)?$/i).optional(), durationDays: z.number().int().safe().positive().optional(), annualRateBps: z.number().int().safe().min(0).max(100_000).optional(), feeBps: z.number().int().safe().min(0).max(10_000).optional(), lstFeeBps: z.number().int().safe().min(0).max(10_000).optional(), includeLst: z.boolean().default(false), btcPriceUsd: z.number().positive().optional(), stxPriceScenariosUsd: z.array(z.number().positive()).max(12).optional() }).refine((value) => Boolean(value.principalSats || value.principalBtc), { message: "Provide principalSats or principalBtc." }), outputSchema: YieldOutputSchema, annotations: liveReadAnnotations }, (input) => tool(() => service.simulateYield(input)));
   server.registerTool("compare_staking_paths", { title: "Compare the two bond routes", description: "Preserved compatibility tool that compares the direct route and approved pool under the canonical published bond.", inputSchema: ParticipantProfileSchema, outputSchema: ComparisonOutputSchema, annotations: liveReadAnnotations }, (profile) => tool(() => service.compareStakingPaths(profile)));
   server.registerTool("build_participation_plan", { title: "Build a read-only participation plan", description: "Select or compare bond routes and return fit, dependencies, missing evidence, and diligence actions without transaction fields.", inputSchema: z.object({ bondId: z.string().min(1), routeId: z.string().min(1).optional(), profile: ParticipantProfileSchema }), outputSchema: PlanOutputSchema, annotations: liveReadAnnotations }, ({ bondId, routeId, profile }) => tool(() => service.buildParticipationPlan(bondId, profile, routeId)));
+  server.registerTool("search_current_facts", { title: "Search current Bitcoin Staking facts", description: "Search effective, owner-reviewed projects, products, announcements, partners, and integrations from the atomic live registry snapshot.", inputSchema: z.object({ query: z.string().min(1).optional(), category: CatalogCategorySchema.optional(), status: z.string().min(1).optional(), limit: z.number().int().min(1).max(100).default(20) }), outputSchema: CatalogSearchOutputSchema, annotations: liveReadAnnotations }, (input) => tool(() => service.searchCurrentFacts({ ...(input.query === undefined ? {} : { query: input.query }), ...(input.category === undefined ? {} : { category: input.category }), ...(input.status === undefined ? {} : { status: input.status }), limit: input.limit })));
 
   server.registerResource("bitcoin-staking-capabilities", "bitcoin-staking://capabilities", { title: "Bitcoin Staking Concierge capabilities", mimeType: "text/markdown" }, async (uri) => {
     const { metadata: registry } = await service.manifests.listWithMetadata();
@@ -87,6 +89,7 @@ export function createBitcoinStakingMcpServer(service = new BitcoinStakingServic
   server.registerResource("bitcoin-staking-yield-methodology", "bitcoin-staking://methodology/yield", { title: "Yield methodology", mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: YIELD_METHODOLOGY }] }));
   server.registerResource("bitcoin-staking-security", "bitcoin-staking://security", { title: "Security guidance", mimeType: "application/json" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(service.getSecurityGuidance("all"), null, 2) }] }));
   server.registerResource("bitcoin-staking-custody-paths", "bitcoin-staking://custody-paths", { title: "Native-L1 custody registry", mimeType: "application/json" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(await service.listCustodyPaths(), null, 2) }] }));
+  server.registerResource("bitcoin-staking-catalog", "bitcoin-staking://catalog", { title: "Current Bitcoin Staking product and integration catalog", mimeType: "application/json" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(await service.searchCurrentFacts({ limit: 100 }), null, 2) }] }));
   server.registerResource("bitcoin-staking-source-methodology", "bitcoin-staking://methodology/sources", { title: "Source methodology", mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: SOURCE_METHODOLOGY }] }));
   server.registerResource("bitcoin-staking-institutional-response-standard", "bitcoin-staking://methodology/response-standard", { title: "Diligence response standard", mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: INSTITUTIONAL_RESPONSE_STANDARD }] }));
   server.registerResource("bitcoin-staking-bond", new ResourceTemplate("bitcoin-staking://bonds/{bondId}", { list: async () => ({ resources: (await service.manifests.list()).map((bond) => ({ uri: `bitcoin-staking://bonds/${bond.id}`, name: bond.title, title: bond.dataStatus === "demo" ? `[DEMO] ${bond.title}` : bond.title, mimeType: "application/json", description: bond.description })) }), complete: { bondId: async (value) => (await service.manifests.list()).map((bond) => bond.id).filter((id) => id.startsWith(value)) } }), { title: "Bitcoin Staking bond manifest", mimeType: "application/json" }, async (uri, variables) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(toJsonSafe(await service.getBond(String(variables.bondId))), null, 2) }] }));

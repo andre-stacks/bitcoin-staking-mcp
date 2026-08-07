@@ -15,7 +15,7 @@ import {
 } from "../src/core/schemas.js";
 
 async function genesis(): Promise<any> {
-  return BondManifestSchema.parse(JSON.parse(await readFile(resolve("data/bonds/genesis-bond-cycle-142.json"), "utf8")));
+  return BondManifestSchema.parse(JSON.parse(await readFile(resolve("data/bonds/genesis-bond.json"), "utf8")));
 }
 
 async function custody(): Promise<any[]> {
@@ -60,6 +60,7 @@ test("bond schema rejects invalid limits, paired-STX terms, reward fields, and c
   assert.equal(BondManifestSchema.safeParse(directLimits).success, false);
 
   const paired = await genesis();
+  paired.participationRoutes[0].pairedStx.required = true;
   delete paired.participationRoutes[0].pairedStx.minimumValueRatioBps;
   assert.equal(BondManifestSchema.safeParse(paired).success, false);
 
@@ -90,15 +91,13 @@ test("open routes cannot omit usability-critical enrollment and pool evidence", 
   Object.assign(pool.participationRoutes[1], { productStatus: "production", enrollmentStatus: "open" });
   assert.equal(BondManifestSchema.safeParse(pool).success, false, "open pool needs contracts, fee, verified accounting/withdrawal, and enrollment URL");
 
-  const lst = await genesis();
-  lst.participationRoutes[1].lst.productStatus = "production";
-  assert.equal(BondManifestSchema.safeParse(lst).success, false, "production LST needs a token contract");
+  const noPublishedLst = await genesis();
+  assert.equal(noPublishedLst.participationRoutes[1].lst, undefined, "current LST claims must come from the registry");
 });
 
-test("borrowing integrations require named live collateral terms", async () => {
+test("bundled Genesis does not encode current borrowing integrations", async () => {
   const bond = await genesis();
-  bond.participationRoutes[1].lst.verifiedDefiIntegrations = [{ name: "Example lender", capability: "borrowing", status: "live", sourceIds: ["stacks-q2-stbtc"] }];
-  assert.equal(BondManifestSchema.safeParse(bond).success, false);
+  assert.equal(bond.participationRoutes[1].lst, undefined);
 });
 
 test("availability dimensions handle exact freshness boundary and every terminal state", async () => {
@@ -117,13 +116,11 @@ test("yield requires rate and duration, while unknown fees leave net economics p
   const bond = await genesis();
   const direct = bond.participationRoutes[0];
   const pool = bond.participationRoutes[1];
-  const poolWithoutFee = simulateYield(bond, pool, { principalSats: "100000000" });
+  const poolWithoutFee = simulateYield(bond, pool, { principalSats: "100000000", durationDays: 365, annualRateBps: 300 });
   assert.ok(poolWithoutFee.grossRewardSats);
   assert.equal(poolWithoutFee.netRewardSats, undefined);
   assert.throws(() => simulateYield(bond, direct, { principalSats: "100000000", feeBps: 0, includeLst: true }), expectsCode("INVALID_INPUT"));
-  const poolWithoutLstFee = simulateYield(bond, { ...pool, feeBps: 0 }, { principalSats: "100000000", includeLst: true });
-  assert.ok(poolWithoutLstFee.grossRewardSats);
-  assert.equal(poolWithoutLstFee.netRewardSats, undefined);
+  assert.throws(() => simulateYield(bond, { ...pool, feeBps: 0 }, { principalSats: "100000000", durationDays: 365, annualRateBps: 300, includeLst: true }), expectsCode("INVALID_INPUT"));
 
   const noDuration = structuredClone(bond);
   delete noDuration.economics.referenceModel;
@@ -157,15 +154,15 @@ test("yield rejects conflicting principal forms, zero principal, and out-of-rang
   const direct = bond.participationRoutes[0];
   assert.throws(() => simulateYield(bond, direct, { principalSats: "1", principalBtc: "1 BTC", feeBps: 0 }), expectsCode("INVALID_INPUT"));
   assert.throws(() => simulateYield(bond, direct, { principalSats: "0", feeBps: 0 }), expectsCode("INVALID_INPUT"));
-  assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 10_001 }), expectsCode("INVALID_INPUT"));
-  assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 0, annualRateBps: 100_001 }), expectsCode("INVALID_INPUT"));
+  assert.throws(() => simulateYield(bond, direct, { principalSats: "1", durationDays: 365, annualRateBps: 300, feeBps: 10_001 }), expectsCode("INVALID_INPUT"));
+  assert.throws(() => simulateYield(bond, direct, { principalSats: "1", durationDays: 365, feeBps: 0, annualRateBps: 100_001 }), expectsCode("INVALID_INPUT"));
   assert.throws(() => simulateYield(bond, direct, { principalSats: "1", feeBps: 0, btcPriceUsd: Number.POSITIVE_INFINITY }), expectsCode("INVALID_INPUT"));
   assert.throws(() => simulateYield(bond, direct, { principalBtc: "1.123456789", feeBps: 0 }), expectsCode("INVALID_INPUT"));
 });
 
 test("direct-route fit enforces paired STX, amount boundaries, and a current custody path", async () => {
   const bond = await genesis();
-  const route = { ...bond.participationRoutes[0], productStatus: "production", enrollmentStatus: "open", minimumSats: "100", maximumSats: "200" };
+  const route = { ...bond.participationRoutes[0], productStatus: "production", enrollmentStatus: "open", minimumSats: "100", maximumSats: "200", pairedStx: { required: true, minimumValueRatioBps: 500 } };
   const paths = await custody();
   const base = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather" } as const;
   const noStx = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "100", stxAvailable: "no" }), paths, new Date("2026-08-06T12:00:00.000Z"));

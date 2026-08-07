@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { BondManifestSchema, BondRegistrySchema, isReviewCurrent, reviewDueAt, type BondManifest, type SourceRef } from "../core/schemas.js";
 import { ServiceError, withAbortTimeout } from "../core/errors.js";
 import { VersionedRegistryClient, registryHash, type RegistryEnvelope } from "./versioned-registry.js";
+import { RegistryStore } from "./registry-store.js";
 
 function dataRoot(): string {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -14,6 +15,7 @@ function dataRoot(): string {
 export class ManifestStore {
   private readonly directory: string;
   private readonly registry?: VersionedRegistryClient<ReturnType<typeof BondRegistrySchema.parse>>;
+  private readonly snapshotRegistry: RegistryStore | undefined;
   private lastMetadata?: RegistryEnvelope<unknown>["metadata"];
   private readonly remoteManifestCache = new Map<string, BondManifest>();
   private readonly fetchImpl: typeof fetch;
@@ -22,7 +24,7 @@ export class ManifestStore {
   private readonly remoteRegistryUrl: string;
   private readonly timeoutMs: number;
 
-  constructor(directory?: string, options: { now?: () => Date; fetchImpl?: typeof fetch; remoteEnabled?: boolean; remoteRegistryUrl?: string; timeoutMs?: number } = {}) {
+  constructor(directory?: string, options: { now?: () => Date; fetchImpl?: typeof fetch; remoteEnabled?: boolean; remoteRegistryUrl?: string; timeoutMs?: number; registryStore?: RegistryStore } = {}) {
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.now = options.now ?? (() => new Date());
     this.remoteEnabled = options.remoteEnabled ?? process.env.BITCOIN_STAKING_DISABLE_REMOTE_REGISTRY !== "1";
@@ -30,7 +32,8 @@ export class ManifestStore {
     this.timeoutMs = options.timeoutMs ?? Number(process.env.BITCOIN_STAKING_UPSTREAM_TIMEOUT_MS ?? 8_000);
     if (!Number.isFinite(this.timeoutMs) || this.timeoutMs <= 0) throw new ServiceError("INVALID_INPUT", "Manifest timeout must be a positive number of milliseconds.");
     this.directory = directory ?? process.env.BITCOIN_STAKING_DATA_DIR ?? resolve(dataRoot(), "bonds");
-    if (!directory && !process.env.BITCOIN_STAKING_DATA_DIR) {
+    this.snapshotRegistry = options.registryStore;
+    if (!this.snapshotRegistry && !directory && !process.env.BITCOIN_STAKING_DATA_DIR) {
       this.registry = new VersionedRegistryClient({
         remoteUrl: this.remoteRegistryUrl,
         fallbackPath: resolve(dataRoot(), "bond-registry.json"),
@@ -43,6 +46,13 @@ export class ManifestStore {
   }
 
   async listWithMetadata() {
+    if (this.snapshotRegistry) {
+      const { snapshot, metadata } = await this.snapshotRegistry.readWithMetadata();
+      const bonds = snapshot.content.bonds;
+      this.assertUnique(bonds);
+      this.lastMetadata = metadata;
+      return { bonds, metadata };
+    }
     if (!this.registry) {
       const bonds = await this.readDirectory();
       const now = this.now();
@@ -70,8 +80,16 @@ export class ManifestStore {
   }
 
   async list(): Promise<BondManifest[]> { return (await this.listWithMetadata()).bonds; }
-  async get(id: string): Promise<BondManifest> { const bond = (await this.list()).find((item) => item.id === id); if (!bond) throw new ServiceError("NOT_FOUND", `Bond not found: ${id}`); return bond; }
-  async sources(): Promise<SourceRef[]> { return [...new Map((await this.list()).flatMap((bond) => bond.sources).map((source) => [source.id, source])).values()]; }
+  async get(id: string): Promise<BondManifest> {
+    const resolvedId = this.snapshotRegistry ? await this.snapshotRegistry.resolveId(id) : id;
+    const bond = (await this.list()).find((item) => item.id === resolvedId || item.aliases.includes(id));
+    if (!bond) throw new ServiceError("NOT_FOUND", `Bond not found: ${id}`);
+    return bond;
+  }
+  async sources(): Promise<SourceRef[]> {
+    if (this.snapshotRegistry) return this.snapshotRegistry.listSources();
+    return [...new Map((await this.list()).flatMap((bond) => bond.sources).map((source) => [source.id, source])).values()];
+  }
   metadata() { return this.lastMetadata; }
 
   private async readDirectory() {

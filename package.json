@@ -1,10 +1,11 @@
 {
   "name": "bitcoin-staking-mcp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A read-only, source-aware MCP server for Bitcoin Staking on Stacks.",
   "type": "module",
   "license": "MIT",
   "author": "Andre Serrano",
+  "workspaces": ["apps/*", "packages/*"],
   "engines": {
     "node": "22.x"
   },
@@ -33,6 +34,7 @@
     "test:live": "BITCOIN_STAKING_LIVE_TEST=1 tsx --test tests/live.test.ts",
     "test:testnet": "BITCOIN_STAKING_TESTNET_LIVE_TEST=1 tsx --test tests/testnet-live.test.ts",
     "registry:validate": "BITCOIN_STAKING_DISABLE_REMOTE_REGISTRY=1 tsx scripts/check-registry.ts",
+    "registry:build": "tsx scripts/build-registry-snapshot.ts",
     "registry:validate:live": "BITCOIN_STAKING_DISABLE_REMOTE_REGISTRY=1 tsx scripts/check-registry.ts --live",
     "demo:proof": "tsx scripts/demo-proof.ts",
     "check": "npm run typecheck && npm run registry:validate && npm run build && npm test",
@@ -49,6 +51,7 @@
     "agents"
   ],
   "dependencies": {
+    "@bitcoin-staking/registry-contract": "file:packages/registry-contract",
     "@modelcontextprotocol/client": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
     "@stacks/bitcoin-staking": "7.6.0",

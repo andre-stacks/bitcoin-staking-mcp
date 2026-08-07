@@ -18,6 +18,7 @@ class OfflineProvider extends StacksProvider {
   override async getProtocolStatus(): Promise<any> { this.statusReads += 1; const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, chainId: this.chainId, contractId: this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78.pox-5" : "ST000000000000000000002AMW42H.pox-5", pox5Active: true, pox5Scheduled: false, currentBurnchainBlockHeight: 10, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async listProtocolBonds(): Promise<any> { this.bondScanReads += 1; const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 10, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async getOnChainBond(): Promise<any> { return undefined; }
+  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 100 + bondIndex * 4200, currentBurnchainBlockHeight: 10, remainingBurnBlocks: 4290, estimatedStartAt: "2026-09-05T14:00:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture using Bitcoin's ten-minute target.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
   override async getParticipantStatus(address: string): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { address, network: this.networkName, accountStatus: null, stakerInfo: null, bondMembership: null, bondAllowanceSats: null, requestedBondId: null, requestedBondDataStatus: null, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
 }
 class FailingProvider extends OfflineProvider { override async getProtocolStatus(): Promise<any> { throw new ServiceError("UPSTREAM_ERROR", "Live network unavailable.", true); } }
@@ -26,11 +27,11 @@ function offlinePrices() { return new CoinGeckoPriceProvider({ now: offlineNow, 
 function offlineService(provider: StacksProvider = new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" })) { return new BitcoinStakingService({ stacks: provider, testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices: offlinePrices(), now: offlineNow }); }
 const profile = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "100000000" } as const;
 
-test("MCP exposes the complete 14-tool read-only production-beta contract", async (context) => {
+test("MCP exposes the complete 15-tool read-only production contract", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const { tools } = await client.listTools(); assert.deepEqual(tools.map((tool) => tool.name), [...EXPECTED_TOOL_NAMES]);
   for (const tool of tools) { assert.equal(tool.annotations?.readOnlyHint, true); assert.equal(tool.annotations?.destructiveHint, false); assert.ok(tool.outputSchema); }
-  const liveRegistryReads = new Set(["get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "build_diligence_report", "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status", "check_compatibility", "simulate_yield", "compare_staking_paths", "build_participation_plan"]);
+  const liveRegistryReads = new Set(["get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "build_diligence_report", "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status", "check_compatibility", "simulate_yield", "compare_staking_paths", "build_participation_plan", "search_current_facts"]);
   for (const tool of tools) assert.equal(tool.annotations?.openWorldHint, liveRegistryReads.has(tool.name), `${tool.name} openWorldHint`);
 });
 
@@ -39,7 +40,7 @@ test("market snapshot grounds the first turn in two routes", async (context) => 
   const result = await client.callTool({ name: "get_market_snapshot", arguments: { network: "mainnet" } });
   assert.equal(result.isError, undefined); const content = result.structuredContent as any;
   assert.deepEqual(content.routes.map((route: any) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
-  assert.equal(content.routes.find((route: any) => route.routeType === "sbtc_pool")?.poolOperator, "StackingDAO");
+  assert.equal(content.bonds[0].protocolSchedule.startRewardCycle, 143);
   assert.match(content.precedence, /on-chain.*outranks owner/i);
   assert.ok(content.sources.some((source: any) => source.id === "custody-registry"));
 });
@@ -69,28 +70,28 @@ test("every tool validates structured output and exposes no transaction fields",
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const calls = [
     { name: "get_market_snapshot", arguments: { network: "mainnet" } }, { name: "get_protocol_status", arguments: { network: "mainnet" } }, { name: "list_protocol_bonds", arguments: { network: "testnet" } },
-    { name: "get_security_guidance", arguments: { topic: "audit_status" } }, { name: "build_diligence_report", arguments: { bondId: "genesis-bond-cycle-142", profile } },
-    { name: "list_bonds", arguments: { includeDemo: true } }, { name: "list_custody_paths", arguments: {} }, { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond-cycle-142" } },
-    { name: "get_bond", arguments: { bondId: "genesis-bond-cycle-142" } }, { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78" } },
-    { name: "check_compatibility", arguments: { bondId: "genesis-bond-cycle-142", provider: "Leather", keyControlPreference: "custodian" } },
-    { name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalSats: "100000000", durationDays: 365, feeBps: 0 } },
-    { name: "compare_staking_paths", arguments: profile }, { name: "build_participation_plan", arguments: { bondId: "genesis-bond-cycle-142", profile } },
+    { name: "get_security_guidance", arguments: { topic: "audit_status" } }, { name: "build_diligence_report", arguments: { bondId: "genesis-bond", profile } },
+    { name: "list_bonds", arguments: { includeDemo: true } }, { name: "list_custody_paths", arguments: {} }, { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond" } },
+    { name: "get_bond", arguments: { bondId: "genesis-bond" } }, { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78" } },
+    { name: "check_compatibility", arguments: { bondId: "genesis-bond", provider: "Leather", keyControlPreference: "custodian" } },
+    { name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalSats: "100000000", durationDays: 365, annualRateBps: 300, feeBps: 0 } },
+    { name: "compare_staking_paths", arguments: profile }, { name: "build_participation_plan", arguments: { bondId: "genesis-bond", profile } },
+    { name: "search_current_facts", arguments: { category: "product", limit: 10 } },
   ];
   for (const call of calls) { const result = await client.callTool(call); assert.equal(result.isError, undefined, `${call.name}: ${JSON.stringify(result.content)}`); SuccessfulToolOutputSchemas[call.name as keyof typeof SuccessfulToolOutputSchemas].parse(result.structuredContent); const serialized = JSON.stringify(result.structuredContent); assert.doesNotMatch(serialized, /"(?:psbt|rawTransaction|signedTransaction|signature|broadcastPayload)"\s*:/i); }
 });
 
 test("yield uses live CoinGecko prices and three-decimal quantity displays", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalSats: "2500000000" } });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalSats: "2500000000", durationDays: 365, annualRateBps: 300 } });
   assert.equal(result.isError, undefined);
   const content = result.structuredContent as any;
   assert.equal(content.priceSnapshot.provider, "CoinGecko");
   assert.equal(content.priceSnapshot.btcUsd, 64_415);
   assert.equal(content.priceSnapshot.stxUsd, 0.129774);
   assert.equal(content.priceSnapshot.display.stxUsd, "$0.130");
-  assert.equal(content.pairedStxRequirement.scenarios[0].requiredStxUnits, 620_453.635);
-  assert.equal(content.pairedStxRequirement.scenarios[0].requiredStxUnitsDisplay, "620453.635 STX");
-  assert.equal(content.grossRewardDisplay, "0.358 BTC");
+  assert.equal(content.pairedStxRequirement, null);
+  assert.equal(content.grossRewardDisplay, "0.750 BTC");
   assert.equal(content.netRewardSats, undefined);
   assert.ok(content.assumptions.some((assumption: string) => /CoinGecko Simple Price observations/i.test(assumption)));
   assert.ok(content.assumptions.every((assumption: string) => !/price enrichment was unavailable/i.test(assumption)));
@@ -102,7 +103,7 @@ test("yield returns gross economics when fees and optional price enrichment are 
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { priceRequests += 1; throw new Error("prices offline"); } });
   const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-stackingdao-sbtc-pool", principalBtc: "1 sBTC" } });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-sbtc-pool", principalBtc: "1 sBTC", durationDays: 365, annualRateBps: 300 } });
   assert.equal(result.isError, undefined);
   const content = result.structuredContent as any;
   assert.ok(content.grossRewardSats);
@@ -115,7 +116,7 @@ test("optional price failure does not invalidate a complete deterministic sats c
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { throw new Error("prices offline"); } });
   const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalBtc: "1 BTC", durationDays: 365, annualRateBps: 300, feeBps: 0 } });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalBtc: "1 BTC", durationDays: 365, annualRateBps: 300, feeBps: 0 } });
   assert.equal(result.isError, undefined);
   const content = YieldOutputSchema.parse(result.structuredContent);
   assert.equal(content.principalSats, "100000000");
@@ -161,7 +162,7 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const resource = await client.readResource({ uri: "bitcoin-staking://capabilities" }); const text = (resource.contents[0] as any).text as string;
   assert.match(text, new RegExp(`Contract version: ${CONTRACT_VERSION}`)); assert.match(text, new RegExp(`Server version: ${SERVER_VERSION}`));
-  assert.match(text, /Skill version: 0\.3\.0/); assert.match(text, /Registry version: 2026-08-06\.1/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
+  assert.match(text, /Skill version: 0\.4\.0/); assert.match(text, /Registry version: rev-/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
   const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: {} }); const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text"); if (content?.type === "text") {
     assert.match(content.text, /Onboarding follows the user's intent/i);
@@ -196,7 +197,7 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /Which matters more to you: retaining control of native BTC on Bitcoin L1 through your preferred wallet or custody provider/i);
     assert.match(content.text, /two stable route types when route detail is relevant/i);
     assert.match(content.text, /multiple pools with different input assets, operators, and LST designs/i);
-    assert.match(content.text, /current pool names, requirements, token designs, terms, and integrations from MCP evidence/i);
+    assert.match(content.text, /current pool names, requirements, token designs, products, terms, and integrations from the live registry/i);
     assert.doesNotMatch(content.text, /native-L1 direct for larger allowlisted institutional participation/i);
     assert.doesNotMatch(content.text, /permissionless sBTC pooling through StackingDAO/i);
     assert.match(content.text, /without adding 'No conversion to sBTC is required\.'/i);

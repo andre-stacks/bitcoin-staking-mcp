@@ -1,0 +1,63 @@
+import { get as getBlob, put } from "@vercel/blob";
+import { createClient } from "@vercel/edge-config";
+import { REGISTRY_EDGE_CONFIG_KEYS } from "@bitcoin-staking/registry-contract";
+import type { ConciergeRegistryContent, ConciergeRegistrySnapshot } from "bitcoin-staking-mcp";
+
+export interface RegistryDraft { content: ConciergeRegistryContent; savedAt: string; savedBy: string }
+export interface RevisionEntry { revision: string; contentHash: string; publishedAt: string; publishedBy: string; blobPathname: string }
+export interface RegistryState { publishedSnapshot: ConciergeRegistrySnapshot | null; draft: RegistryDraft | null; revisions: RevisionEntry[] }
+
+export interface RegistryBackend {
+  readState(): Promise<RegistryState>;
+  writeItems(items: Record<string, unknown>): Promise<void>;
+  archive(snapshot: ConciergeRegistrySnapshot): Promise<string>;
+  readRevision(pathname: string): Promise<ConciergeRegistrySnapshot>;
+}
+
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required.`);
+  return value;
+}
+
+export class VercelRegistryBackend implements RegistryBackend {
+  private client() { return createClient(required("EDGE_CONFIG")); }
+
+  async readState(): Promise<RegistryState> {
+    const client = this.client();
+    const [publishedSnapshot, draft, revisions] = await Promise.all([
+      client.get<ConciergeRegistrySnapshot>(REGISTRY_EDGE_CONFIG_KEYS.published),
+      client.get<RegistryDraft>(REGISTRY_EDGE_CONFIG_KEYS.draft),
+      client.get<RevisionEntry[]>(REGISTRY_EDGE_CONFIG_KEYS.revisions),
+    ]);
+    return { publishedSnapshot: publishedSnapshot ?? null, draft: draft ?? null, revisions: revisions ?? [] };
+  }
+
+  async writeItems(items: Record<string, unknown>): Promise<void> {
+    const endpoint = new URL(`https://api.vercel.com/v1/edge-config/${required("EDGE_CONFIG_ID")}/items`);
+    if (process.env.VERCEL_TEAM_ID) endpoint.searchParams.set("teamId", process.env.VERCEL_TEAM_ID);
+    const response = await fetch(endpoint, {
+      method: "PATCH",
+      headers: { authorization: `Bearer ${required("VERCEL_API_TOKEN")}`, "content-type": "application/json" },
+      body: JSON.stringify({ items: Object.entries(items).map(([key, value]) => ({ operation: "upsert", key, value })) }),
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error(`Edge Config update failed (${response.status}): ${await response.text()}`);
+  }
+
+  async archive(snapshot: ConciergeRegistrySnapshot): Promise<string> {
+    const pathname = `revisions/${snapshot.revision}.json`;
+    await put(pathname, JSON.stringify(snapshot), { access: "private", addRandomSuffix: false, allowOverwrite: false, contentType: "application/json" });
+    return pathname;
+  }
+
+  async readRevision(pathname: string): Promise<ConciergeRegistrySnapshot> {
+    const result = await getBlob(pathname, { access: "private", useCache: false });
+    if (!result || result.statusCode !== 200 || !result.stream) throw new Error(`Revision blob not found: ${pathname}`);
+    return await new Response(result.stream).json() as ConciergeRegistrySnapshot;
+  }
+}
+
+let backend: RegistryBackend | undefined;
+export function registryBackend(): RegistryBackend { return backend ??= new VercelRegistryBackend(); }
+export function setRegistryBackendForTests(value: RegistryBackend | undefined): void { backend = value; }

@@ -15,6 +15,7 @@ import { ParticipantProfileSchema } from "../src/core/schemas.js";
 class OfflineProvider extends StacksProvider {
   override async getProtocolStatus(): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, chainId: this.chainId, contractId: "SP000000000000000000002Q6VF78.pox-5", pox5Active: true, currentBurnchainBlockHeight: 960000, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async listProtocolBonds(): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 960000, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
+  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T12:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 968400, currentBurnchainBlockHeight: 960000, remainingBurnBlocks: 8400, estimatedStartAt: "2026-10-03T20:00:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
 }
 class FailingCustodyStore extends CustodyStore {
   override async readWithMetadata(): Promise<never> { throw new ServiceError("REGISTRY_UNAVAILABLE", "Custody registry offline.", true); }
@@ -30,13 +31,13 @@ class CountingProvider extends OfflineProvider {
 const now = () => new Date("2026-08-06T12:00:00.000Z");
 function service(date = now) { return new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices: new CoinGeckoPriceProvider({ now: date, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200, headers: { "content-type": "application/json" } }) }), now: date }); }
 
-test("Genesis exposes exactly the two approved routes and StackingDAO is the only pool", async () => {
-  const routes = await service().listBondParticipationRoutes({ bondId: "genesis-bond-cycle-142" });
+test("Genesis exposes the two stable route types without hard-coded current operators", async () => {
+  const routes = await service().listBondParticipationRoutes({ bondId: "genesis-bond" });
   assert.deepEqual(routes.routes.map((route) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   const pools = routes.routes.filter((route) => route.routeType === "sbtc_pool");
   assert.equal(pools.length, 1);
-  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].poolOperator.name : null, "StackingDAO");
-  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].lst?.tokenSymbol : null, "stBTC");
+  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].poolOperator.id : null, "registry-managed");
+  assert.equal(pools[0]?.routeType === "sbtc_pool" ? pools[0].lst : null, undefined);
 });
 
 test("testnet snapshot reuses its live reads and route-only flows avoid a full snapshot", async () => {
@@ -66,7 +67,7 @@ test("large allowlisted BTC holder with approved custody is routed to direct L1"
 });
 
 test("unknown whitelist and stale custody evidence cannot be recommended as current", async () => {
-  const svc = service(); const bond = await svc.manifests.get("genesis-bond-cycle-142"); const direct = bond.participationRoutes.find((route) => route.routeType === "native_l1_direct")!; const custody = (await svc.custody.list()).paths;
+  const svc = service(); const bond = await svc.manifests.get("genesis-bond"); const direct = bond.participationRoutes.find((route) => route.routeType === "native_l1_direct")!; const custody = (await svc.custody.list()).paths;
   const profile = ParticipantProfileSchema.parse({ goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "unknown", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000" });
   const assessment = assessRoute(bond, direct, profile, custody, new Date("2026-08-15T00:00:00.000Z"));
   assert.equal(assessment.effectiveAvailability, "needs_review");
@@ -80,7 +81,7 @@ test("overdue bundled registries fail closed when no current remote registry is 
   await assert.rejects(staleService.listBonds(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE");
 });
 
-test("smaller sBTC holder is routed to StackingDAO while pool dependencies remain explicit", async () => {
+test("smaller sBTC holder is routed to a registry-published pool while pool dependencies remain explicit", async () => {
   const result = await service().compareStakingPaths({ goal: "earn_yield", assetHeld: "sbtc", participantType: "individual", whitelistStatus: "not_approved", liquidityNeed: "unknown", bitcoinPathPreference: "open_to_sbtc", keyControlPreference: "self_controlled", amountSats: "1000000" });
   assert.equal(result.assessments[0]?.routeType, "sbtc_pool");
   assert.ok(result.assessments[0]?.missingEvidence.some((item) => /pool fee/i.test(item)));
@@ -95,16 +96,16 @@ test("pool diligence survives custody-registry failure while direct fit remains 
     prices: new CoinGeckoPriceProvider({ now, fetchFn: async () => { throw new Error("prices offline"); } }),
     now,
   });
-  const pool = await svc.buildDiligenceReport({ bondId: "genesis-bond-cycle-142", routeId: "genesis-stackingdao-sbtc-pool", profile: { goal: "earn_yield", assetHeld: "sbtc", participantType: "individual", whitelistStatus: "not_approved", liquidityNeed: "unknown", bitcoinPathPreference: "open_to_sbtc", keyControlPreference: "self_controlled", amountSats: "1000000" } });
+  const pool = await svc.buildDiligenceReport({ bondId: "genesis-bond", routeId: "genesis-sbtc-pool", profile: { goal: "earn_yield", assetHeld: "sbtc", participantType: "individual", whitelistStatus: "not_approved", liquidityNeed: "unknown", bitcoinPathPreference: "open_to_sbtc", keyControlPreference: "self_controlled", amountSats: "1000000" } });
   assert.equal(pool.routeAssessments[0]?.assessment.routeType, "sbtc_pool");
   assert.notEqual(pool.routeAssessments[0]?.assessment.fit, "not_assessable");
-  const direct = await svc.buildDiligenceReport({ bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", profile: { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", amountSats: "2500000000", stxAvailable: "yes" } });
+  const direct = await svc.buildDiligenceReport({ bondId: "genesis-bond", routeId: "genesis-native-l1-direct", profile: { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", amountSats: "2500000000", stxAvailable: "yes" } });
   assert.equal(direct.routeAssessments[0]?.assessment.fit, "not_assessable");
   assert.ok(direct.routeAssessments[0]?.assessment.missingEvidence.some((item) => /custody path/i.test(item)));
 });
 
 test("sBTC+STX input requirement changes the pool assessment", async () => {
-  const svc = service(); const bond = await svc.manifests.get("genesis-bond-cycle-142"); const pool = bond.participationRoutes.find((route) => route.routeType === "sbtc_pool")!; const custody = (await svc.custody.list()).paths;
+  const svc = service(); const bond = await svc.manifests.get("genesis-bond"); const pool = bond.participationRoutes.find((route) => route.routeType === "sbtc_pool")!; const custody = (await svc.custody.list()).paths;
   assert.equal(pool.routeType, "sbtc_pool"); if (pool.routeType !== "sbtc_pool") return;
   const profile = ParticipantProfileSchema.parse({ goal: "earn_yield", assetHeld: "sbtc", participantType: "individual", whitelistStatus: "not_approved", liquidityNeed: "unknown", bitcoinPathPreference: "open_to_sbtc", keyControlPreference: "self_controlled", amountSats: "1000000" });
   const sbtcOnly = assessRoute(bond, pool, profile, custody, now());
@@ -144,23 +145,26 @@ test("diligence never substitutes a different bond for an explicit identifier", 
 });
 
 test("diligence report includes bond, protocol, route, freshness, fit, and one action", async () => {
-  const report = await service().buildDiligenceReport({ bondId: "genesis-bond-cycle-142", profile: { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000" } });
-  assert.equal(report.bondAvailability.scheduled, "2026-08-26");
+  const report = await service().buildDiligenceReport({ bondId: "genesis-bond", profile: { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000" } });
+  assert.equal(report.bondAvailability.scheduled, null);
   assert.match(report.commonProtocolEconomics.coverageBoundary, /Stacks PoX-5/i);
   assert.equal(report.routeAssessments.length, 2);
   assert.ok(report.nextDiligenceAction.length > 10);
   assert.ok(report.sources.length > 0);
   assert.ok(report.sources.some((source) => source.id === "custody-registry"));
-  assert.equal(report.economics.status, "reference_model_projection");
-  assert.equal(report.economics.scenario?.netRewardSats, undefined);
+  assert.equal(report.economics.status, "incomplete_economics");
+  assert.equal(report.economics.scenario, null);
 });
 
 test("service defaults to the native route and labels bond-specific economics from scenario provenance", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "btc-route-default-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
-  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond-cycle-142.json"), "utf8"));
+  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond.json"), "utf8"));
   bond.participationRoutes.reverse();
   bond.economics.termsStatus = "bond_specific";
+  bond.economics.rewardModel = "target_principal_rate";
+  bond.economics.rewardAsset = "sBTC";
+  bond.economics.targetRateBps = 300;
   bond.economics.managerFeeBps = 0;
   delete bond.economics.referenceModel;
   bond.timing.lockDurationDays = 180;
@@ -180,7 +184,7 @@ test("service defaults to the native route and labels bond-specific economics fr
 });
 
 test("compatibility returns custody-registry provenance instead of empty bond-source matches", async () => {
-  const result = await service().checkCompatibility({ bondId: "genesis-bond-cycle-142", provider: "Leather", keyControlPreference: "custodian" });
+  const result = await service().checkCompatibility({ bondId: "genesis-bond", provider: "Leather", keyControlPreference: "custodian" });
   assert.equal(result.status, "supported");
   assert.ok(result.sources.some((source) => source.id === "custody-registry"));
   assert.ok(result.sources.some((source) => source.id === "stacks-q2-2026"));

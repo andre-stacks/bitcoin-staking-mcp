@@ -31,6 +31,7 @@ export interface StacksProviderOptions {
   apiBaseUrl?: string;
   chainId?: number;
   timeoutMs?: number;
+  now?: () => Date;
 }
 
 export class StacksProvider {
@@ -39,6 +40,7 @@ export class StacksProvider {
   readonly chainId: number;
   readonly timeoutMs: number;
   private readonly network;
+  private readonly now: () => Date;
 
   constructor(options: StacksProviderOptions = {}) {
     this.networkName = options.network ?? "mainnet";
@@ -59,10 +61,42 @@ export class StacksProvider {
     }
     this.timeoutMs =
       options.timeoutMs ?? Number(process.env.BITCOIN_STAKING_UPSTREAM_TIMEOUT_MS ?? "8000");
+    this.now = options.now ?? (() => new Date());
     this.network = createNetwork({
       network: { ...baseNetwork, chainId: this.chainId },
       client: { baseUrl: this.apiBaseUrl },
     });
+  }
+
+  async getBondSchedule(bondIndex: number) {
+    if (!Number.isSafeInteger(bondIndex) || bondIndex < 0) {
+      throw new ServiceError("INVALID_INPUT", "bondIndex must be a non-negative safe integer.");
+    }
+    const verifiedAt = this.now();
+    try {
+      const info = await withTimeout(fetchPoxInfo({ network: this.network }), this.timeoutMs, `${this.networkName} PoX API`);
+      const startRewardCycle = bondPeriodToRewardCycle({ bondIndex, poxInfo: info });
+      const startBurnHeight = bondPeriodToBurnHeight({ bondIndex, poxInfo: info });
+      const remainingBurnBlocks = Math.max(0, startBurnHeight - info.currentBurnchainBlockHeight);
+      return {
+        network: this.networkName,
+        bondIndex,
+        startRewardCycle,
+        startBurnHeight,
+        currentBurnchainBlockHeight: info.currentBurnchainBlockHeight,
+        remainingBurnBlocks,
+        estimatedStartAt: new Date(verifiedAt.getTime() + remainingBurnBlocks * 10 * 60_000).toISOString(),
+        estimateStatus: "approximate" as const,
+        estimateBasis: "Current burn height plus remaining burn blocks at Bitcoin's ten-minute target; actual block timing varies.",
+        dataStatus: "derived" as const,
+        sources: [this.sourceRef(verifiedAt.toISOString())],
+        assumptions: ["PoX-5 bond period mapping is protocol-derived; the calendar timestamp is only an estimate."],
+        verifiedAt: verifiedAt.toISOString(),
+      };
+    } catch (error) {
+      if (error instanceof ServiceError) throw error;
+      throw new ServiceError("UPSTREAM_ERROR", `Unable to derive PoX-5 bond period ${bondIndex}: ${error instanceof Error ? error.message : String(error)}`, true);
+    }
   }
 
   sourceRef(retrievedAt = new Date().toISOString()): SourceRef {

@@ -9,6 +9,7 @@ import {
 import { CoinGeckoPriceProvider } from "./providers/coingecko.js";
 import { ManifestStore } from "./providers/manifest-store.js";
 import { CustodyStore } from "./providers/custody-store.js";
+import { RegistryStore } from "./providers/registry-store.js";
 import { StacksProvider } from "./providers/stacks.js";
 import { getSecurityGuidance, listSecuritySources, type SecurityTopic } from "./security.js";
 import { listCanonicalSources } from "./institutional.js";
@@ -16,6 +17,7 @@ import { listCanonicalSources } from "./institutional.js";
 export interface ServiceDependencies {
   manifests?: ManifestStore;
   custody?: CustodyStore;
+  registry?: RegistryStore;
   stacks?: StacksProvider;
   testnetStacks?: StacksProvider;
   prices?: CoinGeckoPriceProvider;
@@ -36,6 +38,7 @@ type ProtocolBondsSettledResult = PromiseSettledResult<ProtocolBondsResult>;
 export class BitcoinStakingService {
   readonly manifests: ManifestStore;
   readonly custody: CustodyStore;
+  readonly registry: RegistryStore;
   readonly stacks: StacksProvider;
   readonly testnetStacks: StacksProvider;
   readonly prices: CoinGeckoPriceProvider;
@@ -43,8 +46,10 @@ export class BitcoinStakingService {
 
   constructor(dependencies: ServiceDependencies = {}) {
     this.now = dependencies.now ?? (() => new Date());
-    this.manifests = dependencies.manifests ?? new ManifestStore(undefined, { now: this.now });
-    this.custody = dependencies.custody ?? new CustodyStore(undefined, { now: this.now });
+    this.registry = dependencies.registry ?? new RegistryStore({ now: this.now });
+    const useDeprecatedRegistries = !process.env.BITCOIN_STAKING_REGISTRY_URL && Boolean(process.env.BITCOIN_STAKING_BOND_REGISTRY_URL || process.env.BITCOIN_STAKING_CUSTODY_REGISTRY_URL);
+    this.manifests = dependencies.manifests ?? new ManifestStore(undefined, { now: this.now, ...(useDeprecatedRegistries ? {} : { registryStore: this.registry }) });
+    this.custody = dependencies.custody ?? new CustodyStore(undefined, { now: this.now, ...(useDeprecatedRegistries ? {} : { registryStore: this.registry }) });
     this.stacks = dependencies.stacks ?? new StacksProvider();
     this.testnetStacks = dependencies.testnetStacks ?? new StacksProvider({ network: "testnet" });
     this.prices = dependencies.prices ?? new CoinGeckoPriceProvider({ now: this.now });
@@ -53,6 +58,14 @@ export class BitcoinStakingService {
   getProtocolStatus(network: StacksNetworkName = "mainnet") { return this.provider(network).getProtocolStatus(); }
   listProtocolBonds(network: StacksNetworkName = "mainnet", options: { lookbackPeriods?: number; lookaheadPeriods?: number } = {}) { return this.provider(network).listProtocolBonds(options); }
   getSecurityGuidance(topic: SecurityTopic | "all" = "all") { return getSecurityGuidance(topic); }
+  searchCurrentFacts(input: { query?: string | undefined; category?: "project" | "product" | "announcement" | undefined; status?: string | undefined; limit?: number | undefined } = {}) {
+    return this.registry.search({
+      ...(input.query === undefined ? {} : { query: input.query }),
+      ...(input.category === undefined ? {} : { category: input.category }),
+      ...(input.status === undefined ? {} : { status: input.status }),
+      ...(input.limit === undefined ? {} : { limit: input.limit }),
+    });
+  }
 
   async getMarketSnapshot(
     input: { network?: StacksNetworkName } = {},
@@ -73,6 +86,14 @@ export class BitcoinStakingService {
     if (registryResult.status === "rejected") throw registryResult.reason;
     const now = this.now();
     const published = registryResult.value.bonds.filter((bond) => bond.dataStatus === "published" && bond.network === network);
+    type BondScheduleValue = Awaited<ReturnType<StacksProvider["getBondSchedule"]>> | ReturnType<typeof errorSummary> | null;
+    const scheduleResults: Array<readonly [string, BondScheduleValue]> = await Promise.all(published.map(async (bond): Promise<readonly [string, BondScheduleValue]> => {
+      if (bond.onChainBondIndex === undefined) return [bond.id, null] as const;
+      try { return [bond.id, await this.provider(network).getBondSchedule(bond.onChainBondIndex)] as const; }
+      catch (error) { return [bond.id, errorSummary(error)] as const; }
+    }));
+    const schedules = new Map(scheduleResults);
+    const catalogResult = await this.searchCurrentFacts({ limit: 100 }).then((value) => ({ status: "available" as const, value })).catch(errorSummary);
     const routeSummaries = this.summarizeRoutes(published, scanResult, now);
     const chain = statusResult.status === "fulfilled" ? statusResult.value : errorSummary(statusResult.reason);
     const onChainBonds = scanResult.status === "fulfilled" ? scanResult.value : errorSummary(scanResult.reason);
@@ -92,8 +113,11 @@ export class BitcoinStakingService {
     } : errorSummary(custodyResult.reason);
     const prices = priceResult.status === "fulfilled" ? priceResult.value : errorSummary(priceResult.reason);
     return {
-      network, bondCount: published.length, bonds: published.map((bond) => ({ id: bond.id, title: bond.title, lifecycleStatus: bond.lifecycleStatus, scheduledLaunchDate: bond.timing.scheduledLaunchDate ?? null })),
+      network, bondCount: published.length, bonds: published.map((bond) => ({ id: bond.id, title: bond.title, lifecycleStatus: bond.lifecycleStatus, protocolSchedule: schedules.get(bond.id) ?? null })),
       routes: routeSummaries, protocol: chain, onChainBonds, testnetEvidence, custody, prices, registry: registryResult.value.metadata,
+      catalog: catalogResult,
+      activeNotices: catalogResult.status === "available" ? catalogResult.value.results.filter((item) => item.kind === "fact" && "category" in item && item.category === "announcement") : [],
+      productHighlights: catalogResult.status === "available" ? catalogResult.value.results.filter((item) => item.kind === "fact" && "category" in item && item.category === "product") : [],
       precedence: "Runtime/on-chain protocol state outranks owner claims. A conflict or overdue attestation prevents a route from being presented as currently usable.",
       dataStatus: "derived" as const, sources: this.uniqueSources([
         ...published.flatMap((bond) => bond.sources),
@@ -112,15 +136,16 @@ export class BitcoinStakingService {
     const lifecycle = input.lifecycleStatus ? LifecycleFilterSchema.parse(input.lifecycleStatus) : undefined;
     const { bonds, metadata } = await this.manifests.listWithMetadata();
     const filtered = bonds.filter((bond) => !lifecycle || bond.lifecycleStatus === lifecycle);
-    const summarize = (bond: typeof filtered[number]) => ({
+    const summarize = async (bond: typeof filtered[number]) => ({
       id: bond.id, title: bond.title, network: bond.network, lifecycleStatus: bond.lifecycleStatus,
       productStatus: bond.productStatus, enrollmentStatus: bond.enrollmentStatus, scheduledLaunchDate: bond.timing.scheduledLaunchDate ?? null,
+      protocolSchedule: bond.onChainBondIndex === undefined ? null : await this.provider(bond.network).getBondSchedule(bond.onChainBondIndex).catch(errorSummary),
       dataStatus: bond.dataStatus, timing: bond.timing, economics: bond.economics, notes: bond.notes,
       routes: bond.participationRoutes.map((route) => ({ id: route.id, name: route.name, routeType: route.routeType, effectiveAvailability: routeEffectiveAvailability(route, this.now()) })),
     });
     const published = filtered.filter((bond) => bond.dataStatus === "published");
     const demos = input.includeDemo ? filtered.filter((bond) => bond.dataStatus === "demo") : [];
-    return { bonds: published.map(summarize), demoBonds: demos.map(summarize), counts: { published: published.length, demo: demos.length }, demoIncluded: input.includeDemo ?? false, registry: metadata,
+    return { bonds: await Promise.all(published.map(summarize)), demoBonds: await Promise.all(demos.map(summarize)), counts: { published: published.length, demo: demos.length }, demoIncluded: input.includeDemo ?? false, registry: metadata,
       dataStatus: published.length ? "published" as const : demos.length ? "demo" as const : "derived" as const,
       sources: this.uniqueSources([...published, ...demos].flatMap((bond) => bond.sources)), assumptions: ["Demo records are excluded unless explicitly requested."], verifiedAt: this.now().toISOString() };
   }
@@ -181,8 +206,9 @@ export class BitcoinStakingService {
       return { ...route, effectiveAvailability: onChainVerification.status === "unavailable" && registryAvailability === "available" ? "unknown" as const : routeEffectiveAvailability(route, now, routeConflict) };
     });
     const runtimeSource = bond.onChainBondIndex === undefined ? [] : [provider.sourceRef(now.toISOString())];
+    const protocolSchedule = bond.onChainBondIndex === undefined ? null : await provider.getBondSchedule(bond.onChainBondIndex).catch(errorSummary);
     return { bond: { ...bond, participationRoutes: routes }, onChainReconciliation: onChainVerification,
-      onChainVerification,
+      onChainVerification, protocolSchedule,
       dataStatus: bond.dataStatus, sources: this.uniqueSources([...bond.sources, ...runtimeSource]), assumptions: [conflict ? "Owner and runtime state conflict; no route is currently usable." : "Published product state remains distinct from runtime configuration."], verifiedAt: now.toISOString() };
   }
 
@@ -195,7 +221,8 @@ export class BitcoinStakingService {
     const bonds = manifestRead.bonds.filter((bond) => bond.dataStatus === "published");
     let bond: BondManifest | undefined;
     if (input.bondId) {
-      bond = bonds.find((item) => item.id === input.bondId);
+      const resolved = await this.manifests.get(input.bondId);
+      bond = bonds.find((item) => item.id === resolved.id);
       if (!bond) throw new ServiceError("NOT_FOUND", `Published bond not found: ${input.bondId}`);
       if (input.bondIndex !== undefined && bond.onChainBondIndex !== input.bondIndex) {
         throw new ServiceError("INVALID_INPUT", `Bond ${input.bondId} does not match bond index ${input.bondIndex}.`);
@@ -231,17 +258,23 @@ export class BitcoinStakingService {
       selectedRoutes.find((route) => route.id === item.routeId)?.routeType === "native_l1_direct"
     );
     const primaryScenario = input.routeId ? economicScenarios[0] : directScenario ?? economicScenarios[0];
+    const protocolSchedule = bond.onChainBondIndex === undefined ? null : await this.provider(bond.network).getBondSchedule(bond.onChainBondIndex).catch(errorSummary);
     const scheduledDate = bond.timing.scheduledLaunchDate
       ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${bond.timing.scheduledLaunchDate}T00:00:00.000Z`))
       : null;
-    const assessmentStatus = bond.lifecycleStatus === "upcoming" && scheduledDate
+    const assessmentStatus = bond.lifecycleStatus === "upcoming" && (scheduledDate || (protocolSchedule && !("status" in protocolSchedule)))
       ? "upcoming_bond_scheduled" as const
       : "published_bond_assessed" as const;
-    const bottomLine = scheduledDate
+    const derivedTiming = protocolSchedule && !("status" in protocolSchedule)
+      ? `Protocol eligibility begins in Cycle ${protocolSchedule.startRewardCycle} at burn height ${protocolSchedule.startBurnHeight}; the current calendar estimate is ${protocolSchedule.estimatedStartAt} and is approximate.`
+      : null;
+    const bottomLine = derivedTiming
+      ? `${bond.title}: ${derivedTiming} Product enrollment and on-chain configuration remain separate checks.`
+      : scheduledDate
       ? `${bond.title} is slated for ${scheduledDate}${bond.timing.startsRewardCycle === undefined ? "" : ` in Cycle ${bond.timing.startsRewardCycle}`}. Enrollment and on-chain configuration remain pending; sourced public-model gross yield can be shown while net yield remains unknown until applicable fees are published.`
       : `${bond.title} is published for diligence. Route availability and final economics must be confirmed from current product and on-chain state.`;
     const nextDiligenceSteps = [
-      "Choose a currently supported custody path for direct native-L1 participation, or review the approved StackingDAO sBTC pool route.",
+      "Choose a currently supported custody path for direct native-L1 participation, or review the currently published sBTC pool route.",
       "Confirm the final bond duration and every applicable fee before treating a gross projection as a net-return scenario.",
       "Reconcile enrollment and on-chain configuration before funding.",
     ];
@@ -250,6 +283,7 @@ export class BitcoinStakingService {
       bottomLine,
       bondAvailability: {
         scheduled: bond.timing.scheduledLaunchDate ?? null,
+        protocolSchedule,
         lifecycleStatus: bond.lifecycleStatus,
         productStatus: bond.productStatus,
         enrollmentStatus: bond.enrollmentStatus,
@@ -339,6 +373,7 @@ export class BitcoinStakingService {
       bottomLine: state,
       bondAvailability: {
         scheduled: null,
+        protocolSchedule: null,
         lifecycleStatus: "unknown" as const,
         productStatus: "unconfirmed" as const,
         enrollmentStatus: "unknown" as const,
@@ -391,7 +426,7 @@ export class BitcoinStakingService {
     const bond = await this.manifests.get(input.bondId); const route = bond.participationRoutes.find((item) => item.routeType === "native_l1_direct");
     if (!route || route.routeType !== "native_l1_direct") throw new ServiceError("NOT_FOUND", "This bond has no direct native-L1 route.");
     const { paths, registry } = await this.custody.list({ provider: input.provider }); const path = paths[0];
-    const supported = !!path && path.status === "available" && route.custodyPathIds.includes(path.id) && isReviewCurrent(route.attestation.reviewedAt, this.now()) && isReviewCurrent(path.attestation.reviewedAt, this.now(), path.attestation.reviewCadenceDays);
+    const supported = !!path && path.status === "available" && (route.custodyPathIds.length === 0 || route.custodyPathIds.includes(path.id)) && isReviewCurrent(route.attestation.reviewedAt, this.now()) && isReviewCurrent(path.attestation.reviewedAt, this.now(), path.attestation.reviewCadenceDays);
     return { bondId: bond.id, routeId: route.id, provider: input.provider, status: supported ? "supported" : path?.status === "not_currently_supported" ? "unsupported" : "unknown", keyControlPreference: input.keyControlPreference, evidence: path?.evidence ?? "No current custody evidence found.",
       dataStatus: bond.dataStatus, sources: path ? registry.sources.filter((source) => path.sourceIds.includes(source.id)) : registry.sources, assumptions: ["Compatibility is a product claim, not a protocol guarantee."], verifiedAt: this.now().toISOString() };
   }
@@ -422,7 +457,7 @@ export class BitcoinStakingService {
       closestRouteId: comparison.recommendedRouteId ?? (needsLiquidityRoute ? pool?.id ?? null : null),
       conclusion: needsLiquidityRoute
         ? `The ${pool?.name ?? "approved sBTC pool"} with optional stBTC is the closest planned experience, but no named live lender, collateral terms, or reliable exit liquidity is verified.`
-        : "Compare the direct native-L1 route with the approved StackingDAO sBTC pool using the stated custody and liquidity tradeoffs.",
+        : "Compare the direct native-L1 route with the currently published sBTC pool using the stated custody and liquidity tradeoffs.",
     };
   }
 

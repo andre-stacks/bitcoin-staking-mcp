@@ -7,7 +7,7 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 ## Milestones
 
 - M1: Live mainnet PoX status, the dedicated testnet's scheduled/active PoX-5 state, and the explicitly labeled demo manifest are visible through MCP.
-- M2: All fourteen tools return validated structured output and the offline suite passes.
+- M2: All fifteen tools return validated structured output and the offline suite passes.
 - M3: The concierge completes the native-yield and liquidity/borrowing journeys in Codex and Claude.
 - M4: A clean clone installs, builds, runs, and supports the recorded demo.
 

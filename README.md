@@ -21,7 +21,7 @@ This server keeps four kinds of information separate:
 flowchart LR
   A["Current production data"] --> C["Bitcoin Staking intelligence core"]
   T["Pre-production network data"] --> C
-  B["Versioned bond manifests"] --> C
+  B["Vercel live knowledge registry"] --> C
   C --> M["Read-only MCP server"]
   M --> X["Codex concierge skill"]
   M --> Y["Claude concierge prompt"]
@@ -32,9 +32,15 @@ The intelligence core contains schemas, provenance, economics, compatibility, an
 
 The concierge is an approachable Bitcoin Staking guide with institutional-quality diligence. It leads with the closest route, explains what is upcoming versus live, and turns pending terms into a practical preparation plan.
 
+### Live registry console
+
+`apps/registry-console` is a Next.js application intended for the Stacks Labs Vercel team. Edge Config holds the shared draft and current published snapshot; private Vercel Blob objects hold immutable revision history. Sign in with Vercel protects the editor, and `PUBLISHER_EMAILS` controls who may mutate data. The anonymous `GET /api/v1/registry` endpoint supports ETags and contains published user-facing facts only. See [registry deployment](docs/REGISTRY_CONSOLE.md).
+
+MCP clients use `BITCOIN_STAKING_REGISTRY_URL` and revalidate every 60 seconds. `BITCOIN_STAKING_BOND_REGISTRY_URL` and `BITCOIN_STAKING_CUSTODY_REGISTRY_URL` remain deprecated compatibility inputs for the 0.4 release. A current bundled snapshot is used during an outage; once its seven-day review window expires, reads fail closed.
+
 The answer policy is evidence-gated. The concierge may use only current MCP structured output and MCP resources for factual claims. It does not complete missing answers from model memory, infer wallet support from protocol behavior, treat an audit statement as end-to-end wallet proof, or substitute demo data after a live-read failure. When the corpus cannot answer a question, it says: “This MCP does not currently verify that,” and identifies the missing evidence.
 
-The published product registry currently lists the Genesis Bond as slated for August 26, 2026 in Cycle 142. Its versioned [public economic model](https://btc-staking-public-dashboard.vercel.app/) uses a 3% BTC target APY, a 5% minimum STX value ratio, and a 12-cycle (~174-day) reference period. Yield scenarios use current CoinGecko prices to calculate paired STX units. A sourced rate and duration support a gross projection; when an applicable fee is missing, net yield remains unknown. The bond remains `upcoming` until on-chain configuration and enrollment are verified.
+The Genesis Bond has stable ID `genesis-bond` and PoX-5 bond period/index 1. The MCP derives its eligible reward cycle and burn height from live PoX information and estimates calendar time from remaining Bitcoin burn blocks at the ten-minute target. Product targets, operators, integrations, and economic terms come from the live registry and remain separate from protocol eligibility.
 
 ## Quick start
 
@@ -43,13 +49,13 @@ Requires Node 22.
 Install for both Codex and Claude Code from any directory:
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.3.0 setup
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 setup
 ```
 
 The installer performs a real MCP handshake, registers `bitcoin-staking` in the user-level configuration for both hosts, installs the global Codex concierge skill, and prints the first prompts. Restart both hosts after setup, then verify at any time:
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.3.0 check
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 check
 ```
 
 To install only one host, use `--hosts codex` or `--hosts claude`. See [Installation](docs/INSTALLATION.md) for local-checkout, pinned-source, JSON, update, and uninstall options.
@@ -68,7 +74,7 @@ Which participation option is right for me?
 
 A specific first question bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow.
 
-The single concierge command is the user-facing entry point. Fourteen read-only MCP tools remain directly available to agents, developers, and MCP Inspector; users do not need to know their names.
+The single concierge command is the user-facing entry point. Fifteen read-only MCP tools remain directly available to agents, developers, and MCP Inspector; users do not need to know their names.
 
 For repository development:
 
@@ -154,21 +160,22 @@ Use Inspector to review the instructions, all tool schemas and annotations, reso
 | `build_diligence_report` | Combine live status, a verified protocol bond if present, profile fit, exact PoX-5 target math, and security evidence. |
 | `list_bonds` | List public manifests and optionally separate demo records. |
 | `list_custody_paths` | List current product-level custody paths, explicit non-support, and review freshness. |
-| `list_bond_participation_routes` | Explain the direct native-L1 and StackingDAO sBTC-pool routes, including optional stBTC capability. |
+| `list_bond_participation_routes` | Explain the direct native-L1 and sBTC-pool route types. |
 | `get_bond` | Read one normalized manifest and optional on-chain verification. |
 | `check_participant_status` | Read public Stacks staking and bond state. |
 | `check_compatibility` | Check cited wallet or custodian support; preserve unknowns. |
 | `simulate_yield` | Fetch current CoinGecko BTC/STX prices and calculate gross yield plus paired STX units. |
-| `compare_staking_paths` | Compare direct native-L1 and StackingDAO sBTC-pool routes for a participant profile, including optional stBTC considerations. |
+| `compare_staking_paths` | Compare direct native-L1 and sBTC-pool routes for a participant profile. |
 | `build_participation_plan` | Produce fit, tradeoffs, gaps, and safe next steps. |
+| `search_current_facts` | Search current projects, products, notices, partners, and integrations. |
 
 Resources expose the capability catalog, glossary, yield methodology, bond manifests, and source records under `bitcoin-staking://` URIs.
 
-`bitcoin-staking://capabilities` maps the user-facing services to all fourteen MCP tools and exposes the server, contract, and skill versions.
+`bitcoin-staking://capabilities` maps the user-facing services to all fifteen MCP tools and exposes the server, contract, and skill versions.
 
 `bitcoin-staking://custody-paths` exposes the maintained native-L1 Bitcoin Staking custody directory. It is deliberately separate from bond manifests: a provider can have a product integration path even when no bond is open, while exact compatibility for a particular bond still requires manifest evidence.
 
-Bond route details come from `list_bond_participation_routes`, which keeps the direct and approved pooled paths attached to their bond and nests optional stBTC capability under the StackingDAO pool.
+Bond route details come from `list_bond_participation_routes`. Current operators, products, notices, and integrations come from `search_current_facts` and `bitcoin-staking://catalog`.
 
 `bitcoin-staking://security` exposes the complete security-diligence catalog. Security answers always distinguish published assurance, protocol/source behavior, SDK construction, wallet behavior, and end-to-end integration proof.
 
@@ -185,7 +192,7 @@ Which Bitcoin staking opportunities are currently available or coming next? Sepa
 ```
 
 ```text
-Using the current public reference model, assess the 12-cycle gross reward scenario for 25 BTC. If an applicable fee is missing, keep net reward unknown, and separate model assumptions from final configured terms.
+Using the current registry terms, assess the gross reward scenario for 25 BTC. If rate, duration, or an applicable fee is missing, say what is still needed and do not invent it.
 ```
 
 ```text
@@ -201,7 +208,7 @@ Include demo opportunities. I have 1 BTC, want native-L1 yield, control my keys,
 ```
 
 ```text
-I want to borrow without selling and need access to my Bitcoin at any time. Compare the direct native-L1 route and StackingDAO sBTC pool, including stBTC only if redemption, liquidity, and a named lender are verified.
+I want to borrow without selling and need access to my Bitcoin at any time. Compare the direct native-L1 and sBTC-pool routes, and include only registry-verified liquidity and lending integrations.
 ```
 
 ## Demo-data disclosure
@@ -228,7 +235,7 @@ npm run demo:proof
 
 The default tests are offline. The mainnet and configured-testnet tests are opt-in and read current public chain state. The checked-in concierge skill also passes the `skill-creator` quick validator. No command constructs or broadcasts a transaction.
 
-The offline suite invokes all fourteen tools through an in-process MCP client, validates complete output contracts, checks registry caching and freshness, exercises the two route journeys and upstream failures, and tests the shared prompt/skill evidence contract. Prompt controls materially reduce unsupported answers, but callers should treat returned provenance and explicit unknown states as the enforceable trust boundary.
+The offline suite invokes all fifteen tools through an in-process MCP client, validates complete output contracts, checks registry caching and freshness, exercises the two route journeys and upstream failures, and tests the shared prompt/skill evidence contract. Prompt controls materially reduce unsupported answers, but callers should treat returned provenance and explicit unknown states as the enforceable trust boundary.
 
 The bond, route, LST, and custody registries use a deliberate hard seven-day owner-review cadence. `reviewDueAt` provides the warning boundary; immediately after that boundary, claims remain visible only as historical context and cannot support a current route or bundled fallback. There is no runtime grace period. `npm run registry:validate` validates schemas, references, formats, duplicates, and status-specific fields while reporting overdue attestations as `needs_review`; `npm run registry:validate:live` requires current attestations and also checks external evidence URLs. A nightly GitHub Actions workflow opens or updates one `registry-review-due` issue when live validation fails. The check never promotes a partner automatically: changed or stale claims require product-owner confirmation through a reviewed registry PR. Registry authenticity currently relies on GitHub transport, repository controls, review history, and the reported content hash; signed manifests are not yet implemented.
 

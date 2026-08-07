@@ -28,9 +28,9 @@ What Bitcoin staking opportunities are currently available or coming next? Use t
 
 Expected behavior: check mainnet state and published manifests first. If neither contains an opportunity, inspect testnet automatically and present it as the live demo/prototype environment for the intended mainnet journey. Keep test assets separate from mainnet opportunities, and do not infer a configured bond from an empty scan.
 
-Current expected product result: show the Genesis Bond as slated for August 26, 2026 in Cycle 142, distinguish that schedule from on-chain configuration, and explain what a participant can prepare now.
+Current expected product result: show the Genesis Bond's live protocol-derived cycle and burn height, label the calendar estimate approximate, distinguish protocol eligibility from product enrollment, and explain what a participant can prepare now.
 
-For a 25 BTC scenario, use the sourced public-model duration, 3% reference target, and 5% paired-STX value ratio. If an applicable fee remains unknown, show the gross reward and label net reward as pending rather than assuming a zero fee.
+For a 25 BTC scenario, use only current registry terms or explicit scenario inputs. If rate or duration is absent, request it; if an applicable fee remains unknown, show the supported gross reward and keep net reward unknown.
 
 ### 2. Generic institutional diligence
 
@@ -84,7 +84,7 @@ Expected behavior: state that current state could not be verified; do not quote 
 
 ## Inspector close
 
-Show the fourteen read-only tools, `get_market_snapshot`, `build_diligence_report`, `list_bond_participation_routes`, `list_custody_paths`, the `bitcoin-staking://security` resource, and source resources. Point out that a wallet, UI, or agent can reuse the same primitive.
+Show the fifteen read-only tools, `get_market_snapshot`, `build_diligence_report`, `list_bond_participation_routes`, `list_custody_paths`, the `bitcoin-staking://security` resource, and source resources. Point out that a wallet, UI, or agent can reuse the same primitive.
 
 ## Recording checklist
 

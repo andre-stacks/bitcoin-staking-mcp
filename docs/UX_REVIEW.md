@@ -1,6 +1,6 @@
 # Bitcoin Staking Concierge — User Experience Review
 
-Status: implemented for the v0.3.0 production beta.
+Status: implemented for the v0.4.0 production beta.
 
 ## Finding
 
@@ -13,18 +13,18 @@ The raw MCP tool catalog was documented but not translated into user goals. A ne
 
 ## Product decision
 
-Keep one user-facing concierge entry point. Do not turn fourteen implementation tools into commands a user must learn.
+Keep one user-facing concierge entry point. Do not turn fifteen implementation tools into commands a user must learn.
 
 The user-facing identity is **Scout — the Bitcoin Staking Concierge**. **Scout AI** is reserved for the internal hackathon submission and is not used as the concierge's name in onboarding. The repository, package, MCP server, prompt identifier, and skill invocation retain their existing technical names.
 
 Onboarding is determined by the user's intent, not simply whether this is the first message. A broad orientation request introduces Scout, the Bitcoin Staking Concierge, gives a concise explanation of how Scout can help, and offers three useful starter questions. A request about timing, participation, economics, risk, custody, or liquidity proceeds directly to that workflow without replaying the general introduction.
 
-A general yield question leads with the current planned economics when the registry supports them. For the current model, Scout explains the 3% annualized rate, roughly six-month term, BTC or sBTC reward choice, and the approximately 0.015 BTC gross return for every 1 BTC staked before fees. Scout does not lead with missing final terms or translate that expected return into 1.5% growth; it confirms that final terms will be published on-chain and invites the user to provide an amount.
+A general yield question leads with the current planned economics only when the live registry supports them. Scout does not retain a rate, term, reward asset, fee, capacity, or worked return in static copy; it invites the user to provide an amount and labels final configured terms separately from a pre-launch model.
 
 The two bond-scoped participation routes remain:
 
 1. Direct native-L1 participation for users who prioritize retaining control of native BTC on Bitcoin L1 through their preferred supported wallet or custody provider.
-2. Pool-based participation for users who want potential DeFi flexibility. Current pool operators, required assets, and LST designs come from MCP evidence.
+2. Pool-based participation for users who want potential DeFi flexibility. Current pool operators, required assets, integrations, and LST designs come from the live registry.
 
 The concierge explains these routes when the user asks how to participate or compare options, not automatically in every first response.
 
@@ -54,7 +54,7 @@ Scout must not infer that enrollment is complete from a Bitcoin funding or lock 
 
 ## Technical discovery
 
-The fourteen tools remain directly available through the MCP host and Inspector. The `bitcoin-staking://capabilities` resource maps user goals to exact tool names and versions for agents and developers.
+The fifteen tools remain directly available through the MCP host and Inspector. The `bitcoin-staking://capabilities` resource maps user goals to exact tool names and versions for agents and developers.
 
 ## Voice
 
@@ -83,5 +83,5 @@ Supported capabilities are stated before constraints. Scout does not wrap a work
 - The phrase “What would you like your Bitcoin to do?” is not used as the opening.
 - A specific supplied request bypasses the introduction.
 - Setup output includes at least one status/discovery prompt and one security prompt.
-- Capability discovery names all fourteen tools, including the market snapshot, bond-scoped routes, and native-L1 custody directory.
+- Capability discovery names all fifteen tools, including the market snapshot, bond-scoped routes, and native-L1 custody directory.
 - Existing provenance, abstention, read-only, and network-routing policies remain unchanged.

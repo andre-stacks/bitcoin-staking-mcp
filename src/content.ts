@@ -2,8 +2,8 @@ export const GLOSSARY = `# Bitcoin Staking glossary
 
 - Native L1 Bitcoin staking: BTC committed in a Bitcoin L1 output under the PoX-5 bond rules. It is distinct from holding sBTC on Stacks.
 - sBTC: A programmable representation of BTC on Stacks. It can be self-custodied, so sBTC versus L1 and self-custody versus custody are separate choices.
-- StackingDAO sBTC pool: The approved permissionless pooled participation route for the Genesis Bond. Operator, minimum, fee, withdrawal, and accounting terms remain product-specific.
-- stBTC liquid staking token: The StackingDAO pool's optional planned LST capability, not a third approved enrollment route. Its contracts, redemption, liquidity, and lending support must be verified when published.
+- sBTC pool: A permissionless pooled participation route. Current operators, minimums, fees, withdrawal rules, accounting, and LST capabilities come from the live registry.
+- Liquid staking token: A pool capability rather than a third bond route. Its contracts, redemption, liquidity, and lending support must be current and registry-published.
 - Bond: A configured Bitcoin Staking opportunity with defined timing, economics, requirements, and an optional on-chain PoX-5 bond index.
 - Participant key control: The participant or its custodian retains the key material required by the bond's Bitcoin script and recovery path.
 - Early exit: A bond-specific path to spend locked BTC before maturity. Availability, signers, costs, and forfeited rewards must be verified.
@@ -12,15 +12,15 @@ export const GLOSSARY = `# Bitcoin Staking glossary
 
 export const CAPABILITIES = `# Bitcoin Staking Concierge capabilities
 
-The concierge is one conversational entry point backed by fourteen read-only MCP tools. It guides users toward the closest participation route and a practical next step.
+The concierge is one conversational entry point backed by fifteen read-only MCP tools. It guides users toward the closest participation route and a practical next step.
 
 1. **Check protocol status and availability** — current PoX-5 state, reward-cycle timing, and whether a verified bond is available.
-2. **Find Bitcoin Staking bonds and routes** — active or upcoming bonds plus direct native-L1 and approved StackingDAO sBTC-pool routes, with stBTC nested as an optional pool capability and scheduled product information separated from live on-chain state.
+2. **Find Bitcoin Staking bonds and routes** — active or upcoming bonds plus direct native-L1 and sBTC-pool routes, with current products and integrations loaded from the live registry.
 3. **Assess participation fit** — liquidity needs, Bitcoin L1 versus sBTC path, key control, amount, time horizon, wallet, and custodian constraints.
 4. **Model economics** — deterministic yield, fee, and price scenarios using sourced terms and explicit assumptions.
 5. **Review security and transaction boundaries** — audits, timelock construction, Leather behavior, pre-funding validation, maturity recovery, and early exit, including what is not yet proven.
 6. **Review custody and public status** — the maintained product-level custody directory, exact bond compatibility when a manifest exists, and public Stacks address participation state. Address checks never prove ownership.
-7. **Compare staking paths** — direct native-L1 and StackingDAO sBTC-pool routes, including the optional stBTC experience for liquidity or future DeFi without inventing a live borrowing product.
+7. **Compare staking paths** — direct native-L1 and sBTC-pool routes, using only current registry evidence for operators, LSTs, liquidity, or DeFi support.
 
 ## Tool map for developers
 
@@ -40,13 +40,14 @@ The concierge is one conversational entry point backed by fourteen read-only MCP
 | Public participant status | \`check_participant_status\` |
 | Personalized comparison of the direct route and approved pool, including an optional LST capability | \`compare_staking_paths\` |
 | Participation fit and checklist | \`build_participation_plan\` |
+| Current projects, products, notices, and integrations | \`search_current_facts\` |
 
 All tools are informational and read-only. They cannot construct, sign, or broadcast transactions.
 `;
 
 export const YIELD_METHODOLOGY = `# Yield methodology
 
-The production beta performs deterministic scenario analysis. It never predicts BTC or STX prices and never invents missing economics. The versioned Protocol Bonds public model supplies a 3% target APY, 5% paired-STX value ratio, and 12-cycle (~174-day) reference period for pre-launch Genesis scenarios. These are reference-model assumptions, not final on-chain bond terms.
+The service performs deterministic scenario analysis. It never predicts BTC or STX prices and never invents missing economics. A duration and annual rate must come from current registry evidence or explicit user inputs; current terms are not retained in this static resource.
 
 For a BTC- or sBTC-denominated target-principal-rate model:
 
@@ -58,7 +59,7 @@ net reward sats = gross reward sats − fee sats
 
 The calculation uses simple, non-compounding annualized yield. By default, the MCP fetches current BTC and STX USD observations from CoinGecko Simple Price and uses them to calculate the value-based STX pairing in token units. Explicit caller prices override the corresponding live defaults. Prices are observations, not forecasts or execution quotes. If a bond does not publish a compatible reward model, the tool returns INSUFFICIENT_DATA.
 
-For the initial PoX-5 reference model, target APY is applied to BTC principal over the selected period. The paired STX requirement is value-based:
+When a current route publishes a value-based paired-STX requirement:
 
 required STX value = BTC principal value × minimum STX ratio
 
