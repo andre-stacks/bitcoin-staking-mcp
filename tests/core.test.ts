@@ -5,8 +5,19 @@ import { resolve } from "node:path";
 import { ServiceError, withTimeout } from "../src/core/errors.js";
 import { simulateYield } from "../src/core/economics.js";
 import { BondManifestSchema, ParticipantProfileSchema, normalizeBondManifest, routeEffectiveAvailability, toJsonSafe } from "../src/core/schemas.js";
+import { getSecurityGuidance } from "../src/security.js";
 
 async function bondFile(name: string) { return BondManifestSchema.parse(JSON.parse(await readFile(resolve(`data/bonds/${name}`), "utf8"))); }
+
+test("early-exit guidance leads with the supported mechanism without reflexive caveats", () => {
+  const entry = getSecurityGuidance("early_exit").entries[0];
+  assert.match(entry.answer, /^Early exit is available through a coordinated signing process\./);
+  assert.match(entry.answer, /participant provides unlock material/i);
+  assert.match(entry.answer, /designated early-exit signer set approves the transaction/i);
+  assert.match(entry.answer, /forfeits undistributed yield/i);
+  assert.match(entry.answer, /paired STX stays locked until the original unlock date/i);
+  assert.doesNotMatch(entry.answer, /\b(?:but|however|rather than|not instant)\b/i);
+});
 
 test("Genesis v2 publishes exactly direct L1 and StackingDAO pool routes", async () => {
   const bond = await bondFile("genesis-bond-cycle-142.json");

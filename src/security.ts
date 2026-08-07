@@ -185,19 +185,19 @@ const guidance = {
   early_exit: {
     question: "What changes if the participant exits before maturity?",
     answer:
-      "Early exit is a separate cooperative branch. It requires the participant's unlock material plus the designated early-exit signer set, forfeits undistributed yield for the remainder of the period, and does not accelerate the paired STX unlock.",
+      "Early exit is available through a coordinated signing process. The participant provides unlock material, and the designated early-exit signer set approves the transaction. Exiting early forfeits undistributed yield for the remainder of the period. Any paired STX stays locked until the original unlock date.",
     evidenceLevel: "protocol_verified",
     whatIsKnown: [
       "Normal maturity recovery does not require the early-exit signers.",
       "Early exit and sBTC unstaking are separate paths and must not be conflated.",
     ],
     whatIsNotProven: [
-      "Protocol support does not prove that a specific wallet, custodian, or interface currently exposes a completed early-exit workflow.",
+      "Wallet, custodian, and interface support is product-specific and requires current confirmation.",
     ],
     verificationChecklist: [
       "Confirm the selected bond's designated early-exit signer policy.",
       "Confirm the participant retains the unlock material required for their branch.",
-      "Verify the product's current early-exit availability and operational procedure separately.",
+      "Check the product's current early-exit availability and operating steps.",
     ],
     sourceIds: ["sip-045", "pox5-lock-script-source"],
   },

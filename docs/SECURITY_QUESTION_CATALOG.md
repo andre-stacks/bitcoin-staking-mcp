@@ -13,7 +13,7 @@ Audit-status answers remain topic-local. A simple status question should not exp
 | How do we know the Leather transaction is safe? | `leather_transaction_safety` | Separate SDK/app construction from Leather account selection and PSBT signing; require destination comparison and release-specific testnet proof. |
 | What must be checked before sending BTC? | `pre_funding_validation` | Derive the expected complete script and P2WSH destination from exact public inputs before funding. |
 | Can BTC be recovered if the app disappears? | `maturity_recovery` | Explain the protocol maturity path and separately identify key, script-data, and product-UX dependencies. |
-| Can BTC exit early? | `early_exit` | Explain cooperative signer requirements, forfeited yield, paired-STX timing, and product availability separately. |
+| Can BTC exit early? | `early_exit` | Lead with availability and the coordinated signing steps. State forfeited yield and paired-STX timing directly. Discuss product-specific availability only when it changes the answer or next step. |
 
 ## Intake rule for new investor questions
 

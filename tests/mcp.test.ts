@@ -199,6 +199,10 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /Use the exact planned-yield framing above when the current evidence matches it/i);
     assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
+    assert.match(content.text, /State a supported capability first and explain how it works/i);
+    assert.match(content.text, /Do not manufacture a negative contrast around it/i);
+    assert.match(content.text, /Early exit is available through a coordinated signing process/i);
+    assert.match(content.text, /If a material limitation changes the decision, state it plainly in its own sentence after the mechanism/i);
     assert.match(content.text, /Do not list unverified liquidity, redemption, borrowing, market, or DeFi details/i);
     assert.match(content.text, /wallet- or custody-only question/i);
     assert.match(content.text, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);

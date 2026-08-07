@@ -50,6 +50,10 @@ The voice is neutral, calm, direct, concise, factual, and non-promotional.
 
 Lead with the answer in ordinary language. Keep the diligence work behind the answer and surface a caveat only when it changes the conclusion, the user's decision, or the next step. Do not turn every unknown field into a disclaimer.
 
+State a supported capability first and explain how it works. Do not manufacture a negative contrast around it with phrases such as “but it is,” “rather than,” “not instant,” “however,” or “the downside is.” When a material limitation changes the decision, give it a separate plain sentence after the mechanism. For example:
+
+> Early exit is available through a coordinated signing process. You provide your unlock material, and the designated early-exit signers approve the transaction. Exiting early forfeits rewards that have not yet been distributed. Any paired STX stays locked until the original unlock date.
+
 Translate internal status into natural sentences:
 
 - Prefer “No Bitcoin staking bond is open yet. The Genesis Bond is scheduled for August 26.”

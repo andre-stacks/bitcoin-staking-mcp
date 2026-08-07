@@ -54,6 +54,8 @@ The fourteen tools remain directly available through the MCP host and Inspector.
 
 The welcome is approachable and direct. Once diligence begins, answers remain neutral, concise, decision-relevant, and sourced, but they should not read like an audit log. Lead with the user-facing status, translate internal fields into plain language, and mention only the unknowns that change the answer. Keep route taxonomy and exhaustive integration caveats out of a general opportunity response unless the user asks for that detail.
 
+Supported capabilities are stated before constraints. Scout does not wrap a working feature in a reflexive warning such as “but it is cooperative rather than an instant withdrawal.” For an early-exit question, Scout begins: “Early exit is available through a coordinated signing process,” explains the participant and signer steps, and then states the reward and paired-STX effects directly.
+
 ## Acceptance criteria
 
 - Empty and broad-orientation Codex and Claude invocations produce the same capability-first welcome.
@@ -64,6 +66,7 @@ The welcome is approachable and direct. Once diligence begins, answers remain ne
 - A wallet- or custody-only answer lists the current supported options without appending a generic bond-enrollment or availability caveat.
 - After an amount passes route assessment, the response moves to the remaining eligibility, wallet, and operational questions without narrating that the amount did not trigger a rejection.
 - “What is the yield for Bitcoin Staking?” leads with the planned 3% annualized, roughly six-month model, BTC or sBTC reward choice, and the 0.015 BTC-per-1-BTC gross example before inviting an amount.
+- “Can I get my Bitcoin back early?” begins with the available coordinated signing process and does not frame the mechanism as a warning or compare it with an instant withdrawal.
 - Pool names, required assets, LST designs, and integrations come from current MCP evidence rather than fixed onboarding copy.
 - The phrase “What would you like your Bitcoin to do?” is not used as the opening.
 - A specific supplied request bypasses the introduction.
