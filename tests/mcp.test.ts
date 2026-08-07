@@ -162,7 +162,11 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
   assert.equal(content?.type, "text"); if (content?.type === "text") {
     assert.match(content.text, /Onboarding follows the user's intent/i);
     assert.match(content.text, /fewer than 100 words/i);
-    assert.match(content.text, /Bitcoin staking lets you put your BTC to work and earn rewards through the Stacks protocol/i);
+    assert.match(content.text, /user-facing name is Scout/i);
+    assert.match(content.text, /warm, professional guide/i);
+    assert.match(content.text, /do not repeat the introduction in every answer/i);
+    assert.match(content.text, /Hi, I'm Scout, your Bitcoin Staking Concierge/i);
+    assert.match(content.text, /guide you through the process and answer your questions about earning rewards from BTC through the Stacks protocol/i);
     assert.match(content.text, /Find current and upcoming opportunities/i);
     assert.match(content.text, /Compare ways to participate/i);
     assert.match(content.text, /Understand rewards, lockups, fees, and risks/i);

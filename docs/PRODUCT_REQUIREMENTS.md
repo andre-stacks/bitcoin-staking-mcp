@@ -39,7 +39,7 @@ The agent reads live protocol status, scans the active on-chain PoX-5 bond windo
 
 ### Choose a participation route
 
-An empty invocation or broad orientation request receives concise capability-first onboarding: one sentence explaining Bitcoin staking through the Stacks protocol, four user-facing capabilities, and three starter questions. It does not automatically lead with an upcoming bond or route taxonomy. A specific request about opportunity timing, participation, economics, risk, custody, or liquidity bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow. The concierge returns the closest route, freshness, current status, the principal tradeoff, and one useful next action when the user asks for route guidance.
+An empty invocation or broad orientation request receives concise capability-first onboarding from Scout, the Bitcoin Staking Concierge: a personable introduction, four user-facing capabilities, and three starter questions. It does not automatically lead with an upcoming bond or route taxonomy. A specific request about opportunity timing, participation, economics, risk, custody, or liquidity bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow. The concierge returns the closest route, freshness, current status, the principal tradeoff, and one useful next action when the user asks for route guidance.
 
 For a live protocol opportunity, `build_diligence_report` combines current network state, bounded bond discovery, the participant profile, exact configured-target math, and security evidence. When an upcoming published bond is not yet configured on-chain, it returns the schedule and preparation plan without substituting missing economic terms.
 

@@ -23,7 +23,11 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /list_custody_paths/);
   assert.match(skill, /tool menu/i);
   assert.match(skill, /Onboarding follows the user's intent/i);
-  assert.match(skill, /Bitcoin staking lets you put your BTC to work and earn rewards through the Stacks protocol/i);
+  assert.match(skill, /user-facing name is Scout/i);
+  assert.match(skill, /warm, professional guide/i);
+  assert.match(skill, /do not repeat the introduction in every answer/i);
+  assert.match(skill, /Hi, I’m Scout, your Bitcoin Staking Concierge/i);
+  assert.match(skill, /guide you through the process and answer your questions about earning rewards from BTC through the Stacks protocol/i);
   assert.match(skill, /Find current and upcoming opportunities/i);
   assert.match(skill, /Compare ways to participate/i);
   assert.match(skill, /Understand rewards, lockups, fees, and risks/i);
@@ -42,6 +46,17 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /do not list every unverified stBTC integration/i);
   assert.match(skill, /Final terms may change before launch/i);
   assert.match(skill, /Avoid stacked qualifiers, status jargon/i);
+});
+
+test("Codex skill metadata presents Scout as the Bitcoin Staking Concierge", async () => {
+  const metadata = await readFile(
+    resolve(".agents/skills/bitcoin-staking-concierge/agents/openai.yaml"),
+    "utf8",
+  );
+
+  assert.match(metadata, /display_name: "Scout — Bitcoin Staking Concierge"/);
+  assert.match(metadata, /Explore Bitcoin staking with Scout/);
+  assert.match(metadata, /introduce Scout/);
 });
 
 test("README examples stay network-agnostic", async () => {

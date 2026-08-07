@@ -56,7 +56,7 @@ To install only one host, use `--hosts codex` or `--hosts claude`. See [Installa
 
 ### First conversation
 
-Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, or with a broad statement such as “I'd like to get started with Bitcoin staking,” it briefly explains Bitcoin staking, summarizes what the concierge can help with, and offers three useful starter questions. It does not make users learn bond routes before choosing a direction.
+Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, or with a broad statement such as “I'd like to get started with Bitcoin staking,” Scout introduces itself as the Bitcoin Staking Concierge, summarizes how it can help, and offers three useful starter questions. It does not make users learn bond routes before choosing a direction.
 
 Ask naturally. For example:
 
