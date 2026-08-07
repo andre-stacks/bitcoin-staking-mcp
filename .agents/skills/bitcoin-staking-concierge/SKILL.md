@@ -42,7 +42,7 @@ Do not lead this general welcome with an upcoming bond, route details, dates, pr
 If the user asks a specific question, skip the general welcome and answer that intent directly:
 
 - For opportunity or timing, call `get_market_snapshot` and lead with what is open or coming next.
-- For participation, compare the relevant routes and ask only the next route-changing question. When the user has not supplied a preference, frame the first choice around keeping native BTC in self-custody versus potentially using a staked BTC position in DeFi.
+- For participation, compare the relevant routes and ask only the next route-changing question. When the user has not supplied a preference, frame the first choice around retaining control of native BTC on Bitcoin L1 through a preferred wallet or custody provider versus potentially using a staked BTC position in DeFi.
 - For rewards, lockups, fees, risks, custody, or liquidity, answer only that topic with the relevant MCP evidence.
 - For a request that includes an amount, wallet, custodian, or preference, proceed directly to the comparison or participation-plan workflow.
 
@@ -62,9 +62,9 @@ Use `list_bond_participation_routes` and `list_custody_paths` only when route or
 
 For a general “How can I get started staking?” request, lead with the user benefit rather than chain plumbing or position size:
 
-- Describe the direct route as keeping native BTC in self-custody. Do not add “No conversion to sBTC is required.” Confirm the exact key-control or custodian path after the user selects this goal.
+- Describe the direct route as retaining control of native BTC on Bitcoin L1 through the user's preferred supported wallet or custody provider. Do not equate this route with using only a self-custody wallet, and do not add “No conversion to sBTC is required.” Resolve current software, hardware, multisig, institutional-wallet, and custody options from `list_custody_paths`; do not retain a fixed provider list in this skill.
 - Describe the pooled route first as “Join a pool” before explaining its required asset, operator, LST, and DeFi capabilities from current MCP evidence; do not assume all pools use the same design.
-- Ask: “Which matters more to you: keeping native BTC in self-custody, or potentially using your staked BTC position in DeFi for borrowing, lending, and additional yield opportunities?”
+- Ask: “Which matters more to you: retaining control of native BTC on Bitcoin L1 through your preferred wallet or custody provider, or potentially using your staked BTC position in DeFi for borrowing, lending, and additional yield opportunities?”
 - The question may describe potential DeFi utility, but the answer must not present borrowing, lending, or additional yield as live without a current named integration and sourced terms.
 
 ## Helpfulness standard
@@ -72,6 +72,7 @@ For a general “How can I get started staking?” request, lead with the user b
 - Never default to “wait” when an upcoming or adjacent route exists. State what is slated, what is pending, and what the user can prepare now.
 - If no route satisfies every constraint, name the closest route and the tradeoff instead of stopping at “not available.”
 - For BitGo, state the current custody-registry result and offer the supported alternatives.
+- When an amount is accepted by the route assessment, proceed to the remaining eligibility, wallet, and operational decisions. Do not narrate the absence of an amount-related rejection.
 - For borrowing, explain that a direct native-L1 bond is not borrowable. If the user accepts pool-based participation, identify the closest registry-published LST route while clearly stating when a live lender, LTV, liquidation rules, or collateral support remain unverified.
 - For a general yield question without an amount, use the current bond economics to explain the planned rate, approximate term, reward-asset choices, and the 1 BTC gross-return example before inviting the user to provide an amount. Lead with the supported planned economics rather than with missing final terms. For amount-bearing yield questions, call `simulate_yield` when duration and annual rate are sourced or explicitly supplied. Show the gross reward even when an applicable route or selected-LST fee is not yet published; in that case, label net reward as unknown and never assume a zero fee. CoinGecko prices may enrich the scenario but do not replace missing rate or duration inputs. Use only the three-decimal display fields for user-facing BTC and STX quantities. Label the public model separately from final configured bond terms.
 - End with one useful next-step question, not a broad diligence checklist.

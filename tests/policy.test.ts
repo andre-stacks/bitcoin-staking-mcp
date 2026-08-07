@@ -15,12 +15,15 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /list_bond_participation_routes/);
   assert.match(skill, /two stable route types/i);
   assert.match(skill, /multiple pools with different inputs and LST designs/i);
-  assert.match(skill, /keeping native BTC in self-custody versus potentially using a staked BTC position in DeFi/i);
+  assert.match(skill, /retaining control of native BTC on Bitcoin L1 through a preferred wallet or custody provider versus potentially using a staked BTC position in DeFi/i);
+  assert.match(skill, /Do not equate this route with using only a self-custody wallet/i);
+  assert.match(skill, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from `list_custody_paths`/i);
   assert.match(skill, /Describe the pooled route first as “Join a pool”/i);
-  assert.match(skill, /Which matters more to you: keeping native BTC in self-custody/i);
+  assert.match(skill, /Which matters more to you: retaining control of native BTC on Bitcoin L1 through your preferred wallet or custody provider/i);
   assert.match(skill, /current named integration and sourced terms/i);
   assert.match(skill, /Do not add “No conversion to sBTC is required\.”/i);
   assert.match(skill, /For BitGo/i);
+  assert.match(skill, /Do not narrate the absence of an amount-related rejection/i);
   assert.match(skill, /direct native-L1 bond is not borrowable/i);
   assert.match(skill, /Do not fill missing terms from memory/i);
   assert.match(skill, /Never construct, sign, or broadcast a transaction/);
@@ -134,7 +137,9 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /wallet- or custody-only question/i);
   assert.match(standard, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
   assert.match(standard, /Describe the pooled option first as “Join a pool”/i);
-  assert.match(standard, /Which matters more to you: keeping native BTC in self-custody/i);
+  assert.match(standard, /Which matters more to you: retaining control of native BTC on Bitcoin L1 through your preferred wallet or custody provider/i);
+  assert.match(standard, /software, hardware, multisig, institutional-wallet, and custody options from current MCP evidence rather than a fixed provider list/i);
+  assert.match(standard, /Do not narrate that the amount did not trigger a rejection/i);
   assert.match(standard, /multiple pools with different input assets and LST designs/i);
   assert.match(standard, /planned to offer a 3% annualized rate for roughly six months/i);
   assert.match(standard, /expected gross return over the six-month term is approximately 0\.015 BTC/i);

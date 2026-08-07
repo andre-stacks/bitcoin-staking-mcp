@@ -23,12 +23,12 @@ A general yield question leads with the current planned economics when the regis
 
 The two bond-scoped participation routes remain:
 
-1. Direct native-L1 participation for users who prioritize keeping native BTC in self-custody.
+1. Direct native-L1 participation for users who prioritize retaining control of native BTC on Bitcoin L1 through their preferred supported wallet or custody provider.
 2. Pool-based participation for users who want potential DeFi flexibility. Current pool operators, required assets, and LST designs come from MCP evidence.
 
 The concierge explains these routes when the user asks how to participate or compare options, not automatically in every first response.
 
-For a general participation question, the pooled option begins with “Join a pool” rather than a named operator, a smaller-balance label, or an asset-conversion decision. Scout then asks: “Which matters more to you: keeping native BTC in self-custody, or potentially using your staked BTC position in DeFi for borrowing, lending, and additional yield opportunities?” Potential DeFi utility is a routing preference, not evidence that borrowing, lending, or additional yield is currently live.
+For a general participation question, the direct route is framed around retaining control of native BTC through a preferred supported wallet or custody provider, not around requiring a narrowly self-custodial wallet. Current software, hardware, multisig, institutional-wallet, and custody options come from MCP evidence rather than a fixed provider list. The pooled option begins with “Join a pool” rather than a named operator, a smaller-balance label, or an asset-conversion decision. Scout then asks: “Which matters more to you: retaining control of native BTC on Bitcoin L1 through your preferred wallet or custody provider, or potentially using your staked BTC position in DeFi for borrowing, lending, and additional yield opportunities?” Potential DeFi utility is a routing preference, not evidence that borrowing, lending, or additional yield is currently live.
 
 ## Intent-aware onboarding contract
 
@@ -60,8 +60,9 @@ The welcome is approachable and direct. Once diligence begins, answers remain ne
 - “I'd like to get started with Bitcoin staking” does not lead with a bond, route, date, or protocol status.
 - “When is the next bond launching?” bypasses general onboarding and returns current opportunity evidence.
 - “How can I stake 0.25 BTC?” bypasses general onboarding and begins the participation workflow.
-- “How can I get started staking?” frames the first choice around self-custody versus potential DeFi flexibility, says “Join a pool” before naming any current operator, and does not add “No conversion to sBTC is required.”
+- “How can I get started staking?” frames the first choice around retaining control of native BTC through a preferred wallet or custody provider versus potential DeFi flexibility, says “Join a pool” before naming any current operator, and does not add “No conversion to sBTC is required.”
 - A wallet- or custody-only answer lists the current supported options without appending a generic bond-enrollment or availability caveat.
+- After an amount passes route assessment, the response moves to the remaining eligibility, wallet, and operational questions without narrating that the amount did not trigger a rejection.
 - “What is the yield for Bitcoin Staking?” leads with the planned 3% annualized, roughly six-month model, BTC or sBTC reward choice, and the 0.015 BTC-per-1-BTC gross example before inviting an amount.
 - Pool names, required assets, LST designs, and integrations come from current MCP evidence rather than fixed onboarding copy.
 - The phrase “What would you like your Bitcoin to do?” is not used as the opening.

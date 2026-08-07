@@ -182,9 +182,11 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /specific question, skip the general welcome/i);
     assert.match(content.text, /For opportunity or timing, call get_market_snapshot/i);
     assert.match(content.text, /direct how-to-participate question/i);
-    assert.match(content.text, /keeping native BTC in self-custody versus potentially using a staked BTC position in DeFi/i);
+    assert.match(content.text, /retaining control of native BTC on Bitcoin L1 through a preferred wallet or custody provider versus potentially using a staked BTC position in DeFi/i);
+    assert.match(content.text, /do not equate this route with using only a self-custody wallet/i);
+    assert.match(content.text, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from list_custody_paths rather than a fixed provider list/i);
     assert.match(content.text, /Describe the pooled route first as 'Join a pool'/i);
-    assert.match(content.text, /Which matters more to you: keeping native BTC in self-custody/i);
+    assert.match(content.text, /Which matters more to you: retaining control of native BTC on Bitcoin L1 through your preferred wallet or custody provider/i);
     assert.match(content.text, /two stable route types when route detail is relevant/i);
     assert.match(content.text, /multiple pools with different input assets, operators, and LST designs/i);
     assert.match(content.text, /current pool names, requirements, token designs, terms, and integrations from MCP evidence/i);
@@ -200,6 +202,7 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /Do not list unverified liquidity, redemption, borrowing, market, or DeFi details/i);
     assert.match(content.text, /wallet- or custody-only question/i);
     assert.match(content.text, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
+    assert.match(content.text, /Do not narrate the absence of an amount-related rejection/i);
     assert.match(content.text, /planned to offer a 3% annualized rate for roughly six months/i);
     assert.match(content.text, /rewards available in BTC or sBTC/i);
     assert.match(content.text, /expected gross return over the six-month term is approximately 0\.015 BTC/i);
