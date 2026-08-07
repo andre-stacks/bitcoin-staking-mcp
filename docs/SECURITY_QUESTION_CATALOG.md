@@ -14,7 +14,7 @@ Audit-status answers remain topic-local. A simple status question should not exp
 | How do we know the Leather transaction is safe? | `leather_transaction_safety` | Separate SDK/app construction from Leather account selection and PSBT signing; require destination comparison and release-specific testnet proof. |
 | What must be checked before sending BTC? | `pre_funding_validation` | Derive the expected complete script and P2WSH destination from exact public inputs before funding. |
 | Can BTC be recovered if the app disappears? | `maturity_recovery` | Explain the protocol maturity path and separately identify key, script-data, and product-UX dependencies. |
-| Can BTC exit early? | `early_exit` | Lead with availability. Explain that the user first submits an early-exit transaction on Stacks, then approves the Bitcoin return transaction in their wallet. State forfeited yield, paired-STX timing, and network fees directly. Reserve coordinator, co-signing, reclaim, unlock-material, and signer-policy terminology for technical follow-up. Discuss product-specific availability only when it changes the answer or next step. |
+| Can BTC exit early? | `early_exit` | State that PoX-5 supports an optional early-exit path, then check current bond and route evidence before saying the user can use it. When enabled, explain the Stacks transaction followed by the Bitcoin wallet approval. State forfeited yield, paired-STX timing, and network fees directly. Reserve coordinator, co-signing, reclaim, unlock-material, and signer-policy terminology for technical follow-up. |
 
 ## Intake rule for new investor questions
 
@@ -32,5 +32,5 @@ Audit-status answers remain topic-local. A simple status question should not exp
 - Custodian-specific PSBT and witness-script support.
 - Recovery-material retention and operational runbooks.
 - Testnet evidence for the exact wallet/app release combination.
-- Audit report scope and remediation status once public report links are available.
+- Audit report links, scope, reviewed commits, and remediation status from current evidence.
 - Bitcoin reorg, fee, stuck-transaction, and maturity-spend operational risks.

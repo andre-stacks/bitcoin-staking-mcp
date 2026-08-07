@@ -2,8 +2,8 @@ export const GLOSSARY = `# Bitcoin Staking glossary
 
 - Native L1 Bitcoin staking: BTC committed in a Bitcoin L1 output under the PoX-5 bond rules. It is distinct from holding sBTC on Stacks.
 - sBTC: A programmable representation of BTC on Stacks. It can be self-custodied, so sBTC versus L1 and self-custody versus custody are separate choices.
-- StackingDAO sBTC pool: The approved permissionless pooled participation route for the Genesis Bond. Operator, minimum, fee, withdrawal, and accounting terms remain product-specific.
-- stBTC liquid staking token: The StackingDAO pool's optional planned LST capability, not a third approved enrollment route. Its contracts, redemption, liquidity, and lending support must be verified when published.
+- Pool-based participation: A bond route operated through a current approved pool. Operator, input asset, minimum, fee, withdrawal, accounting, and availability terms remain product-specific.
+- Pool-specific liquid staking token: An optional capability nested under the pool that issues it, not a separate enrollment route. Its contracts, redemption, liquidity, and lending support must be verified when published.
 - Bond: A configured Bitcoin Staking opportunity with defined timing, economics, requirements, and an optional on-chain PoX-5 bond index.
 - Participant key control: The participant or its custodian retains the key material required by the bond's Bitcoin script and recovery path.
 - Early exit: A bond-specific path to spend locked BTC before maturity. Availability, signers, costs, and forfeited rewards must be verified.
@@ -15,12 +15,12 @@ export const CAPABILITIES = `# Bitcoin Staking Concierge capabilities
 The concierge is one conversational entry point backed by fourteen read-only MCP tools. It guides users toward the closest participation route and a practical next step.
 
 1. **Check protocol status and availability** — current PoX-5 state, reward-cycle timing, and whether a verified bond is available.
-2. **Find Bitcoin Staking bonds and routes** — active or upcoming bonds plus direct native-L1 and approved StackingDAO sBTC-pool routes, with stBTC nested as an optional pool capability and scheduled product information separated from live on-chain state.
+2. **Find Bitcoin Staking bonds and routes** — active or upcoming bonds plus direct native-L1 and current pool-based routes, with any LST nested under its issuing pool and scheduled product information separated from live on-chain state.
 3. **Assess participation fit** — liquidity needs, Bitcoin L1 versus sBTC path, key control, amount, time horizon, wallet, and custodian constraints.
 4. **Model economics** — deterministic yield, fee, and price scenarios using sourced terms and explicit assumptions.
 5. **Review security and transaction boundaries** — audits, timelock construction, Leather behavior, pre-funding validation, maturity recovery, and early exit, including what is not yet proven.
 6. **Review custody and public status** — the maintained product-level custody directory, exact bond compatibility when a manifest exists, and public Stacks address participation state. Address checks never prove ownership.
-7. **Compare staking paths** — direct native-L1 and StackingDAO sBTC-pool routes, including the optional stBTC experience for liquidity or future DeFi without inventing a live borrowing product.
+7. **Compare staking paths** — direct native-L1 and current pool-based routes, including any registry-published LST experience for liquidity or future DeFi without inventing a live borrowing product.
 
 ## Tool map for developers
 

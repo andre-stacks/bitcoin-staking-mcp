@@ -241,7 +241,7 @@ export class BitcoinStakingService {
       ? `${bond.title} is slated for ${scheduledDate}${bond.timing.startsRewardCycle === undefined ? "" : ` in Cycle ${bond.timing.startsRewardCycle}`}. Enrollment and on-chain configuration remain pending; sourced public-model gross yield can be shown while net yield remains unknown until applicable fees are published.`
       : `${bond.title} is published for diligence. Route availability and final economics must be confirmed from current product and on-chain state.`;
     const nextDiligenceSteps = [
-      "Choose a currently supported custody path for direct native-L1 participation, or review the approved StackingDAO sBTC pool route.",
+      "Choose a currently supported custody path for direct native-L1 participation, or review a current approved pool route.",
       "Confirm the final bond duration and every applicable fee before treating a gross projection as a net-return scenario.",
       "Reconcile enrollment and on-chain configuration before funding.",
     ];
@@ -417,12 +417,14 @@ export class BitcoinStakingService {
     );
     const pool = bond.participationRoutes.find((route) => route.routeType === "sbtc_pool");
     const needsLiquidityRoute = profile.goal === "borrow_without_selling" || profile.liquidityNeed === "access_anytime";
+    const poolLabel = pool?.name ?? "current approved pool";
+    const lstLabel = pool?.lst?.tokenSymbol;
     return {
       ...comparison,
       closestRouteId: comparison.recommendedRouteId ?? (needsLiquidityRoute ? pool?.id ?? null : null),
       conclusion: needsLiquidityRoute
-        ? `The ${pool?.name ?? "approved sBTC pool"} with optional stBTC is the closest planned experience, but no named live lender, collateral terms, or reliable exit liquidity is verified.`
-        : "Compare the direct native-L1 route with the approved StackingDAO sBTC pool using the stated custody and liquidity tradeoffs.",
+        ? `The ${poolLabel}${lstLabel ? ` with optional ${lstLabel}` : ""} is the closest planned experience, but no named live lender, collateral terms, or reliable exit liquidity is verified.`
+        : `Compare the direct native-L1 route with the ${poolLabel} using the stated custody and liquidity tradeoffs.`,
     };
   }
 

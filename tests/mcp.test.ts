@@ -153,8 +153,8 @@ test("audit guidance stays audit-specific and does not inherit a prior custodian
   assert.match(content.responseScope, /audit-specific|requested security topic/i);
   assert.equal(content.entries[0].answer, "Yes. The PoX-5 codebase was audited by Trail of Bits and Clarity Alliance, with additional review by Asymmetric Research.");
   assert.match(content.entries[0].responseScope, /without volunteering report-availability/i);
-  assert.match(content.entries[0].whatIsNotProven[0], /have not been published publicly yet/i);
-  assert.match(content.entries[0].whatIsNotProven[0], /Contact the Bitcoin Staking team/i);
+  assert.match(content.entries[0].whatIsNotProven[0], /must be confirmed from current MCP evidence/i);
+  assert.match(content.entries[0].verificationChecklist[0], /if none are returned, contact the Bitcoin Staking team/i);
   assert.ok(content.entries[0].verificationChecklist.every((step: string) => !/wallet|custod|integration/i.test(step)));
   assert.doesNotMatch(JSON.stringify(content), /BitGo/i);
 });
@@ -240,9 +240,9 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /State a supported capability first and explain how it works/i);
     assert.match(content.text, /Do not manufacture a negative contrast around it/i);
     assert.match(content.text, /Explain user actions and outcomes before infrastructure terminology/i);
-    assert.match(content.text, /Early exit is available before the bond ends/i);
-    assert.match(content.text, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
-    assert.match(content.text, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
+    assert.match(content.text, /PoX-5 supports an optional early-exit path/i);
+    assert.match(content.text, /check current bond and route evidence before saying the user can use it/i);
+    assert.match(content.text, /When a bond enables it, explain the Stacks transaction and later Bitcoin wallet approval/i);
     assert.match(content.text, /Early Exit Coordinator.*only when the user asks for technical detail/i);
     assert.match(content.text, /If a material limitation changes the decision, state it plainly in its own sentence after the mechanism/i);
     assert.match(content.text, /Do not list unverified liquidity, redemption, borrowing, market, or DeFi details/i);
@@ -277,6 +277,10 @@ test("alternate schedule and economics flow from runtime evidence rather than pr
       bondingPeriodDays: 91,
     },
   };
+  const alternatePool = bond.participationRoutes.find((route: any) => route.routeType === "sbtc_pool");
+  alternatePool.name = "Alternate BTC pool";
+  alternatePool.poolOperator = { id: "alternate-pool", name: "Alternate Pool" };
+  alternatePool.lst = { ...alternatePool.lst, tokenSymbol: "altBTC" };
   await writeFile(join(directory, "alternate-bond.json"), JSON.stringify(bond), "utf8");
 
   const service = new BitcoinStakingService({
@@ -311,6 +315,24 @@ test("alternate schedule and economics flow from runtime evidence rather than pr
   assert.equal(scenario.grossRewardDisplay, "0.011 BTC");
   assert.equal(scenario.availability, "published_reference_model_scenario");
   assert.equal(scenario.modelContext.sourceStatus, "reference_not_final_bond_terms");
+
+  const comparisonResult = await client.callTool({
+    name: "compare_staking_paths",
+    arguments: {
+      ...profile,
+      goal: "borrow_without_selling",
+      assetHeld: "sbtc",
+      participantType: "individual",
+      whitelistStatus: "unknown",
+      liquidityNeed: "access_anytime",
+      bitcoinPathPreference: "open_to_sbtc",
+      keyControlPreference: "self_controlled",
+    },
+  });
+  assert.equal(comparisonResult.isError, undefined, JSON.stringify(comparisonResult.content));
+  const comparison = comparisonResult.structuredContent as any;
+  assert.match(comparison.conclusion, /Alternate BTC pool with optional altBTC/i);
+  assert.doesNotMatch(comparison.conclusion, /StackingDAO|stBTC/i);
 
   const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request: "When is the next bond and what is the yield?" } });
   const content = prompt.messages[0]?.content;
@@ -356,7 +378,8 @@ test("concierge prompt makes the current audit question override unrelated prior
     assert.match(content.text, /newest user request as the controlling scope/i);
     assert.match(content.text, /Has the protocol been audited/i);
     assert.match(content.text, /without volunteering report-availability/i);
-    assert.match(content.text, /reports have not been published publicly yet/i);
+    assert.match(content.text, /check current MCP evidence: provide any returned public report links/i);
+    assert.match(content.text, /if none are returned, say that the current evidence does not include them/i);
     assert.match(content.text, /Bitcoin Staking team for access/i);
     assert.match(content.text, /Do not mention BitGo or another named integration unless the current request asks whether it was covered/i);
   }
