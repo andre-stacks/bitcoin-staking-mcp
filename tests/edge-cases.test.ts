@@ -68,14 +68,6 @@ test("bond schema rejects invalid limits, paired-STX terms, reward fields, and c
   delete fixed.economics.fixedRewardUnits;
   assert.equal(BondManifestSchema.safeParse(fixed).success, false);
 
-  const duplicateRewardOptions = await genesis();
-  duplicateRewardOptions.economics.rewardAssetOptions = ["sBTC", "sBTC"];
-  assert.equal(BondManifestSchema.safeParse(duplicateRewardOptions).success, false);
-
-  const mismatchedRewardAsset = await genesis();
-  mismatchedRewardAsset.economics.rewardAssetOptions = ["BTC"];
-  assert.equal(BondManifestSchema.safeParse(mismatchedRewardAsset).success, false);
-
   const contract = await genesis();
   contract.participationRoutes[1].contracts = [{ role: "pool", contractId: "ST000000000000000000002AMW42H.pool", network: "testnet" }];
   assert.equal(BondManifestSchema.safeParse(contract).success, false);

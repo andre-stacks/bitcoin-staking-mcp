@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { ServiceError } from "../src/core/errors.js";
-import { CONTRACT_VERSION, EXPECTED_TOOL_NAMES, SERVER_VERSION, createBitcoinStakingMcpServer } from "../src/mcp/server.js";
+import { CONTRACT_VERSION, EXPECTED_TOOL_NAMES, SERVER_VERSION, SKILL_VERSION, createBitcoinStakingMcpServer } from "../src/mcp/server.js";
 import { StacksProvider } from "../src/providers/stacks.js";
 import { CoinGeckoPriceProvider } from "../src/providers/coingecko.js";
 import { BitcoinStakingService } from "../src/service.js";
@@ -159,9 +159,14 @@ test("audit guidance stays audit-specific and does not inherit a prior custodian
 
 test("capabilities expose versions and concierge prompt enforces intent-aware onboarding", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
+  const serverInstructions = client.getInstructions() ?? "";
+  assert.match(serverInstructions, /read-only Bitcoin Staking intelligence layer/i);
+  assert.match(serverInstructions, /runtime and on-chain evidence as stronger than product-owner claims/i);
+  assert.match(serverInstructions, /Never construct, sign, or broadcast transactions/i);
+  assert.doesNotMatch(serverInstructions, /Scout|Hi, I'm|Try asking|fewer than 100 words/i);
   const resource = await client.readResource({ uri: "bitcoin-staking://capabilities" }); const text = (resource.contents[0] as any).text as string;
   assert.match(text, new RegExp(`Contract version: ${CONTRACT_VERSION}`)); assert.match(text, new RegExp(`Server version: ${SERVER_VERSION}`));
-  assert.match(text, /Skill version: 0\.3\.0/); assert.match(text, /Registry version: 2026-08-06\.1/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
+  assert.match(text, new RegExp(`Skill version: ${SKILL_VERSION.replace(/\./g, "\\.")}`)); assert.match(text, /Registry version: 2026-08-06\.1/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
   const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: {} }); const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text"); if (content?.type === "text") {
     assert.match(content.text, /Onboarding follows the user's intent/i);

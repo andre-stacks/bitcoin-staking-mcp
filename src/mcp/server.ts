@@ -15,7 +15,7 @@ import {
 
 export const SERVER_VERSION = "0.3.0";
 export const CONTRACT_VERSION = "2.0.0";
-export const SKILL_VERSION = "0.3.0";
+export const SKILL_VERSION = "0.3.1";
 export const EXPECTED_TOOL_NAMES = [
   "get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "get_security_guidance", "build_diligence_report",
   "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status",
@@ -24,6 +24,14 @@ export const EXPECTED_TOOL_NAMES = [
 
 const readOnlyAnnotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false } as const;
 const liveReadAnnotations = { ...readOnlyAnnotations, openWorldHint: true } as const;
+export const SERVER_INSTRUCTIONS = [
+  "This server is a read-only Bitcoin Staking intelligence layer. Use its tools and resources for structured facts, calculations, source provenance, and verification boundaries.",
+  "Treat current runtime and on-chain evidence as stronger than product-owner claims, and apply returned freshness and conflict status before describing anything as current or available.",
+  "Do not replace unavailable live data with demo, stale, remembered, or inferred state. Preserve unknown and empty results as unknown and empty.",
+  "Use simulate_yield only when duration and annual rate are sourced or explicitly supplied. Never assume a missing route or LST fee is zero.",
+  "Never construct, sign, or broadcast transactions, move funds, or provide individualized financial advice.",
+].join(" ");
+
 const CONCIERGE_INSTRUCTIONS = [
   "Classify the newest request before responding. Onboarding follows the user's intent, not simply whether this is the first message.",
   "For an empty invocation or broad orientation such as 'I'd like to get started with Bitcoin staking' that has no concrete question, amount, provider, or preference, give a capability-first welcome of fewer than 100 words.",
@@ -46,7 +54,7 @@ const CONCIERGE_INSTRUCTIONS = [
   "In a general opportunity answer, describe a pool-specific LST naturally only when current MCP evidence returns it; explain the route taxonomy only when it matters. Do not list unverified liquidity, redemption, borrowing, market, or DeFi details unless the user asks about them or they change the recommendation.",
   "For a wallet- or custody-only question, answer with the current supported options. Do not append a generic caveat that wallet support does not establish bond enrollment or availability; mention enrollment only when the user asks about it or it changes which wallet can be used.",
   "When an amount is accepted by the route assessment, proceed to the remaining eligibility, wallet, and operational decisions. Do not narrate the absence of an amount-related rejection.",
-  "For a general yield question without an amount, read the current bond economics and lead with supported planned terms rather than with missing final terms. When current MCP evidence returns the 3% annualized, roughly six-month model and BTC or sBTC reward options, say: 'Bitcoin Staking is currently planned to offer a 3% annualized rate for roughly six months, with rewards available in BTC or sBTC. For every 1 BTC staked, the expected gross return over the six-month term is approximately 0.015 BTC, before any applicable fees. Final terms will be confirmed when each bond is published on-chain.' Do not describe this as 1.5% growth over the term. Invite the user to provide their BTC amount for an estimate.",
+  "For a general yield question without an amount, read the current bond economics and lead with supported planned terms rather than with missing final terms. When current MCP evidence returns the 3% annualized, roughly six-month model, use the approved planned reward framing and say: 'Bitcoin Staking is currently planned to offer a 3% annualized rate for roughly six months, with rewards available in BTC or sBTC. For every 1 BTC staked, the expected gross return over the six-month term is approximately 0.015 BTC, before any applicable fees. Final terms will be confirmed when each bond is published on-chain.' Do not describe this as 1.5% growth over the term. Invite the user to provide their BTC amount for an estimate.",
   "For a yield question, call simulate_yield when duration and annual rate are sourced or explicitly supplied. If an applicable route or selected-LST fee is missing, show the sourced gross reward, label net reward unknown, and never assume a zero fee. CoinGecko prices may enrich the scenario, but do not replace missing rate or duration inputs. Use only three-decimal display fields for user-facing BTC and STX quantities.",
   "Use the exact planned-yield framing above when the current evidence matches it; otherwise state only the economics returned by the MCP. Avoid stacked qualifiers and status jargon such as scheduled-not-open, optional capability, is intended to provide, or exhaustive lists ending in not yet verified.",
   "For borrowing, require a named live lender and sourced collateral terms; transferability alone is never borrowing evidence. Accept BTC or sBTC amounts naturally and convert to sats internally. Never expose internal enums or basis points unless requested. Never construct, sign, or broadcast transactions or provide individualized advice.",
@@ -61,7 +69,7 @@ function failure(error: unknown) { const serviceError = error instanceof Service
 function tool<T>(handler: () => Promise<T> | T) { return Promise.resolve().then(handler).then(success).catch(failure); }
 
 export function createBitcoinStakingMcpServer(service = new BitcoinStakingService()): McpServer {
-  const server = new McpServer({ name: "bitcoin-staking-mcp", version: SERVER_VERSION }, { instructions: CONCIERGE_INSTRUCTIONS });
+  const server = new McpServer({ name: "bitcoin-staking-mcp", version: SERVER_VERSION }, { instructions: SERVER_INSTRUCTIONS });
 
   server.registerTool("get_market_snapshot", { title: "Get Bitcoin Staking market snapshot", description: "Deterministic front door combining the reviewed product registry, route freshness, live PoX state, and on-chain bond configuration with evidence precedence already applied.", inputSchema: z.object({ network: StacksNetworkSchema.default("mainnet") }), outputSchema: MarketSnapshotOutputSchema, annotations: liveReadAnnotations }, ({ network }) => tool(() => service.getMarketSnapshot({ network })));
   server.registerTool("get_protocol_status", { title: "Get Bitcoin Staking protocol status", description: "Read current PoX state and exact endpoint provenance.", inputSchema: z.object({ network: StacksNetworkSchema.default("mainnet") }), outputSchema: ProtocolStatusOutputSchema, annotations: liveReadAnnotations }, ({ network }) => tool(() => service.getProtocolStatus(network)));

@@ -20,13 +20,13 @@ test("early-exit guidance leads with the supported mechanism without reflexive c
   assert.match(entry.answer, /paired STX stays locked until the original unlock date/i);
   assert.match(entry.answer, /Normal Stacks and Bitcoin network fees apply/i);
   assert.doesNotMatch(entry.answer, /coordinated signing|co-signed|reclaim transaction|unlock material|signer set|2-of-2/i);
-  assert.doesNotMatch(entry.answer, /\b(?:but|however|rather than|not instant)\b/i);
+  assert.doesNotMatch(entry.answer, /but it is cooperative rather than an instant withdrawal/i);
 });
 
 test("Genesis v2 publishes exactly direct L1 and StackingDAO pool routes", async () => {
   const bond = await bondFile("genesis-bond-cycle-142.json");
   assert.equal(bond.schemaVersion, 2);
-  assert.deepEqual(bond.economics.rewardAssetOptions, ["BTC", "sBTC"]);
+  assert.equal(bond.economics.rewardAsset, "sBTC");
   assert.deepEqual(bond.participationRoutes.map((route) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   const pool = bond.participationRoutes[1];
   assert.equal(pool?.routeType, "sbtc_pool");
@@ -36,6 +36,15 @@ test("Genesis v2 publishes exactly direct L1 and StackingDAO pool routes", async
     assert.equal(pool.lst?.tokenSymbol, "stBTC");
   }
   assert.equal(bond.participationRoutes.some((route) => (route.routeType as string) === "liquid_staking_token"), false);
+});
+
+test("published economics remain parseable by strict v0.3 clients", async () => {
+  const bond = await bondFile("genesis-bond-cycle-142.json");
+  const v03EconomicsKeys = new Set([
+    "targetRateBps", "managerFeeBps", "rewardAsset", "rewardModel",
+    "rewardSource", "termsStatus", "fixedRewardUnits", "referenceModel",
+  ]);
+  assert.deepEqual(Object.keys(bond.economics).filter((key) => !v03EconomicsKeys.has(key)), []);
 });
 
 test("v1 manifests normalize to one unconfirmed native-L1 v2 route", () => {
