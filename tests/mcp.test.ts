@@ -198,6 +198,8 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
     assert.match(content.text, /Do not list unverified liquidity, redemption, borrowing, market, or DeFi details/i);
+    assert.match(content.text, /wallet- or custody-only question/i);
+    assert.match(content.text, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
     assert.match(content.text, /Avoid stacked qualifiers and status jargon/i);
   }
 });

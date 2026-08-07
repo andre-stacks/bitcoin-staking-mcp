@@ -52,6 +52,8 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /Lead with the answer in ordinary language/i);
   assert.match(skill, /include a caveat only when it changes the answer/i);
   assert.match(skill, /do not list every unverified stBTC integration/i);
+  assert.match(skill, /wallet- or custody-only question/i);
+  assert.match(skill, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
   assert.match(skill, /Final terms may change before launch/i);
   assert.match(skill, /Avoid stacked qualifiers, status jargon/i);
 });
@@ -125,6 +127,8 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /Lead with the answer in ordinary language/i);
   assert.match(standard, /surface a caveat only when it changes the conclusion/i);
   assert.match(standard, /do not list every unverified liquidity/i);
+  assert.match(standard, /wallet- or custody-only question/i);
+  assert.match(standard, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
   assert.match(standard, /Describe the pooled option first as “Join a pool”/i);
   assert.match(standard, /Which matters more to you: keeping native BTC in self-custody/i);
   assert.match(standard, /multiple pools with different input assets and LST designs/i);

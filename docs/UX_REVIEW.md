@@ -59,6 +59,7 @@ The welcome is approachable and direct. Once diligence begins, answers remain ne
 - “When is the next bond launching?” bypasses general onboarding and returns current opportunity evidence.
 - “How can I stake 0.25 BTC?” bypasses general onboarding and begins the participation workflow.
 - “How can I get started staking?” frames the first choice around self-custody versus potential DeFi flexibility, says “Join a pool” before naming any current operator, and does not add “No conversion to sBTC is required.”
+- A wallet- or custody-only answer lists the current supported options without appending a generic bond-enrollment or availability caveat.
 - Pool names, required assets, LST designs, and integrations come from current MCP evidence rather than fixed onboarding copy.
 - The phrase “What would you like your Bitcoin to do?” is not used as the opening.
 - A specific supplied request bypasses the introduction.

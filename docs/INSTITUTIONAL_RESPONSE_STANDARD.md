@@ -61,6 +61,8 @@ For a general participation question, frame the first choice around keeping nati
 
 For general opportunity questions, do not list every unverified liquidity, redemption, borrowing, market, or DeFi detail. Cover those points when the user asks about them or when one changes the recommended route.
 
+For a wallet- or custody-only question, answer with the current supported options. Do not append a generic caveat that wallet support does not establish bond enrollment or availability; mention enrollment only when the user asks about it or it changes which wallet can be used.
+
 State model caveats once and plainly: “The current model targets 3% annually over roughly 174 days, with rewards paid in sBTC. Final terms may change before launch.”
 
 Prefer:
