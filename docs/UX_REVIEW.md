@@ -18,7 +18,7 @@ Keep one user-facing concierge entry point. Do not turn fourteen implementation 
 The concierge now introduces two bond-scoped participation routes:
 
 1. Direct native-L1 bond for users who prioritize keeping BTC on Bitcoin L1.
-2. The approved StackingDAO sBTC pool for permissionless smaller-balance participation, with stBTC nested as an optional capability.
+2. The approved StackingDAO sBTC pool for permissionless smaller-balance participation, with any stBTC option offered through the pool.
 The first response loads the upcoming opportunity and current custody paths, explains the routes in plain language, and asks which priority matters most. If the user already asks something, the agent proceeds directly and does not repeat the introduction.
 
 ## First-run contract
@@ -40,7 +40,7 @@ The fourteen tools remain directly available through the MCP host and Inspector.
 
 ## Voice
 
-The welcome is approachable and direct. Once diligence begins, answers retain the institutional response standard: neutral, concise, decision-relevant, sourced, and explicit about unknown or unproven facts.
+The welcome is approachable and direct. Once diligence begins, answers remain neutral, concise, decision-relevant, and sourced, but they should not read like an audit log. Lead with the user-facing status, translate internal fields into plain language, and mention only the unknowns that change the answer. Keep route taxonomy and exhaustive integration caveats out of a general opportunity response unless the user asks for that detail.
 
 ## Acceptance criteria
 

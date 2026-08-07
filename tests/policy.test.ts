@@ -14,7 +14,7 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /Never default to “wait”/i);
   assert.match(skill, /list_bond_participation_routes/);
   assert.match(skill, /StackingDAO sBTC pool/i);
-  assert.match(skill, /stBTC.*optional.*pool capability/i);
+  assert.match(skill, /stBTC.*under the StackingDAO pool/i);
   assert.match(skill, /For BitGo/i);
   assert.match(skill, /direct native-L1 bond is not borrowable/i);
   assert.match(skill, /Do not fill missing terms from memory/i);
@@ -25,6 +25,11 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /keeping BTC on L1, staying liquid, or starting with a smaller pooled position/i);
   assert.match(skill, /newest user request as the controlling scope/i);
   assert.match(skill, /audit-status question must not introduce BitGo/i);
+  assert.match(skill, /Lead with the answer in ordinary language/i);
+  assert.match(skill, /include a caveat only when it changes the answer/i);
+  assert.match(skill, /do not list every unverified stBTC integration/i);
+  assert.match(skill, /Final terms may change before launch/i);
+  assert.match(skill, /Avoid stacked qualifiers, status jargon/i);
 });
 
 test("README examples stay network-agnostic", async () => {
@@ -67,6 +72,11 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /One useful next-step question/i);
   assert.match(standard, /newest user request controls the response scope/i);
   assert.match(standard, /Do not introduce BitGo or any other named integration/i);
+  assert.match(standard, /Lead with the answer in ordinary language/i);
+  assert.match(standard, /surface a caveat only when it changes the conclusion/i);
+  assert.match(standard, /do not list every unverified liquidity/i);
+  assert.match(standard, /Final terms may change before launch/i);
+  assert.match(standard, /stacked qualifiers and status jargon/i);
 });
 
 test("nightly registry validation preserves pipeline failures", async () => {
