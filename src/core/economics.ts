@@ -187,7 +187,7 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
   ];
   if (projectionPeriod === "reference_model_duration") {
     assumptions.push(
-      `The ${durationDays}-day period is the public model's ${bond.economics.referenceModel?.bondingPeriodCycles}-cycle reference period; the Genesis Bond's final configured duration remains pending.`,
+      `The ${durationDays}-day period is the public model's ${bond.economics.referenceModel?.bondingPeriodCycles}-cycle reference period; ${bond.title}'s final configured duration remains pending.`,
     );
   }
   if (bond.dataStatus === "demo") {
@@ -203,7 +203,7 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
       input.btcPriceUsd === undefined || net === undefined
         ? null
         : (Number(net) / 100_000_000) * input.btcPriceUsd,
-    note: "The STX price scenario affects the paired-STX token estimate; it does not change the sBTC-denominated reward.",
+    note: `The STX price scenario affects the paired-STX token estimate; it does not change the ${bond.economics.rewardAsset}-denominated reward.`,
   }));
 
   return {

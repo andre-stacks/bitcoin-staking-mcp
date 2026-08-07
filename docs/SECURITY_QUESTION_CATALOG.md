@@ -6,14 +6,15 @@ This catalog translates recurring investor and integration questions into public
 
 | Investor question | MCP topic | Required answer boundary |
 | --- | --- | --- |
-| Has PoX-5 been audited? | `audit_status` | Name the published assurance and distinguish it from audit-report scope, findings, remediation, and wallet-integration proof. |
+| How will I know my Bitcoin is safe? | `all` | Use the security-foundation, independent-verification, bounded-residual-risk sequence. Lead with Bitcoin-enforced native-L1 protections, then audits and concrete pre-funding/recovery checks, then supported software and operational risks. Do not generalize native-L1 script properties to a pool route. |
+| Has PoX-5 been audited? | `audit_status` | Name the published assurance and reviewers. Do not volunteer report gaps; if the user requests the documents or deeper audit diligence, say the reports are not public yet and direct them to the Bitcoin Staking team for access. |
 
-Audit-status answers remain topic-local. They may state generically that a protocol audit is not integration proof, but they must not introduce a named wallet or custodian from an earlier turn unless the current question asks whether it was covered.
+Audit-status answers remain topic-local. A simple status question should not expand into report, scope, findings, remediation, commit-attestation, or integration caveats. Those details are progressive disclosure for a relevant follow-up. Audit answers must not introduce a named wallet or custodian from an earlier turn unless the current question asks whether it was covered.
 | How is the timelock constructed? | `timelock_construction` | Explain P2WSH, the CLTV maturity branch, the separate early-exit branch, participant unlock material, and the complete-script commitment. |
 | How do we know the Leather transaction is safe? | `leather_transaction_safety` | Separate SDK/app construction from Leather account selection and PSBT signing; require destination comparison and release-specific testnet proof. |
 | What must be checked before sending BTC? | `pre_funding_validation` | Derive the expected complete script and P2WSH destination from exact public inputs before funding. |
 | Can BTC be recovered if the app disappears? | `maturity_recovery` | Explain the protocol maturity path and separately identify key, script-data, and product-UX dependencies. |
-| Can BTC exit early? | `early_exit` | Explain cooperative signer requirements, forfeited yield, paired-STX timing, and product availability separately. |
+| Can BTC exit early? | `early_exit` | State that PoX-5 supports an optional early-exit path, then check current bond and route evidence before saying the user can use it. When enabled, explain the Stacks transaction followed by the Bitcoin wallet approval. State forfeited yield, paired-STX timing, and network fees directly. Reserve coordinator, co-signing, reclaim, unlock-material, and signer-policy terminology for technical follow-up. |
 
 ## Intake rule for new investor questions
 
@@ -31,5 +32,5 @@ Audit-status answers remain topic-local. They may state generically that a proto
 - Custodian-specific PSBT and witness-script support.
 - Recovery-material retention and operational runbooks.
 - Testnet evidence for the exact wallet/app release combination.
-- Audit report scope and remediation status once public report links are available.
+- Audit report links, scope, reviewed commits, and remediation status from current evidence.
 - Bitcoin reorg, fee, stuck-transaction, and maturity-spend operational risks.

@@ -51,9 +51,9 @@ When sources conflict, the answer reports the conflict. Runtime and contract evi
 | [PoX-5 hardfork and audit statement](https://www.stacks.co/blog/the-pox-5-hardfork-what-to-expect-this-week) | Official statement naming Trail of Bits, Clarity Alliance, and Asymmetric Research. |
 | [Public PoX-5 testnet guide](https://www.stacks.co/blog/the-public-pox-5-testnet-is-live-test-bitcoin-staking-before-mainnet) | Official network and testnet positioning. |
 
-## Current gaps
+## Evidence gaps to check at runtime
 
-- Public links to final audit reports, exact in-scope commit attestations, finding severity tables, and remediation status.
+- Public links to final audit reports, exact in-scope commit attestations, finding severity tables, and remediation status must be resolved from current evidence rather than inferred from the published reviewer statement.
 - Release-specific end-to-end proof for each wallet, custodian, and application combination.
 - Public compatibility evidence for every supported wallet and custody provider.
 - A canonical public product manifest for every upcoming bond.

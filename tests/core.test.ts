@@ -5,12 +5,31 @@ import { resolve } from "node:path";
 import { ServiceError, withTimeout } from "../src/core/errors.js";
 import { simulateYield } from "../src/core/economics.js";
 import { BondManifestSchema, ParticipantProfileSchema, normalizeBondManifest, routeEffectiveAvailability, toJsonSafe } from "../src/core/schemas.js";
+import { getSecurityGuidance } from "../src/security.js";
 
 async function bondFile(name: string) { return BondManifestSchema.parse(JSON.parse(await readFile(resolve(`data/bonds/${name}`), "utf8"))); }
+
+test("early-exit guidance leads with the supported mechanism without reflexive caveats", () => {
+  const entry = getSecurityGuidance("early_exit").entries[0];
+  assert.match(entry.answer, /^PoX-5 supports an optional early-exit path before maturity\./);
+  assert.match(entry.answer, /Whether it is available for a specific bond requires current bond and route confirmation/i);
+  assert.match(entry.answer, /For a bond that enables it/i);
+  assert.match(entry.answer, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
+  assert.match(entry.answer, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
+  assert.match(entry.answer, /security approval required by the bond/i);
+  assert.match(entry.answer, /keep rewards already received/i);
+  assert.match(entry.answer, /rewards remaining in the bond are forfeited/i);
+  assert.match(entry.answer, /paired STX stays locked until the original unlock date/i);
+  assert.match(entry.answer, /Normal Stacks and Bitcoin network fees apply/i);
+  assert.doesNotMatch(entry.answer, /coordinated signing|co-signed|reclaim transaction|unlock material|signer set|2-of-2/i);
+  assert.doesNotMatch(entry.answer, /^Early exit is available/i);
+  assert.doesNotMatch(entry.answer, /but it is cooperative rather than an instant withdrawal/i);
+});
 
 test("Genesis v2 publishes exactly direct L1 and StackingDAO pool routes", async () => {
   const bond = await bondFile("genesis-bond-cycle-142.json");
   assert.equal(bond.schemaVersion, 2);
+  assert.equal(bond.economics.rewardAsset, "sBTC");
   assert.deepEqual(bond.participationRoutes.map((route) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   const pool = bond.participationRoutes[1];
   assert.equal(pool?.routeType, "sbtc_pool");
@@ -20,6 +39,19 @@ test("Genesis v2 publishes exactly direct L1 and StackingDAO pool routes", async
     assert.equal(pool.lst?.tokenSymbol, "stBTC");
   }
   assert.equal(bond.participationRoutes.some((route) => (route.routeType as string) === "liquid_staking_token"), false);
+  assert.equal(bond.participationRoutes[0]?.routeType, "native_l1_direct");
+  if (bond.participationRoutes[0]?.routeType === "native_l1_direct") {
+    assert.equal(bond.participationRoutes[0].earlyExit.status, "unknown");
+  }
+});
+
+test("published economics remain parseable by strict v0.3 clients", async () => {
+  const bond = await bondFile("genesis-bond-cycle-142.json");
+  const v03EconomicsKeys = new Set([
+    "targetRateBps", "managerFeeBps", "rewardAsset", "rewardModel",
+    "rewardSource", "termsStatus", "fixedRewardUnits", "referenceModel",
+  ]);
+  assert.deepEqual(Object.keys(bond.economics).filter((key) => !v03EconomicsKeys.has(key)), []);
 });
 
 test("v1 manifests normalize to one unconfirmed native-L1 v2 route", () => {

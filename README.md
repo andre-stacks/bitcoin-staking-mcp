@@ -34,7 +34,7 @@ The concierge is an approachable Bitcoin Staking guide with institutional-qualit
 
 The answer policy is evidence-gated. The concierge may use only current MCP structured output and MCP resources for factual claims. It does not complete missing answers from model memory, infer wallet support from protocol behavior, treat an audit statement as end-to-end wallet proof, or substitute demo data after a live-read failure. When the corpus cannot answer a question, it says: “This MCP does not currently verify that,” and identifies the missing evidence.
 
-The published product registry currently lists the Genesis Bond as slated for August 26, 2026 in Cycle 142. Its versioned [public economic model](https://btc-staking-public-dashboard.vercel.app/) uses a 3% BTC target APY, a 5% minimum STX value ratio, and a 12-cycle (~174-day) reference period. Yield scenarios use current CoinGecko prices to calculate paired STX units. A sourced rate and duration support a gross projection; when an applicable fee is missing, net yield remains unknown. The bond remains `upcoming` until on-chain configuration and enrollment are verified.
+The published product registry supplies the Genesis Bond's current schedule, reward cycle, and economic evidence at runtime. Scout keeps planned product timing, public reference-model assumptions, bond-specific terms, and final on-chain configured terms distinct. Yield scenarios use sourced rate and duration inputs plus current CoinGecko prices for paired-STX calculations. When an applicable fee is missing, the supported gross projection remains available and net yield remains unknown.
 
 ## Quick start
 
@@ -56,13 +56,17 @@ To install only one host, use `--hosts codex` or `--hosts claude`. See [Installa
 
 ### First conversation
 
-Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, it loads the upcoming opportunity and the direct native-L1 and StackingDAO sBTC pool routes. stBTC is presented only as the pool's optional LST capability. It then asks which priority matters most.
+Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, or with a broad statement such as “I'd like to get started with Bitcoin staking,” Scout introduces itself as the Bitcoin Staking Concierge, summarizes how it can help, and offers three useful starter questions. It does not make users learn bond routes before choosing a direction.
 
 Ask naturally. For example:
 
 ```text
-What is the current protocol status, and are any bonds available?
+When is the next bond launching?
+How can I get started staking?
+Which participation option is right for me?
 ```
+
+A specific first question bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow.
 
 The single concierge command is the user-facing entry point. Fourteen read-only MCP tools remain directly available to agents, developers, and MCP Inspector; users do not need to know their names.
 
@@ -150,12 +154,12 @@ Use Inspector to review the instructions, all tool schemas and annotations, reso
 | `build_diligence_report` | Combine live status, a verified protocol bond if present, profile fit, exact PoX-5 target math, and security evidence. |
 | `list_bonds` | List public manifests and optionally separate demo records. |
 | `list_custody_paths` | List current product-level custody paths, explicit non-support, and review freshness. |
-| `list_bond_participation_routes` | Explain the direct native-L1 and StackingDAO sBTC-pool routes, including optional stBTC capability. |
+| `list_bond_participation_routes` | Explain the direct native-L1 and current pool-based routes, including any registry-published LST capability. |
 | `get_bond` | Read one normalized manifest and optional on-chain verification. |
 | `check_participant_status` | Read public Stacks staking and bond state. |
 | `check_compatibility` | Check cited wallet or custodian support; preserve unknowns. |
 | `simulate_yield` | Fetch current CoinGecko BTC/STX prices and calculate gross yield plus paired STX units. |
-| `compare_staking_paths` | Compare direct native-L1 and StackingDAO sBTC-pool routes for a participant profile, including optional stBTC considerations. |
+| `compare_staking_paths` | Compare direct native-L1 and current pool-based routes for a participant profile, including any registry-published LST considerations. |
 | `build_participation_plan` | Produce fit, tradeoffs, gaps, and safe next steps. |
 
 Resources expose the capability catalog, glossary, yield methodology, bond manifests, and source records under `bitcoin-staking://` URIs.
@@ -164,7 +168,7 @@ Resources expose the capability catalog, glossary, yield methodology, bond manif
 
 `bitcoin-staking://custody-paths` exposes the maintained native-L1 Bitcoin Staking custody directory. It is deliberately separate from bond manifests: a provider can have a product integration path even when no bond is open, while exact compatibility for a particular bond still requires manifest evidence.
 
-Bond route details come from `list_bond_participation_routes`, which keeps the direct and approved pooled paths attached to their bond and nests optional stBTC capability under the StackingDAO pool.
+Bond route details come from `list_bond_participation_routes`, which keeps direct and approved pooled paths attached to their bond and nests each optional LST capability under the pool that issues it.
 
 `bitcoin-staking://security` exposes the complete security-diligence catalog. Security answers always distinguish published assurance, protocol/source behavior, SDK construction, wallet behavior, and end-to-end integration proof.
 
@@ -181,7 +185,7 @@ Which Bitcoin staking opportunities are currently available or coming next? Sepa
 ```
 
 ```text
-Using the current public reference model, assess the 12-cycle gross reward scenario for 25 BTC. If an applicable fee is missing, keep net reward unknown, and separate model assumptions from final configured terms.
+Using the current public reference model, assess the gross reward scenario for 25 BTC. If an applicable fee is missing, keep net reward unknown, and separate model assumptions from bond-specific and final configured terms.
 ```
 
 ```text
@@ -197,7 +201,7 @@ Include demo opportunities. I have 1 BTC, want native-L1 yield, control my keys,
 ```
 
 ```text
-I want to borrow without selling and need access to my Bitcoin at any time. Compare the direct native-L1 route and StackingDAO sBTC pool, including stBTC only if redemption, liquidity, and a named lender are verified.
+I want to borrow without selling and need access to my Bitcoin at any time. Compare the direct native-L1 route and current pool-based routes, including an LST only if redemption, liquidity, and a named lender are verified.
 ```
 
 ## Demo-data disclosure

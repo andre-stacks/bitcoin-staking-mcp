@@ -1,6 +1,6 @@
 # Bitcoin Staking MCP — Production-Beta Implementation Audit
 
-Audit date: August 6, 2026. Target: v0.3.0. Scope: the approved bond-centric production-beta plan, implementation, offline and live tests, registry operations, package artifact, and installer contract. This is an engineering/product acceptance record, not a protocol security audit or authorization to tag, publish, deploy, or use capital.
+Audit date: August 7, 2026. Target: v0.3.0. Scope: the approved bond-centric production-beta plan, implementation, offline and live tests, registry operations, package artifact, and installer contract. This is an engineering/product acceptance record, not a protocol security audit or authorization to tag, publish, deploy, or use capital.
 
 ## Verdict
 
@@ -25,9 +25,9 @@ Release execution remains a separate approval boundary. The repository is versio
 | Yield behavior | Complete | Integer sats math applies route and selected-LST fees sequentially. Duration and rate are mandatory for gross reward; missing applicable fees leave net reward unknown rather than defaulting to zero. Optional CoinGecko failure cannot invalidate deterministic sats math or cure a missing rate or duration. Invalid, conflicting, impossible-supply, and non-finite inputs fail closed. |
 | Participant network/provenance | Complete | Address inference, requested network, and selected bond are reconciled with bond precedence and conflict rejection. Component output identifies the exact account endpoint, contract/function, and map provenance. |
 | Diligence report | Complete | Reports cover schedule/configuration/registration/boundary, protocol economics and controls, direct and pool risks, optional LST risks, operational fit, claim sources, freshness, missing evidence, and a concrete next action. |
-| Concierge onboarding | Complete | The first turn calls the snapshot, explains the two routes plainly, treats stBTC as optional, and asks one route-changing priority question. Follow-ups are limited to asset, amount, whitelist, liquidity, and custody/key-control facts. |
+| Concierge onboarding | Complete | Broad orientation introduces Scout, summarizes four user-facing capabilities, and offers three starter questions. Specific timing, participation, economics, risk, custody, and liquidity requests bypass the welcome and proceed directly to the relevant evidence-backed workflow. |
 | Safety boundary | Complete | Tools cannot construct transactions, PSBTs, signatures, or broadcast payloads. All tool annotations are read-only/non-destructive; tools that may fetch registry, chain, or price data are correctly marked open-world. |
-| Version and installer contract | Complete | Server 0.3.0, contract 2.0.0, skill 0.3.0, registry version/hash/status/source mode are exposed through capabilities and verified by setup/check. The default install pins `#v0.3.0`; unpinned main remains development-only. |
+| Version and installer contract | Complete | Server 0.3.0, contract 2.0.0, skill 0.3.1, registry version/hash/status/source mode are exposed through capabilities and verified by setup/check. The default install pins `#v0.3.0`; unpinned main remains development-only. |
 | Host lifecycle | Complete | Setup/update/check/uninstall, exact Codex and Claude registration specs, host autodetection, explicit-host failure, skill hashing/tamper detection, version mismatch refusal, and targeted removal are tested. |
 | Release automation | Complete | CI, nightly registry review, package contents, stdio startup, live opt-in smoke tests, and release documentation are present. Tagging/publishing is intentionally not performed by this audit. |
 
@@ -56,13 +56,13 @@ The automated suite proves the requested journeys and the failure boundaries aro
 
 ## Verification record
 
-- `npm run check`: passed. 86 tests discovered; 84 passed and the two opt-in live tests were skipped as designed. Type checking, registry validation, build, packaged stdio initialization, and all offline tests passed.
+- `npm run check`: passed. 96 tests discovered; 94 passed and the two opt-in live tests were skipped as designed. Type checking, registry validation, build, packaged stdio initialization, and all offline tests passed.
 - `npm run registry:validate:live`: passed. Registry version `2026-08-06.1`, two bond manifests, six custody paths, 13 registered source entries, and current freshness were validated; external evidence was reachable.
 - `npm run test:live`: passed against the current mainnet PoX API.
 - `npm run test:testnet`: passed against the dedicated PoX-5 testnet API.
 - `npm run demo:proof`: passed. At the audit time, mainnet PoX-5 was active with no configured bond in indices 0–2; the dedicated testnet reported active PoX-5 and no configured bond in indices 0–2. These are time-specific observations, not permanent product claims.
 - `npm pack --dry-run`: passed; the tarball contains compiled code, registry data, the concierge skill, installation docs, README, and license.
-- Isolated tarball install: passed outside the repository. The installed artifact completed a real stdio MCP handshake with exactly 14 tools, server `0.3.0`, contract `2.0.0`, skill `0.3.0`, registry `2026-08-06.1`, a SHA-256 content hash, and current review status.
+- Isolated tarball install: passed outside the repository. The installed artifact completed a real stdio MCP handshake with exactly 14 tools, server `0.3.0`, contract `2.0.0`, skill `0.3.1`, registry `2026-08-06.1`, a SHA-256 content hash, and current review status.
 - `npm audit --audit-level=high`: zero known vulnerabilities in the locked dependency graph at audit time.
 - `git diff --check`: passed.
 

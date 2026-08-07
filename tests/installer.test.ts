@@ -81,9 +81,11 @@ test("setup registers both hosts, installs the global skill, and verifies regist
   assert.ok(calls.every((call) => call.cwd === tmpdir()));
   await access(join(fakeHome, ".agents", "skills", "bitcoin-staking-concierge", "SKILL.md"));
   assert.ok(result.nextSteps.some((step) => step.includes("$bitcoin-staking-concierge")));
-  assert.ok(result.nextSteps.some((step) => step.includes("current protocol status")));
+  assert.ok(result.nextSteps.some((step) => step.includes("Scout")));
+  assert.ok(result.nextSteps.some((step) => step.includes("I'd like to get started with Bitcoin staking")));
+  assert.ok(result.nextSteps.some((step) => step.includes("next bond launching")));
   assert.ok(result.nextSteps.some((step) => step.includes("security evidence")));
-  assert.ok(result.nextSteps.some((step) => step.includes("guided overview of the two routes")));
+  assert.ok(result.nextSteps.some((step) => step.includes("guided overview of what it can help with")));
 });
 
 test("setup fails closed before registration when the MCP handshake is incomplete", async () => {

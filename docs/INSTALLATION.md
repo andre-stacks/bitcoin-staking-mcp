@@ -36,7 +36,11 @@ Claude Code:
 /mcp__bitcoin_staking__bitcoin_staking_concierge
 ```
 
-The concierge introduces protocol status, bond discovery, participation fit, yield modeling, security diligence, compatibility and public-status checks, and native-L1 versus sBTC comparison. Ask naturally, for example:
+Scout, the Bitcoin Staking Concierge, can help with opportunity discovery, participation fit, yield modeling, security diligence, compatibility and public-status checks, and native-L1 versus sBTC comparison. Ask naturally, for example:
+
+```text
+I'd like to get started with Bitcoin staking.
+```
 
 ```text
 What is the current protocol status, and are any bonds available?
