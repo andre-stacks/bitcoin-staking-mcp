@@ -74,6 +74,7 @@ test("bond schema rejects invalid limits, paired-STX terms, reward fields, and c
   assert.equal(BondManifestSchema.safeParse(duplicateRewardOptions).success, false);
 
   const mismatchedRewardAsset = await genesis();
+  mismatchedRewardAsset.economics.rewardAsset = "sBTC";
   mismatchedRewardAsset.economics.rewardAssetOptions = ["BTC"];
   assert.equal(BondManifestSchema.safeParse(mismatchedRewardAsset).success, false);
 

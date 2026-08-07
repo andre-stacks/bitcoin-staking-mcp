@@ -211,7 +211,7 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /show the sourced gross reward, label net reward unknown/i);
     assert.match(content.text, /prices may enrich the scenario, but do not replace missing rate or duration inputs/i);
     assert.match(content.text, /three-decimal display fields/i);
-    assert.match(content.text, /Use the exact planned-yield framing above when the current evidence matches it/i);
+    assert.match(content.text, /State only the economics returned by the current MCP read/i);
     assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
     assert.match(content.text, /State a supported capability first and explain how it works/i);
@@ -226,12 +226,9 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /wallet- or custody-only question/i);
     assert.match(content.text, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
     assert.match(content.text, /Do not narrate the absence of an amount-related rejection/i);
-    assert.match(content.text, /planned to offer a 3% annualized rate for roughly six months/i);
-    assert.match(content.text, /rewards available in BTC or sBTC/i);
-    assert.match(content.text, /expected gross return over the six-month term is approximately 0\.015 BTC/i);
-    assert.match(content.text, /Do not describe this as 1\.5% growth over the term/i);
-    assert.match(content.text, /Final terms will be confirmed when each bond is published on-chain/i);
-    assert.match(content.text, /Invite the user to provide their BTC amount for an estimate/i);
+    assert.match(content.text, /read the current registry economics/i);
+    assert.match(content.text, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
+    assert.match(content.text, /invite the user to provide their BTC amount for a calculated estimate/i);
     assert.match(content.text, /Avoid stacked qualifiers and status jargon/i);
   }
 });
