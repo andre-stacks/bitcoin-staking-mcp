@@ -76,11 +76,11 @@ const guidance = {
       "The accepted SIP and pinned PoX-5 implementation are publicly inspectable.",
     ],
     whatIsNotProven: [
-      "The audit reports have not been published publicly yet. Contact the Bitcoin Staking team to request access.",
+      "Public report links and exact reviewed commits must be confirmed from current MCP evidence rather than inferred from the published reviewer statement.",
       "A protocol audit does not prove that a wallet or application integration constructs and presents every transaction correctly.",
     ],
     verificationChecklist: [
-      "Contact the Bitcoin Staking team to request the audit reports while public links are unavailable.",
+      "Check current MCP evidence for public report links; if none are returned, contact the Bitcoin Staking team to request access.",
       "Once the reports are available, confirm their exact code commits and in-scope components.",
       "Confirm all material findings are fixed, accepted by a named owner, or otherwise dispositioned.",
       "Obtain the auditors' final remediation or closure attestations for the reviewed commits.",
@@ -185,14 +185,14 @@ const guidance = {
   early_exit: {
     question: "What changes if the participant exits before maturity?",
     answer:
-      "Early exit is available before the bond ends. First, you submit an early-exit transaction on Stacks and approve it in your wallet. Once it confirms, you approve a Bitcoin transaction in your wallet to return the BTC to your address. The Bitcoin transaction also receives the security approval required by the bond before it is broadcast. You keep rewards already received. Rewards remaining in the bond are forfeited, and any paired STX stays locked until the original unlock date. Normal Stacks and Bitcoin network fees apply.",
+      "PoX-5 supports an optional early-exit path before maturity. Whether it is available for a specific bond requires current bond and route confirmation. For a bond that enables it, first you submit an early-exit transaction on Stacks and approve it in your wallet. Once it confirms, you approve a Bitcoin transaction in your wallet to return the BTC to your address. The Bitcoin transaction also receives the security approval required by the bond before it is broadcast. You keep rewards already received. Rewards remaining in the bond are forfeited, and any paired STX stays locked until the original unlock date. Normal Stacks and Bitcoin network fees apply.",
     evidenceLevel: "protocol_verified",
     whatIsKnown: [
       "Normal maturity recovery does not require the early-exit signers.",
       "Early exit and sBTC unstaking are separate paths and must not be conflated.",
     ],
     whatIsNotProven: [
-      "Wallet, custodian, and interface support is product-specific and requires current confirmation.",
+      "Bond availability plus wallet, custodian, and interface support are product-specific and require current confirmation.",
     ],
     verificationChecklist: [
       "Confirm the selected bond's designated early-exit signer policy.",
@@ -230,6 +230,8 @@ export function getSecurityGuidance(topic: SecurityTopic | "all" = "all") {
     responseScope:
       topic === "audit_status"
         ? "Keep the response audit-specific. Do not carry forward named wallets, custodians, borrowing goals, or other entities from earlier turns unless the current request explicitly reconnects them to audit coverage."
+        : topic === "all"
+          ? "For a broad Bitcoin-safety question, lead with the sourced native-L1 Bitcoin security foundation, then independent audit and transaction/recovery verification controls, then bounded implementation and operational risk. Do not open with a blanket no-safety guarantee, and do not apply native-L1 Bitcoin-script protections to a pool-based route."
         : "Answer only the requested security topic and introduce another product or entity only when the current request makes it relevant.",
     entries,
     dataStatus: "derived" as const,

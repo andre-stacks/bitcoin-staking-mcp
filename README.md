@@ -40,7 +40,7 @@ MCP clients use `BITCOIN_STAKING_REGISTRY_URL` and revalidate every 60 seconds. 
 
 The answer policy is evidence-gated. The concierge may use only current MCP structured output and MCP resources for factual claims. It does not complete missing answers from model memory, infer wallet support from protocol behavior, treat an audit statement as end-to-end wallet proof, or substitute demo data after a live-read failure. When the corpus cannot answer a question, it says: “This MCP does not currently verify that,” and identifies the missing evidence.
 
-The Genesis Bond has stable ID `genesis-bond` and PoX-5 bond period/index 1. The MCP derives its eligible reward cycle and burn height from live PoX information and estimates calendar time from remaining Bitcoin burn blocks at the ten-minute target. Product targets, operators, integrations, and economic terms come from the live registry and remain separate from protocol eligibility.
+The Genesis Bond has stable ID `genesis-bond` and PoX-5 bond period/index 1. The MCP derives its eligible reward cycle and burn height from live PoX information and estimates calendar time from remaining Bitcoin burn blocks at the ten-minute target. Product targets, operators, integrations, and economic terms come from the live registry and remain separate from protocol eligibility. Scout keeps planned product timing, public reference-model assumptions, bond-specific terms, and final on-chain configured terms distinct. Yield scenarios use sourced rate and duration inputs; when an applicable fee is missing, the supported gross projection remains available and net yield remains unknown.
 
 ## Quick start
 
@@ -160,12 +160,12 @@ Use Inspector to review the instructions, all tool schemas and annotations, reso
 | `build_diligence_report` | Combine live status, a verified protocol bond if present, profile fit, exact PoX-5 target math, and security evidence. |
 | `list_bonds` | List public manifests and optionally separate demo records. |
 | `list_custody_paths` | List current product-level custody paths, explicit non-support, and review freshness. |
-| `list_bond_participation_routes` | Explain the direct native-L1 and sBTC-pool route types. |
+| `list_bond_participation_routes` | Explain the direct native-L1 and current pool-based routes, including any registry-published LST capability. |
 | `get_bond` | Read one normalized manifest and optional on-chain verification. |
 | `check_participant_status` | Read public Stacks staking and bond state. |
 | `check_compatibility` | Check cited wallet or custodian support; preserve unknowns. |
 | `simulate_yield` | Fetch current CoinGecko BTC/STX prices and calculate gross yield plus paired STX units. |
-| `compare_staking_paths` | Compare direct native-L1 and sBTC-pool routes for a participant profile. |
+| `compare_staking_paths` | Compare direct native-L1 and current pool-based routes for a participant profile, including any registry-published LST considerations. |
 | `build_participation_plan` | Produce fit, tradeoffs, gaps, and safe next steps. |
 | `search_current_facts` | Search current projects, products, notices, partners, and integrations. |
 
@@ -175,7 +175,7 @@ Resources expose the capability catalog, glossary, yield methodology, bond manif
 
 `bitcoin-staking://custody-paths` exposes the maintained native-L1 Bitcoin Staking custody directory. It is deliberately separate from bond manifests: a provider can have a product integration path even when no bond is open, while exact compatibility for a particular bond still requires manifest evidence.
 
-Bond route details come from `list_bond_participation_routes`. Current operators, products, notices, and integrations come from `search_current_facts` and `bitcoin-staking://catalog`.
+Bond route details come from `list_bond_participation_routes`, which keeps direct and pool-based paths attached to their bond and nests each optional LST capability under the pool that issues it. Current operators, products, notices, and integrations come from `search_current_facts` and `bitcoin-staking://catalog`.
 
 `bitcoin-staking://security` exposes the complete security-diligence catalog. Security answers always distinguish published assurance, protocol/source behavior, SDK construction, wallet behavior, and end-to-end integration proof.
 
@@ -192,7 +192,7 @@ Which Bitcoin staking opportunities are currently available or coming next? Sepa
 ```
 
 ```text
-Using the current registry terms, assess the gross reward scenario for 25 BTC. If rate, duration, or an applicable fee is missing, say what is still needed and do not invent it.
+Using the current registry evidence, assess the gross reward scenario for 25 BTC. Keep planned targets and public reference-model assumptions distinct from bond-specific and final configured terms. If rate or duration is missing, say what is needed; if an applicable fee is missing, keep net reward unknown.
 ```
 
 ```text
@@ -208,7 +208,7 @@ Include demo opportunities. I have 1 BTC, want native-L1 yield, control my keys,
 ```
 
 ```text
-I want to borrow without selling and need access to my Bitcoin at any time. Compare the direct native-L1 and sBTC-pool routes, and include only registry-verified liquidity and lending integrations.
+I want to borrow without selling and need access to my Bitcoin at any time. Compare the direct native-L1 route and current pool-based routes, including an LST only when the current registry verifies redemption, liquidity, and a named lender.
 ```
 
 ## Demo-data disclosure

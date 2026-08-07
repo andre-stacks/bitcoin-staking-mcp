@@ -28,9 +28,9 @@ What Bitcoin staking opportunities are currently available or coming next? Use t
 
 Expected behavior: check mainnet state and published manifests first. If neither contains an opportunity, inspect testnet automatically and present it as the live demo/prototype environment for the intended mainnet journey. Keep test assets separate from mainnet opportunities, and do not infer a configured bond from an empty scan.
 
-Current expected product result: show the Genesis Bond's live protocol-derived cycle and burn height, label the calendar estimate approximate, distinguish protocol eligibility from product enrollment, and explain what a participant can prepare now.
+Current expected product result: show the Genesis Bond's live protocol-derived cycle and burn height, label the returned calendar estimate approximate, distinguish protocol eligibility, planned product timing, enrollment, and on-chain configuration, and explain what a participant can prepare now.
 
-For a 25 BTC scenario, use only current registry terms or explicit scenario inputs. If rate or duration is absent, request it; if an applicable fee remains unknown, show the supported gross reward and keep net reward unknown.
+For a 25 BTC scenario, use only the rate, duration, reward asset, paired-STX requirement, and fees returned by current registry evidence or explicitly supplied as scenario inputs. Preserve whether the inputs are planned, reference-model, bond-specific, or configured. If rate or duration is absent, request it; if an applicable fee remains unknown, show the supported gross reward and keep net reward unknown rather than assuming a zero fee.
 
 ### 2. Generic institutional diligence
 

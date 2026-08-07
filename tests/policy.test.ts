@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { SKILL_VERSION } from "../src/mcp/server.js";
 
 test("repo concierge skill enforces guided discovery and evidence boundaries", async () => {
   const skill = await readFile(
@@ -57,23 +58,34 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /provider-specific setup requirements only when the user names that provider/i);
   assert.match(skill, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(skill, /Has the protocol been audited/i);
+  assert.match(skill, /Security confidence sequence/i);
+  assert.match(skill, /Security starts with Bitcoin itself/i);
+  assert.match(skill, /security foundation.*Independent verification.*Bounded residual risk/is);
+  assert.match(skill, /Like any financial software, risk is not zero/i);
+  assert.match(skill, /Do not open a broad safety answer with “your Bitcoin cannot be guaranteed completely safe”/i);
+  assert.match(skill, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
   assert.match(skill, /without volunteering report-availability/i);
-  assert.match(skill, /reports have not been published publicly yet/i);
+  assert.match(skill, /check current MCP evidence: provide any returned public report links/i);
+  assert.match(skill, /if none are returned, say that the current evidence does not include them/i);
   assert.match(skill, /Bitcoin Staking team for access/i);
   assert.match(skill, /Lead with the answer in ordinary language/i);
   assert.match(skill, /include a caveat only when it changes the answer/i);
   assert.match(skill, /State the supported capability first and explain how it works/i);
   assert.match(skill, /Do not manufacture a negative contrast around a supported feature/i);
   assert.match(skill, /Explain what the user does and what happens next before naming protocol infrastructure/i);
-  assert.match(skill, /Early exit is available before the bond ends/i);
-  assert.match(skill, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
-  assert.match(skill, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
+  assert.match(skill, /PoX-5 supports an optional early-exit path/i);
+  assert.match(skill, /check current bond and route evidence before saying the user can use it/i);
+  assert.match(skill, /When a bond enables it, explain the Stacks transaction and later Bitcoin wallet approval/i);
   assert.match(skill, /Early Exit Coordinator.*for technical follow-up/i);
   assert.match(skill, /state it plainly in its own sentence after the mechanism/i);
-  assert.match(skill, /do not list every unverified stBTC integration/i);
+  assert.match(skill, /do not list every unverified pool-specific LST integration/i);
   assert.match(skill, /wallet- or custody-only question/i);
   assert.match(skill, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
-  assert.match(skill, /Never retain a current rate, duration, capacity, fee, or reward asset/i);
+  assert.match(skill, /returned annualized rate and approximate term/i);
+  assert.match(skill, /call `simulate_yield` with a 1 BTC principal/i);
+  assert.match(skill, /do not calculate the return in prose/i);
+  assert.match(skill, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
+  assert.match(skill, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
   assert.match(skill, /Avoid stacked qualifiers, status jargon/i);
 });
 
@@ -107,7 +119,7 @@ test("README examples stay network-agnostic", async () => {
   assert.match(readme, /best currently available data/);
   assert.doesNotMatch(readme, /On the configured testnet, which protocol bonds/);
   assert.doesNotMatch(readme, /Build an institutional diligence report for the PoX-5 testnet/);
-  assert.match(readme, /direct native-L1 and sBTC-pool route types/i);
+  assert.match(readme, /direct native-L1.*current pool-based routes/i);
   assert.match(readme, /Fifteen read-only MCP tools/i);
 });
 
@@ -118,7 +130,8 @@ test("concierge skill remains orchestration-only", async () => {
   );
 
   assert.doesNotMatch(skill, /targetRateBps|stxValueRatio|minUstxRatioBps/);
-  assert.match(skill, /current registry evidence or explicit user scenario inputs/i);
+  assert.match(skill, /current registry evidence supports them/i);
+  assert.match(skill, /public reference-model/i);
   assert.match(skill, /CoinGecko prices may enrich the scenario/i);
   assert.match(skill, /three-decimal display fields/i);
   assert.match(skill, /show the gross reward.*net reward as unknown/i);
@@ -147,7 +160,13 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /provider-specific setup requirements only when the user names that provider/i);
   assert.match(standard, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(standard, /without volunteering report availability/i);
-  assert.match(standard, /reports have not been published publicly yet/i);
+  assert.match(standard, /Security starts with Bitcoin itself/i);
+  assert.match(standard, /Security foundation.*Independent verification.*Bounded residual risk/is);
+  assert.match(standard, /Like any financial software, risk is not zero/i);
+  assert.match(standard, /Do not open a broad safety answer with “your Bitcoin cannot be guaranteed completely safe”/i);
+  assert.match(standard, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
+  assert.match(standard, /check current MCP evidence: provide any returned public report links/i);
+  assert.match(standard, /if none are returned, say that the current evidence does not include them/i);
   assert.match(standard, /Bitcoin Staking team for access/i);
   assert.match(standard, /Do not introduce BitGo or any other named integration/i);
   assert.match(standard, /Lead with the answer in ordinary language/i);
@@ -155,7 +174,8 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /State a supported capability first and explain how it works/i);
   assert.match(standard, /Do not manufacture a negative contrast around it/i);
   assert.match(standard, /Explain what the user does and what happens next before naming protocol infrastructure/i);
-  assert.match(standard, /Early exit is available before the bond ends/i);
+  assert.match(standard, /PoX-5 supports an optional early-exit path before maturity/i);
+  assert.match(standard, /Whether it is available for a specific bond requires current bond and route confirmation/i);
   assert.match(standard, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
   assert.match(standard, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
   assert.match(standard, /Early Exit Coordinator.*for technical follow-up/i);
@@ -168,9 +188,65 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /software, hardware, multisig, institutional-wallet, and custody options from current MCP evidence rather than a fixed provider list/i);
   assert.match(standard, /Do not narrate that the amount did not trigger a rejection/i);
   assert.match(standard, /multiple pools with different input assets and LST designs/i);
-  assert.match(standard, /Final terms may change before launch/i);
-  assert.match(standard, /Do not retain a current rate, duration, fee, capacity, or reward asset/i);
+  assert.match(standard, /returned annualized rate and approximate term/i);
+  assert.match(standard, /use `simulate_yield` with a 1 BTC principal/i);
+  assert.match(standard, /Do not infer the worked return in prose/i);
+  assert.match(standard, /Planned product targets and public reference-model assumptions are not bond-specific terms; bond-specific terms are not proof of final on-chain configuration/i);
+  assert.match(standard, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
   assert.match(standard, /stacked qualifiers and status jargon/i);
+});
+
+test("static Scout policy surfaces do not retain current schedule or economics", async () => {
+  const paths = [
+    ".agents/skills/bitcoin-staking-concierge/SKILL.md",
+    "README.md",
+    "docs/DEMO_RUNBOOK.md",
+    "docs/INSTITUTIONAL_RESPONSE_STANDARD.md",
+    "docs/PRODUCT_REQUIREMENTS.md",
+    "docs/SECURITY_QUESTION_CATALOG.md",
+    "docs/SOURCE_CORPUS.md",
+    "docs/TECHNICAL_SPEC.md",
+    "docs/UX_REVIEW.md",
+    "src/content.ts",
+    "src/institutional.ts",
+    "src/mcp/server.ts",
+  ];
+  const forbidden = [
+    /\b(?:January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}(?:, \d{4})?\b/i,
+    /\b20\d{2}-\d{2}-\d{2}\b/,
+    /\b\d+(?:\.\d+)?% annualized\b/i,
+    /\broughly \w+(?:-\w+)? months?\b/i,
+    /\bgross (?:return|reward)[^.\n]*\b0\.\d+ BTC\b/i,
+  ];
+  for (const path of paths) {
+    const surface = await readFile(resolve(path), "utf8");
+    for (const pattern of forbidden) {
+      assert.doesNotMatch(surface, pattern, `${path} retains a time-sensitive product fact`);
+    }
+  }
+
+  const runtimeOperatorSurfaces = [
+    ".agents/skills/bitcoin-staking-concierge/SKILL.md",
+    "README.md",
+    "docs/INSTITUTIONAL_RESPONSE_STANDARD.md",
+    "docs/PRODUCT_REQUIREMENTS.md",
+    "docs/SECURITY_QUESTION_CATALOG.md",
+    "docs/SOURCE_CORPUS.md",
+    "docs/UX_REVIEW.md",
+    "src/content.ts",
+    "src/institutional.ts",
+    "src/mcp/server.ts",
+    "src/service.ts",
+  ];
+  for (const path of runtimeOperatorSurfaces) {
+    const surface = await readFile(resolve(path), "utf8");
+    assert.doesNotMatch(surface, /StackingDAO/, `${path} retains a current pool operator`);
+  }
+
+  const audit = await readFile(resolve("docs/IMPLEMENTATION_AUDIT.md"), "utf8");
+  const documentedSkillVersions = [...audit.matchAll(/skill `?(\d+\.\d+\.\d+)`?/gi)].map((match) => match[1]);
+  assert.ok(documentedSkillVersions.length >= 2);
+  assert.deepEqual([...new Set(documentedSkillVersions)], [SKILL_VERSION]);
 });
 
 test("nightly registry validation preserves pipeline failures", async () => {

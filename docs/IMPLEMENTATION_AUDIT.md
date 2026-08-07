@@ -45,7 +45,7 @@ The automated suites cover:
 
 ## Verification record
 
-- `npm run check`: passed after the final implementation changes. The root suite discovers 99 tests: 97 pass and the two opt-in live tests skip as designed. The console suite passes 14/14. Across both suites, 113 tests are discovered, 111 pass, and two intentionally skip. TypeScript, schema validation, builds, and the Next.js production build pass.
+- `npm run check`: passed after the final implementation and PR3 integration changes. The root suite discovers 102 tests: 100 pass and the two opt-in live tests skip as designed. The console suite passes 14/14. Across both suites, 116 tests are discovered, 114 pass, and two intentionally skip. TypeScript, schema validation, builds, and the Next.js production build pass.
 - Real Preview OAuth/editor acceptance: passed with an allowlisted Stacks Labs publisher. A temporary integration was saved, validated, diffed, published, retrieved through the anonymous API and `RegistryStore`, then removed through rollback. Each publication produced a new immutable revision. The editor finished with the corrected seed, an empty integration list, and no saved draft.
 - Real Vercel consistency regression: the audit reproduced an eventually consistent rollback failure, changed rollback to a single atomic mutation, deployed the fix, rolled from the seed to the temporary integration revision, and rolled back to the seed again. Both fixed rollbacks completed, produced new revision IDs, and retained all earlier revisions.
 - Public API acceptance: `200` registry, matching weak ETag, `304` revalidation, current health metadata, canonical content hash, no temporary integration after restoration, and no private draft fields.
@@ -62,10 +62,11 @@ Completed:
 
 1. Implementation and offline tests.
 2. Vercel Preview deployment, seeded-data validation, real OAuth, publish/retrieve/rollback acceptance, and corrected-seed restoration.
+3. PR #3 merge, integration into this branch, conflict resolution, and combined policy/runtime-fixture validation.
 
 Required before merging this stacked PR:
 
-1. Merge or otherwise resolve its base PR, then rebase/retarget this PR to the intended branch and verify the exact resulting head.
+1. Retarget this PR to `main` and verify the exact resulting head.
 2. Obtain human review/approval and mark the PR ready for review.
 3. Require green GitHub CI and Vercel checks on that exact head.
 

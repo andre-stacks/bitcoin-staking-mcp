@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { ServiceError } from "../src/core/errors.js";
-import { CONTRACT_VERSION, EXPECTED_TOOL_NAMES, SERVER_VERSION, createBitcoinStakingMcpServer } from "../src/mcp/server.js";
+import { CONTRACT_VERSION, EXPECTED_TOOL_NAMES, SERVER_VERSION, SKILL_VERSION, createBitcoinStakingMcpServer } from "../src/mcp/server.js";
 import { StacksProvider } from "../src/providers/stacks.js";
 import { CoinGeckoPriceProvider } from "../src/providers/coingecko.js";
+import { ManifestStore } from "../src/providers/manifest-store.js";
 import { BitcoinStakingService } from "../src/service.js";
 import { SuccessfulToolOutputSchemas, YieldOutputSchema } from "../src/mcp/output-schemas.js";
 
@@ -159,17 +161,39 @@ test("audit guidance stays audit-specific and does not inherit a prior custodian
   assert.match(content.responseScope, /audit-specific|requested security topic/i);
   assert.equal(content.entries[0].answer, "Yes. The PoX-5 codebase was audited by Trail of Bits and Clarity Alliance, with additional review by Asymmetric Research.");
   assert.match(content.entries[0].responseScope, /without volunteering report-availability/i);
-  assert.match(content.entries[0].whatIsNotProven[0], /have not been published publicly yet/i);
-  assert.match(content.entries[0].whatIsNotProven[0], /Contact the Bitcoin Staking team/i);
+  assert.match(content.entries[0].whatIsNotProven[0], /must be confirmed from current MCP evidence/i);
+  assert.match(content.entries[0].verificationChecklist[0], /if none are returned, contact the Bitcoin Staking team/i);
   assert.ok(content.entries[0].verificationChecklist.every((step: string) => !/wallet|custod|integration/i.test(step)));
   assert.doesNotMatch(JSON.stringify(content), /BitGo/i);
 });
 
+test("broad security guidance uses confidence, verification, and bounded-risk framing", async (context) => {
+  const { client, server } = await connectedClient(offlineService());
+  context.after(async () => { await client.close(); await server.close(); });
+  const result = await client.callTool({
+    name: "get_security_guidance",
+    arguments: { topic: "all" },
+  });
+  assert.equal(result.isError, undefined);
+  const content = result.structuredContent as any;
+  assert.equal(content.requestedTopic, "all");
+  assert.match(content.responseScope, /native-L1 Bitcoin security foundation/i);
+  assert.match(content.responseScope, /audit and transaction\/recovery verification controls/i);
+  assert.match(content.responseScope, /bounded implementation and operational risk/i);
+  assert.match(content.responseScope, /Do not open with a blanket no-safety guarantee/i);
+  assert.match(content.responseScope, /do not apply native-L1 Bitcoin-script protections to a pool-based route/i);
+});
+
 test("capabilities expose versions and concierge prompt enforces intent-aware onboarding", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
+  const serverInstructions = client.getInstructions() ?? "";
+  assert.match(serverInstructions, /read-only Bitcoin Staking intelligence layer/i);
+  assert.match(serverInstructions, /runtime and on-chain evidence as stronger than product-owner claims/i);
+  assert.match(serverInstructions, /Never construct, sign, or broadcast transactions/i);
+  assert.doesNotMatch(serverInstructions, /Scout|Hi, I'm|Try asking|fewer than 100 words/i);
   const resource = await client.readResource({ uri: "bitcoin-staking://capabilities" }); const text = (resource.contents[0] as any).text as string;
   assert.match(text, new RegExp(`Contract version: ${CONTRACT_VERSION}`)); assert.match(text, new RegExp(`Server version: ${SERVER_VERSION}`));
-  assert.match(text, /Skill version: 0\.4\.0/); assert.match(text, /Registry version: rev-/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
+  assert.match(text, new RegExp(`Skill version: ${SKILL_VERSION.replace(/\./g, "\\.")}`)); assert.match(text, /Registry version: rev-/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
   const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: {} }); const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text"); if (content?.type === "text") {
     assert.match(content.text, /Onboarding follows the user's intent/i);
@@ -197,6 +221,13 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /required Stacks registration is complete/i);
     assert.match(content.text, /provider-specific setup requirements only when the user names that provider/i);
     assert.match(content.text, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
+    assert.match(content.text, /How will I know my Bitcoin is safe/i);
+    assert.match(content.text, /security-foundation, independent-verification, bounded-residual-risk sequence/i);
+    assert.match(content.text, /Security starts with Bitcoin itself/i);
+    assert.match(content.text, /chosen wallet or custody key/i);
+    assert.match(content.text, /Like any financial software, risk is not zero/i);
+    assert.match(content.text, /Do not open with 'your Bitcoin cannot be guaranteed completely safe'/i);
+    assert.match(content.text, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
     assert.match(content.text, /retaining control of native BTC on Bitcoin L1 through a preferred wallet or custody provider versus potentially using a staked BTC position in DeFi/i);
     assert.match(content.text, /do not equate this route with using only a self-custody wallet/i);
     assert.match(content.text, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from list_custody_paths rather than a fixed provider list/i);
@@ -211,15 +242,16 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /show the sourced gross reward, label net reward unknown/i);
     assert.match(content.text, /prices may enrich the scenario, but do not replace missing rate or duration inputs/i);
     assert.match(content.text, /three-decimal display fields/i);
+    assert.match(content.text, /positive planned-yield structure above with values returned by current registry evidence and deterministic calculations/i);
     assert.match(content.text, /State only the economics returned by the current MCP read/i);
     assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
     assert.match(content.text, /State a supported capability first and explain how it works/i);
     assert.match(content.text, /Do not manufacture a negative contrast around it/i);
     assert.match(content.text, /Explain user actions and outcomes before infrastructure terminology/i);
-    assert.match(content.text, /Early exit is available before the bond ends/i);
-    assert.match(content.text, /submit an early-exit transaction on Stacks and approve it in your wallet/i);
-    assert.match(content.text, /approve a Bitcoin transaction in your wallet to return the BTC to your address/i);
+    assert.match(content.text, /PoX-5 supports an optional early-exit path/i);
+    assert.match(content.text, /check current bond and route evidence before saying the user can use it/i);
+    assert.match(content.text, /When a bond enables it, explain the Stacks transaction and later Bitcoin wallet approval/i);
     assert.match(content.text, /Early Exit Coordinator.*only when the user asks for technical detail/i);
     assert.match(content.text, /If a material limitation changes the decision, state it plainly in its own sentence after the mechanism/i);
     assert.match(content.text, /Do not list unverified liquidity, redemption, borrowing, market, or DeFi details/i);
@@ -227,9 +259,124 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
     assert.match(content.text, /Do not narrate the absence of an amount-related rejection/i);
     assert.match(content.text, /read the current registry economics/i);
+    assert.match(content.text, /State the returned annualized rate, approximate term, and reward asset/i);
+    assert.match(content.text, /Call simulate_yield with a 1 BTC principal/i);
+    assert.match(content.text, /do not calculate the worked return in prose/i);
+    assert.match(content.text, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
     assert.match(content.text, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
-    assert.match(content.text, /invite the user to provide their BTC amount for a calculated estimate/i);
+    assert.match(content.text, /Invite the user to provide their BTC amount for a personalized estimate/i);
     assert.match(content.text, /Avoid stacked qualifiers and status jargon/i);
+  }
+});
+
+test("alternate schedule and economics flow from runtime evidence rather than prompt copy", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "bitcoin-staking-runtime-facts-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond.json"), "utf8"));
+  bond.timing = { ...bond.timing, scheduledLaunchDate: "2026-09-17", startsRewardCycle: 145 };
+  bond.economics = {
+    targetRateBps: 425,
+    rewardAsset: "BTC",
+    rewardAssetOptions: ["BTC", "sBTC"],
+    rewardModel: "target_principal_rate",
+    rewardSource: "Alternate runtime fixture.",
+    termsStatus: "reference_program_model",
+    referenceModel: {
+      id: "alternate-reference-model",
+      status: "public_reference_model",
+      sourceIds: ["genesis-bond-owner-attestation"],
+      annualTargetRateBps: 425,
+      pairedStxMinimumValueRatioBps: 500,
+      bondingPeriodCycles: 7,
+      daysPerCycle: 13,
+      bondingPeriodDays: 91,
+      initialCapacityBtc: 50,
+      targetCoverageRatio: 1,
+      calculationMethod: "simple_non_compounding",
+    },
+  };
+  const alternatePool = bond.participationRoutes.find((route: any) => route.routeType === "sbtc_pool");
+  alternatePool.name = "Alternate BTC pool";
+  alternatePool.poolOperator = { id: "alternate-pool", name: "Alternate Pool" };
+  alternatePool.lst = {
+    tokenSymbol: "altBTC",
+    productStatus: "in_progress",
+    verification: ["product_owner_confirmed"],
+    attestation: {
+      scope: "Alternate pool LST fixture",
+      ownerOrganization: "Fixture",
+      reviewedAt: "2026-08-06T00:00:00.000Z",
+      reviewCadenceDays: 7,
+      sourceIds: ["genesis-bond-owner-attestation"],
+    },
+    transferable: true,
+    redemption: { method: "Fixture redemption.", timing: "Fixture timing.", status: "unverified" },
+    liquidityEvidence: { status: "unverified", description: "Fixture has no verified liquidity.", sourceIds: ["genesis-bond-owner-attestation"] },
+    oracleEvidence: { status: "unverified", description: "Fixture has no verified oracle.", sourceIds: ["genesis-bond-owner-attestation"] },
+    supportedMarkets: [],
+    verifiedDefiIntegrations: [],
+    sourceIds: ["genesis-bond-owner-attestation"],
+  };
+  await writeFile(join(directory, "alternate-bond.json"), JSON.stringify(bond), "utf8");
+
+  const service = new BitcoinStakingService({
+    manifests: new ManifestStore(directory, { now: offlineNow }),
+    stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
+    testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }),
+    prices: offlinePrices(),
+    now: offlineNow,
+  });
+  const { client, server } = await connectedClient(service);
+  context.after(async () => { await client.close(); await server.close(); });
+
+  const bondsResult = await client.callTool({ name: "list_bonds", arguments: {} });
+  assert.equal(bondsResult.isError, undefined);
+  const listed = bondsResult.structuredContent as any;
+  assert.equal(listed.bonds[0].scheduledLaunchDate, "2026-09-17");
+  assert.equal(listed.bonds[0].timing.startsRewardCycle, 145);
+  assert.equal(listed.bonds[0].economics.targetRateBps, 425);
+  assert.equal(listed.bonds[0].economics.rewardAsset, "BTC");
+  assert.equal(listed.bonds[0].economics.termsStatus, "reference_program_model");
+
+  const yieldResult = await client.callTool({
+    name: "simulate_yield",
+    arguments: { bondId: bond.id, routeId: bond.participationRoutes[0].id, principalSats: "100000000", feeBps: 0 },
+  });
+  assert.equal(yieldResult.isError, undefined, JSON.stringify(yieldResult.content));
+  const scenario = yieldResult.structuredContent as any;
+  assert.equal(scenario.annualRateBps, 425);
+  assert.equal(scenario.durationDays, 91);
+  assert.equal(scenario.rewardAsset, "BTC");
+  assert.equal(scenario.grossRewardSats, "1059589");
+  assert.equal(scenario.grossRewardDisplay, "0.011 BTC");
+  assert.equal(scenario.availability, "published_reference_model_scenario");
+  assert.equal(scenario.modelContext.sourceStatus, "reference_not_final_bond_terms");
+
+  const comparisonResult = await client.callTool({
+    name: "compare_staking_paths",
+    arguments: {
+      ...profile,
+      goal: "borrow_without_selling",
+      assetHeld: "sbtc",
+      participantType: "individual",
+      whitelistStatus: "unknown",
+      liquidityNeed: "access_anytime",
+      bitcoinPathPreference: "open_to_sbtc",
+      keyControlPreference: "self_controlled",
+    },
+  });
+  assert.equal(comparisonResult.isError, undefined, JSON.stringify(comparisonResult.content));
+  const comparison = comparisonResult.structuredContent as any;
+  assert.match(comparison.conclusion, /Alternate BTC pool with optional altBTC/i);
+  assert.doesNotMatch(comparison.conclusion, /StackingDAO|stBTC/i);
+
+  const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request: "When is the next bond and what is the yield?" } });
+  const content = prompt.messages[0]?.content;
+  assert.equal(content?.type, "text");
+  if (content?.type === "text") {
+    assert.match(content.text, /protocol-derived cycle, burn height, and approximate calendar estimate returned by current MCP evidence/i);
+    assert.match(content.text, /Call simulate_yield with a 1 BTC principal/i);
+    assert.match(content.text, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
   }
 });
 
@@ -240,6 +387,7 @@ test("concierge prompt preserves broad, timing, and amount-bearing first-message
     "I'd like to get started with Bitcoin staking",
     "When is the next bond launching?",
     "How can I stake 0.25 BTC?",
+    "How will I know my Bitcoin is safe?",
   ];
   for (const request of requests) {
     const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request } });
@@ -266,7 +414,8 @@ test("concierge prompt makes the current audit question override unrelated prior
     assert.match(content.text, /newest user request as the controlling scope/i);
     assert.match(content.text, /Has the protocol been audited/i);
     assert.match(content.text, /without volunteering report-availability/i);
-    assert.match(content.text, /reports have not been published publicly yet/i);
+    assert.match(content.text, /check current MCP evidence: provide any returned public report links/i);
+    assert.match(content.text, /if none are returned, say that the current evidence does not include them/i);
     assert.match(content.text, /Bitcoin Staking team for access/i);
     assert.match(content.text, /Do not mention BitGo or another named integration unless the current request asks whether it was covered/i);
   }
