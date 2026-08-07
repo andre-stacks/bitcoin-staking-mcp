@@ -34,7 +34,7 @@ The concierge is an approachable Bitcoin Staking guide with institutional-qualit
 
 ### Live registry console
 
-`apps/registry-console` is a Next.js application intended for the Stacks Labs Vercel team. Edge Config holds the shared draft and current published snapshot; private Vercel Blob objects hold immutable revision history. Sign in with Vercel protects the editor, and `PUBLISHER_EMAILS` controls who may mutate data. The anonymous `GET /api/v1/registry` endpoint supports ETags and contains published user-facing facts only. See [registry deployment](docs/REGISTRY_CONSOLE.md).
+`apps/registry-console` is a Next.js application intended for the Stacks Labs Vercel team. Vercel Global Config (formerly Edge Config) holds the shared draft and current published snapshot; private Vercel Blob objects hold immutable revision history. Sign in with Vercel protects the editor, and `PUBLISHER_EMAILS` controls who may mutate data. The anonymous `GET /api/v1/registry` endpoint supports ETags and contains published user-facing facts only. See [registry deployment](docs/REGISTRY_CONSOLE.md).
 
 MCP clients use `BITCOIN_STAKING_REGISTRY_URL` and revalidate every 60 seconds. `BITCOIN_STAKING_BOND_REGISTRY_URL` and `BITCOIN_STAKING_CUSTODY_REGISTRY_URL` remain deprecated compatibility inputs for the 0.4 release. A current bundled snapshot is used during an outage; once its seven-day review window expires, reads fail closed.
 

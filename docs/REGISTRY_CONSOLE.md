@@ -4,18 +4,18 @@ The registry console is implemented in `apps/registry-console`. Deployment, prod
 
 ## Vercel setup
 
-Create one project under the Stacks Labs Vercel team with Root Directory `apps/registry-console`. Connect one Edge Config and one private Blob store. Register a Sign in with Vercel application whose callback is `/api/auth/callback` and enable `openid`, `email`, and `profile`.
+Create one project under the Stacks Labs Vercel team with Root Directory `apps/registry-console`. Connect one Global Config store (formerly Edge Config) and one private Blob store. Register a Sign in with Vercel application whose callback is `/api/auth/callback` and enable `openid`, `email`, and `profile`.
 
-Configure the variables listed in `apps/registry-console/.env.example`. `VERCEL_API_TOKEN` should be limited to the team and permissions needed to update the selected Edge Config. `PUBLISHER_EMAILS` is a comma-separated allowlist. Users with a valid Vercel account but an email outside that list receive read-only denial.
+Configure the variables listed in `apps/registry-console/.env.example`. `VERCEL_API_TOKEN` should be limited to the team and permissions needed to update the selected Global Config. `PUBLISHER_EMAILS` is a comma-separated allowlist. Users with a valid Vercel account but an email outside that list receive read-only denial. `EDGE_CONFIG` and `EDGE_CONFIG_ID` remain supported as deprecated compatibility names for one release.
 
-Edge Config keys are:
+Global Config keys are:
 
 - `publishedSnapshot`: the anonymous atomic snapshot;
 - `draft`: the private shared draft or `null`;
 - `publicationMetadata`: the current revision summary;
 - `revisionIndex`: private Blob pathnames and revision metadata.
 
-Each publish validates the full draft, hashes canonical content, writes a new private `revisions/<revision>.json` object, and updates all Edge Config publication keys in one batch. Rollback reads an immutable private object and publishes its content as a new revision.
+Each publish validates the full draft, hashes canonical content, writes a new private `revisions/<revision>.json` object, and updates all Global Config publication keys in one batch. Rollback reads an immutable private object and publishes its content as a new revision.
 
 ## Local validation
 

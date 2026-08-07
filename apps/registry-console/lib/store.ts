@@ -1,5 +1,5 @@
 import { get as getBlob, put } from "@vercel/blob";
-import { createClient } from "@vercel/edge-config";
+import { createClient } from "@vercel/global-config";
 import { REGISTRY_EDGE_CONFIG_KEYS } from "@bitcoin-staking/registry-contract";
 import type { ConciergeRegistryContent, ConciergeRegistrySnapshot } from "bitcoin-staking-mcp";
 
@@ -20,8 +20,14 @@ function required(name: string): string {
   return value;
 }
 
+function requiredConfigValue(currentName: string, legacyName: string): string {
+  const value = process.env[currentName] ?? process.env[legacyName];
+  if (!value) throw new Error(`${currentName} is required.`);
+  return value;
+}
+
 export class VercelRegistryBackend implements RegistryBackend {
-  private client() { return createClient(required("EDGE_CONFIG")); }
+  private client() { return createClient(requiredConfigValue("GLOBAL_CONFIG", "EDGE_CONFIG")); }
 
   async readState(): Promise<RegistryState> {
     const client = this.client();
@@ -34,7 +40,8 @@ export class VercelRegistryBackend implements RegistryBackend {
   }
 
   async writeItems(items: Record<string, unknown>): Promise<void> {
-    const endpoint = new URL(`https://api.vercel.com/v1/edge-config/${required("EDGE_CONFIG_ID")}/items`);
+    const configId = requiredConfigValue("GLOBAL_CONFIG_ID", "EDGE_CONFIG_ID");
+    const endpoint = new URL(`https://api.vercel.com/v1/edge-config/${configId}/items`);
     if (process.env.VERCEL_TEAM_ID) endpoint.searchParams.set("teamId", process.env.VERCEL_TEAM_ID);
     const response = await fetch(endpoint, {
       method: "PATCH",
@@ -42,7 +49,7 @@ export class VercelRegistryBackend implements RegistryBackend {
       body: JSON.stringify({ items: Object.entries(items).map(([key, value]) => ({ operation: "upsert", key, value })) }),
       cache: "no-store",
     });
-    if (!response.ok) throw new Error(`Edge Config update failed (${response.status}): ${await response.text()}`);
+    if (!response.ok) throw new Error(`Global Config update failed (${response.status}): ${await response.text()}`);
   }
 
   async archive(snapshot: ConciergeRegistrySnapshot): Promise<string> {
