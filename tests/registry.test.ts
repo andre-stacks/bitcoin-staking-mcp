@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { VersionedRegistryClient } from "../src/providers/versioned-registry.js";
+import { BitcoinStakingService } from "../src/service.js";
 import { ManifestStore } from "../src/providers/manifest-store.js";
 import { ServiceError } from "../src/core/errors.js";
 
@@ -91,6 +92,23 @@ test("stale remote 304 and future-dated remote content fall back only to a curre
   const futureFetch: typeof fetch = async () => new Response(JSON.stringify({ registryVersion: "future", reviewedAt: "2026-08-20T00:00:00.000Z", reviewCadenceDays: 7, value: "future" }), { status: 200 });
   const future = new VersionedRegistryClient({ remoteUrl: "https://example.com/registry.json", fallbackPath: fallback, parse, now: () => now, fetchImpl: futureFetch, remoteEnabled: true });
   assert.equal((await future.read()).metadata.sourceMode, "bundled_snapshot");
+});
+
+test("deprecated local registry paths are honored when the unified registry URL is unset", async () => {
+  const previous = {
+    unified: process.env.BITCOIN_STAKING_REGISTRY_URL,
+    data: process.env.BITCOIN_STAKING_DATA_DIR,
+  };
+  delete process.env.BITCOIN_STAKING_REGISTRY_URL;
+  process.env.BITCOIN_STAKING_DATA_DIR = resolve("data/bonds");
+  try {
+    const service = new BitcoinStakingService({ now: () => new Date("2026-08-07T00:00:00.000Z") });
+    const result = await service.manifests.listWithMetadata();
+    assert.equal(result.metadata.registryVersion, "local-directory");
+  } finally {
+    if (previous.unified === undefined) delete process.env.BITCOIN_STAKING_REGISTRY_URL; else process.env.BITCOIN_STAKING_REGISTRY_URL = previous.unified;
+    if (previous.data === undefined) delete process.env.BITCOIN_STAKING_DATA_DIR; else process.env.BITCOIN_STAKING_DATA_DIR = previous.data;
+  }
 });
 
 test("manifest registry content hash changes when a referenced manifest changes", async (context) => {

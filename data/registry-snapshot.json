@@ -1,0 +1,738 @@
+{
+  "registryVersion": "3.0.0",
+  "reviewedAt": "2026-08-06T00:00:00.000Z",
+  "reviewCadenceDays": 7,
+  "reviewDueAt": "2026-08-13T00:00:00.000Z",
+  "revision": "rev-20260806000000000-e9ee75f850b3",
+  "contentHash": "sha256:e9ee75f850b3e73e73ef59e9fba2879a7fd160c1ed890fa2708530f633e5908b",
+  "publishedAt": "2026-08-06T00:00:00.000Z",
+  "publishedBy": "registry-bootstrap@stackslabs.com",
+  "content": {
+    "schemaVersion": 3,
+    "reviewedAt": "2026-08-06T00:00:00.000Z",
+    "reviewCadenceDays": 7,
+    "bonds": [
+      {
+        "schemaVersion": 2,
+        "id": "genesis-bond",
+        "title": "Genesis Bond",
+        "description": "The first Stacks Bitcoin Staking bond. Its protocol eligibility is derived from PoX-5 bond period 1 on every live read.",
+        "aliases": [
+          "genesis-bond-cycle-142"
+        ],
+        "network": "mainnet",
+        "onChainBondIndex": 1,
+        "lifecycleStatus": "upcoming",
+        "dataStatus": "published",
+        "productStatus": "in_progress",
+        "enrollmentStatus": "scheduled",
+        "verification": [
+          "product_owner_confirmed"
+        ],
+        "attestation": {
+          "scope": "Genesis Bond identity, product status, and supported route types",
+          "ownerOrganization": "Stacks Labs",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "genesis-bond-owner-attestation"
+          ]
+        },
+        "timing": {},
+        "economics": {
+          "rewardAsset": "unknown",
+          "rewardModel": "unknown"
+        },
+        "protocolTerms": {
+          "coverageBoundary": "Stacks PoX-5 Bitcoin Staking only; STX-only stacking and non-Stacks yield products are excluded.",
+          "signerAndAdministrationControls": "Live PoX-5 state has precedence over owner-maintained product targets and enrollment status.",
+          "audits": [
+            "Use the current registry sources and live protocol state for security diligence."
+          ],
+          "unresolvedTerms": [
+            "Current capacity, fees, enrollment window, operators, and deployed integration details must come from the live registry."
+          ]
+        },
+        "participationRoutes": [
+          {
+            "id": "genesis-native-l1-direct",
+            "name": "Genesis native-L1 direct",
+            "productStatus": "in_progress",
+            "enrollmentStatus": "scheduled",
+            "verification": [
+              "product_owner_confirmed"
+            ],
+            "attestation": {
+              "scope": "Direct native-L1 Genesis Bond route type",
+              "ownerOrganization": "Stacks Labs",
+              "reviewedAt": "2026-08-06T00:00:00.000Z",
+              "reviewCadenceDays": 7,
+              "sourceIds": [
+                "genesis-bond-owner-attestation"
+              ]
+            },
+            "sourceIds": [
+              "genesis-bond-owner-attestation",
+              "sip-045",
+              "stacks-institutional-bitcoin-staking-access"
+            ],
+            "summary": "Direct participation using a Bitcoin L1 timelock, subject to current eligibility, enrollment, and custody requirements.",
+            "routeType": "native_l1_direct",
+            "whitelist": {
+              "required": true,
+              "status": "unknown"
+            },
+            "participantTypes": [
+              "institution"
+            ],
+            "custodyPathIds": [],
+            "pairedStx": {
+              "required": false
+            },
+            "keyControl": "unknown",
+            "enrollment": {
+              "method": "Register your interest through the Stacks institutional access form. Submitting the form connects you with the Stacks team. They will follow up to guide you through onboarding and the next allocation steps.",
+              "url": "https://www.stacks.co/institutional-bitcoin-staking"
+            },
+            "recovery": {
+              "status": "unconfirmed",
+              "evidence": "Confirm current recovery requirements before participation."
+            },
+            "earlyExit": {
+              "status": "unknown",
+              "evidence": "No current bond-specific early-exit commitment is stored in the bundled fallback."
+            }
+          },
+          {
+            "id": "genesis-sbtc-pool",
+            "name": "Genesis sBTC pool route",
+            "productStatus": "in_progress",
+            "enrollmentStatus": "scheduled",
+            "verification": [
+              "product_owner_confirmed"
+            ],
+            "attestation": {
+              "scope": "Permissionless sBTC pool route type for the Genesis Bond",
+              "ownerOrganization": "Stacks Labs",
+              "reviewedAt": "2026-08-06T00:00:00.000Z",
+              "reviewCadenceDays": 7,
+              "sourceIds": [
+                "genesis-bond-owner-attestation"
+              ]
+            },
+            "sourceIds": [
+              "genesis-bond-owner-attestation",
+              "bitcoin-staking-explained",
+              "stackingdao-zest-vault-architecture"
+            ],
+            "summary": "Permissionless participation through StackingDAO's planned sBTC pool and stBTC liquid-staking design.",
+            "routeType": "sbtc_pool",
+            "poolOperator": {
+              "id": "stackingdao",
+              "name": "StackingDAO"
+            },
+            "permissionless": true,
+            "investorInputs": "sbtc_only",
+            "rewardAccounting": {
+              "method": "Consult the current registry for current accounting details.",
+              "rewardAsset": "unknown",
+              "status": "unverified"
+            },
+            "contracts": [],
+            "withdrawalTerms": {
+              "method": "Consult the current registry.",
+              "timing": "Not present in the bundled fallback.",
+              "status": "unverified"
+            },
+            "lst": {
+              "tokenSymbol": "stBTC",
+              "productStatus": "in_progress",
+              "verification": [
+                "product_owner_confirmed"
+              ],
+              "attestation": {
+                "scope": "StackingDAO stBTC design and planned Zest Protocol use",
+                "ownerOrganization": "StackingDAO and Zest Protocol",
+                "reviewedAt": "2026-08-06T00:00:00.000Z",
+                "reviewCadenceDays": 7,
+                "sourceIds": [
+                  "stackingdao-zest-vault-architecture"
+                ]
+              },
+              "transferable": true,
+              "redemption": {
+                "method": "Planned withdrawals use an idle buffer, with an asynchronous cooldown path when reserves are insufficient.",
+                "timing": "The architecture targets about one reward cycle for cooldown and describes an express path with a fee.",
+                "status": "unverified"
+              },
+              "liquidityEvidence": {
+                "status": "unverified",
+                "description": "The architecture targets a liquid stBTC token and planned Zest collateral use; deployed market liquidity is not yet verified.",
+                "sourceIds": [
+                  "stackingdao-zest-vault-architecture"
+                ]
+              },
+              "oracleEvidence": {
+                "status": "unverified",
+                "description": "Zest ratio-aware pricing is planned, but the final stBTC oracle and risk configuration remain prerequisites.",
+                "sourceIds": [
+                  "stackingdao-zest-vault-architecture"
+                ]
+              },
+              "supportedMarkets": [
+                "Zest Protocol (planned)"
+              ],
+              "verifiedDefiIntegrations": [],
+              "sourceIds": [
+                "stackingdao-zest-vault-architecture"
+              ]
+            }
+          }
+        ],
+        "notes": [
+          "Bond period 1 maps to reward Cycle 143 under PoX-5; the cycle and burn height are derived live and are not editable product fields.",
+          "PoX-5 fixes every bond term at 12 reward cycles, approximately six months on mainnet; exact calendar dates and the native-BTC unlock height are derived from live PoX cycle parameters.",
+          "An approximate calendar date is derived from remaining burn blocks using Bitcoin's ten-minute target."
+        ],
+        "sources": [
+          {
+            "id": "genesis-bond-owner-attestation",
+            "title": "Stacks Labs Genesis Bond owner attestation",
+            "sourceType": "owner_attestation",
+            "dataStatus": "published",
+            "retrievedAt": "2026-08-06T00:00:00.000Z"
+          },
+          {
+            "id": "sip-045",
+            "title": "SIP-045: PoX-5 Bitcoin Staking initial program conditions",
+            "url": "https://github.com/stacksgov/sips/blob/0b7cecaecdb6060a6fc19510f2e7dd8dde1d2fa1/sips/sip-045/sip-045-pox-5-bitcoin-staking.md",
+            "sourceType": "official_docs",
+            "dataStatus": "published"
+          },
+          {
+            "id": "pox5-release-contract",
+            "title": "PoX-5 bond-duration constants in stacks-core 4.0.1",
+            "url": "https://github.com/stacks-network/stacks-core/blob/4.0.1/stackslib/src/chainstate/stacks/boot/pox-5.clar#L72-L76",
+            "sourceType": "source_code",
+            "dataStatus": "published",
+            "sourceVersion": "4.0.1"
+          },
+          {
+            "id": "stacks-institutional-bitcoin-staking-access",
+            "title": "Stacks Institutional Bitcoin Staking access page",
+            "url": "https://www.stacks.co/institutional-bitcoin-staking",
+            "sourceType": "official_docs",
+            "dataStatus": "published"
+          },
+          {
+            "id": "bitcoin-staking-explained",
+            "title": "Bitcoin Staking explained",
+            "url": "https://www.stacks.co/blog/bitcoin-staking-explained-how-it-works-on-stacks",
+            "sourceType": "official_docs",
+            "dataStatus": "published"
+          },
+          {
+            "id": "stackingdao-zest-vault-architecture",
+            "title": "StackingDAO and Zest Protocol stBTC vault architecture note",
+            "sourceType": "owner_attestation",
+            "dataStatus": "published",
+            "retrievedAt": "2026-08-06T00:00:00.000Z"
+          }
+        ],
+        "verifiedAt": "2026-08-06T00:00:00.000Z"
+      },
+      {
+        "schemaVersion": 2,
+        "id": "demo-native-bitcoin-bond",
+        "title": "Illustrative Native Bitcoin Bond",
+        "description": "Synthetic v2 manifest for tests and demonstrations; never an available opportunity.",
+        "aliases": [],
+        "network": "testnet",
+        "lifecycleStatus": "upcoming",
+        "dataStatus": "demo",
+        "productStatus": "tested",
+        "enrollmentStatus": "closed",
+        "verification": [
+          "testnet_verified"
+        ],
+        "attestation": {
+          "scope": "Synthetic test fixture",
+          "ownerOrganization": "Bitcoin Staking MCP",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "demo-native-bitcoin-bond-manifest"
+          ]
+        },
+        "timing": {
+          "lockDurationDays": 180
+        },
+        "economics": {
+          "targetRateBps": 500,
+          "managerFeeBps": 0,
+          "rewardAsset": "sBTC",
+          "rewardModel": "target_principal_rate",
+          "termsStatus": "demo"
+        },
+        "protocolTerms": {
+          "coverageBoundary": "Synthetic testnet-only example.",
+          "signerAndAdministrationControls": "Synthetic.",
+          "audits": [],
+          "unresolvedTerms": []
+        },
+        "participationRoutes": [
+          {
+            "id": "demo-native-l1-direct",
+            "name": "Demo native-L1 direct",
+            "productStatus": "tested",
+            "enrollmentStatus": "closed",
+            "verification": [
+              "testnet_verified"
+            ],
+            "attestation": {
+              "scope": "Synthetic direct route",
+              "ownerOrganization": "Bitcoin Staking MCP",
+              "reviewedAt": "2026-08-06T00:00:00.000Z",
+              "reviewCadenceDays": 7,
+              "sourceIds": [
+                "demo-native-bitcoin-bond-manifest"
+              ]
+            },
+            "sourceIds": [
+              "demo-native-bitcoin-bond-manifest"
+            ],
+            "summary": "Synthetic direct route.",
+            "routeType": "native_l1_direct",
+            "whitelist": {
+              "required": true,
+              "status": "available"
+            },
+            "participantTypes": [
+              "institution",
+              "individual"
+            ],
+            "custodyPathIds": [],
+            "minimumSats": "10000000",
+            "maximumSats": "1000000000",
+            "pairedStx": {
+              "required": true,
+              "minimumValueRatioBps": 500
+            },
+            "keyControl": "custodian_or_participant",
+            "enrollment": {
+              "method": "Demo only."
+            },
+            "recovery": {
+              "status": "documented",
+              "evidence": "Synthetic recovery flow."
+            },
+            "earlyExit": {
+              "status": "unknown",
+              "evidence": "Not tested."
+            }
+          }
+        ],
+        "notes": [
+          "DEMO ONLY: not live, configured, or investable."
+        ],
+        "sources": [
+          {
+            "id": "demo-native-bitcoin-bond-manifest",
+            "title": "Illustrative v2 bond manifest",
+            "url": "https://github.com/andre-stacks/bitcoin-staking-mcp/blob/main/data/bonds/demo-native-bitcoin-bond.json",
+            "sourceType": "demo_manifest",
+            "dataStatus": "demo"
+          }
+        ],
+        "verifiedAt": "2026-08-06T00:00:00.000Z"
+      }
+    ],
+    "custody": {
+      "schemaVersion": 1,
+      "registryVersion": "2026-08-06.1",
+      "scope": "native_l1_bitcoin_staking",
+      "reviewCadenceDays": 7,
+      "reviewedAt": "2026-08-06T00:00:00.000Z",
+      "verificationMethod": "product_owner_confirmed",
+      "ownerOrganization": "Stacks Labs",
+      "paths": [
+        {
+          "id": "leather",
+          "name": "Leather",
+          "category": "software_wallet",
+          "status": "available",
+          "summary": "Available as the direct wallet path for the Bitcoin Staking product flow.",
+          "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Leather as the primary launch wallet.",
+          "sourceIds": [
+            "custody-registry",
+            "stacks-q2-2026"
+          ],
+          "attestation": {
+            "scope": "Leather native-L1 direct participation",
+            "ownerOrganization": "Stacks Labs",
+            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewCadenceDays": 7,
+            "sourceIds": [
+              "custody-registry"
+            ]
+          }
+        },
+        {
+          "id": "leather-multisig",
+          "name": "Leather Multi-sig",
+          "category": "multisig_wallet",
+          "status": "available",
+          "summary": "Available as the shared-control Leather custody path.",
+          "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Leather multisig work for Bitcoin Staking.",
+          "sourceIds": [
+            "custody-registry",
+            "stacks-q2-2026"
+          ],
+          "attestation": {
+            "scope": "Leather multisig native-L1 direct participation",
+            "ownerOrganization": "Stacks Labs",
+            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewCadenceDays": 7,
+            "sourceIds": [
+              "custody-registry"
+            ]
+          }
+        },
+        {
+          "id": "ledger",
+          "name": "Ledger",
+          "category": "hardware_wallet",
+          "status": "available",
+          "summary": "Available through the supported Ledger hardware-wallet path.",
+          "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Ledger support in the Leather launch path.",
+          "sourceIds": [
+            "custody-registry",
+            "stacks-q2-2026"
+          ],
+          "attestation": {
+            "scope": "Ledger native-L1 direct participation",
+            "ownerOrganization": "Stacks Labs",
+            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewCadenceDays": 7,
+            "sourceIds": [
+              "custody-registry"
+            ]
+          }
+        },
+        {
+          "id": "fordefi",
+          "name": "Fordefi",
+          "category": "institutional_wallet",
+          "status": "available",
+          "summary": "Available as an institutional wallet and signing path.",
+          "evidence": "Current product-owner confirmation; the linked official Stacks publication identifies Fordefi as an institutional Bitcoin Staking integration path.",
+          "sourceIds": [
+            "custody-registry",
+            "stacks-institutional-custody"
+          ],
+          "attestation": {
+            "scope": "Fordefi native-L1 direct participation",
+            "ownerOrganization": "Stacks Labs",
+            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewCadenceDays": 7,
+            "sourceIds": [
+              "custody-registry"
+            ]
+          }
+        },
+        {
+          "id": "fireblocks",
+          "name": "Fireblocks",
+          "category": "institutional_wallet",
+          "status": "available",
+          "summary": "Available as an institutional MPC wallet and custody path.",
+          "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting the Fireblocks custody integration.",
+          "sourceIds": [
+            "custody-registry",
+            "stacks-q2-2026",
+            "stacks-fireblocks"
+          ],
+          "attestation": {
+            "scope": "Fireblocks native-L1 direct participation",
+            "ownerOrganization": "Stacks Labs",
+            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewCadenceDays": 7,
+            "sourceIds": [
+              "custody-registry"
+            ]
+          }
+        },
+        {
+          "id": "bitgo",
+          "name": "BitGo",
+          "category": "qualified_custodian",
+          "status": "not_currently_supported",
+          "summary": "BitGo does not currently support the native-L1 Bitcoin Staking bond flow.",
+          "evidence": "Current product-owner confirmation. BitGo's adjacent STX stacking and sBTC support must not be presented as support for this native-L1 bond flow.",
+          "sourceIds": [
+            "custody-registry",
+            "bitgo-stacks-docs",
+            "bitgo-sbtc"
+          ],
+          "attestation": {
+            "scope": "BitGo native-L1 direct participation non-support",
+            "ownerOrganization": "Stacks Labs",
+            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewCadenceDays": 7,
+            "sourceIds": [
+              "custody-registry"
+            ]
+          }
+        }
+      ],
+      "sources": [
+        {
+          "id": "custody-registry",
+          "title": "Bitcoin Staking custody-path registry",
+          "url": "https://github.com/andre-stacks/bitcoin-staking-mcp/blob/main/data/custody-paths.json",
+          "sourceType": "public_manifest",
+          "dataStatus": "published"
+        },
+        {
+          "id": "stacks-q2-2026",
+          "title": "Stacks ecosystem report: Q2 2026",
+          "url": "https://www.stacks.co/blog/q2-2026",
+          "sourceType": "official_docs",
+          "dataStatus": "published"
+        },
+        {
+          "id": "stacks-institutional-custody",
+          "title": "Bitcoin Staking for institutions",
+          "url": "https://www.stacks.co/blog/bitcoin-staking-for-institutions-why-self-custody-yield-is-the-solution",
+          "sourceType": "official_docs",
+          "dataStatus": "published"
+        },
+        {
+          "id": "stacks-fireblocks",
+          "title": "Stacks is live on Fireblocks, with Bitcoin Staking coming soon",
+          "url": "https://www.stacks.co/blog/stacks-is-live-on-fireblocks-with-bitcoin-staking-coming",
+          "sourceType": "official_docs",
+          "dataStatus": "published"
+        },
+        {
+          "id": "bitgo-stacks-docs",
+          "title": "BitGo Stacks developer documentation",
+          "url": "https://developers.bitgo.com/docs/stacks/",
+          "sourceType": "official_docs",
+          "dataStatus": "published"
+        },
+        {
+          "id": "bitgo-sbtc",
+          "title": "BitGo institutional support for sBTC",
+          "url": "https://www.bitgo.com/resources/blog/bitgo-launches-institutional-support-for-sbtc/",
+          "sourceType": "official_docs",
+          "dataStatus": "published"
+        }
+      ]
+    },
+    "facts": [
+      {
+        "id": "genesis-bond-product",
+        "title": "Genesis Bond",
+        "summary": "The Genesis Bond uses PoX-5 bond period 1. Its eligible reward cycle and burn height are derived from live protocol state.",
+        "aliases": [],
+        "tags": [
+          "genesis",
+          "bond",
+          "pox-5"
+        ],
+        "relatedIds": [
+          "genesis-bond"
+        ],
+        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "sourceIds": [
+          "genesis-bond-owner-attestation"
+        ],
+        "attestation": {
+          "scope": "Genesis Bond product identity and corrected PoX-5 period mapping",
+          "ownerOrganization": "Stacks Labs",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "genesis-bond-owner-attestation"
+          ]
+        },
+        "category": "product",
+        "status": "in_progress"
+      },
+      {
+        "id": "stackingdao-stbtc",
+        "title": "StackingDAO stBTC",
+        "summary": "StackingDAO is developing stBTC as an sBTC-backed liquid-staking token for PoX-5. The design includes a withdrawal buffer and a cooldown path, with final contracts, fees, and redemption parameters still pending.",
+        "aliases": [
+          "stbtc"
+        ],
+        "tags": [
+          "stackingdao",
+          "stbtc",
+          "lst",
+          "sbtc"
+        ],
+        "relatedIds": [
+          "genesis-bond",
+          "genesis-sbtc-pool"
+        ],
+        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "sourceIds": [
+          "stackingdao-zest-vault-architecture"
+        ],
+        "attestation": {
+          "scope": "StackingDAO stBTC product design",
+          "ownerOrganization": "StackingDAO and Zest Protocol",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "stackingdao-zest-vault-architecture"
+          ]
+        },
+        "category": "product",
+        "status": "in_progress"
+      },
+      {
+        "id": "institutional-bitcoin-staking-access",
+        "title": "Register your interest in Bitcoin Staking",
+        "summary": "Register your interest at https://www.stacks.co/institutional-bitcoin-staking. Submitting the form connects you with the Stacks team. They will follow up to guide you through onboarding and the next allocation steps.",
+        "aliases": [
+          "bitcoin-staking-interest-form",
+          "institutional-access-request"
+        ],
+        "tags": [
+          "bitcoin-staking",
+          "institutional",
+          "access",
+          "interest",
+          "signup",
+          "onboarding"
+        ],
+        "relatedIds": [
+          "genesis-bond",
+          "genesis-native-l1-direct"
+        ],
+        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "sourceIds": [
+          "stacks-institutional-bitcoin-staking-access"
+        ],
+        "attestation": {
+          "scope": "Current Institutional Bitcoin Staking access request",
+          "ownerOrganization": "Stacks Labs",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "stacks-institutional-bitcoin-staking-access"
+          ]
+        },
+        "category": "product",
+        "status": "available"
+      },
+      {
+        "id": "bitcoin-staking-application",
+        "title": "Bitcoin Staking landing page and application",
+        "summary": "If you are interested in accessing the Bitcoin Staking application, you will be able to visit https://staking.stacks.co.",
+        "aliases": [
+          "staking-stacks-co"
+        ],
+        "tags": [
+          "bitcoin-staking",
+          "application",
+          "landing-page",
+          "planned"
+        ],
+        "relatedIds": [
+          "genesis-bond"
+        ],
+        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "sourceIds": [
+          "staking-application-owner-attestation"
+        ],
+        "attestation": {
+          "scope": "Planned Bitcoin Staking landing page and application destination",
+          "ownerOrganization": "Stacks Labs",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "staking-application-owner-attestation"
+          ]
+        },
+        "category": "product",
+        "status": "planned"
+      }
+    ],
+    "integrations": [
+      {
+        "id": "zest-stbtc-borrowing",
+        "title": "Planned Zest Protocol stBTC borrowing and lending path",
+        "summary": "StackingDAO and Zest Protocol plan to support stBTC as collateral for sBTC borrowing and a leveraged stBTC yield vault. Interest rates, eligibility, final LTV, liquidation settings, oracle configuration, market depth, deployed contracts, and launch availability are not yet published.",
+        "aliases": [
+          "zest-stbtc",
+          "stbtc-zest"
+        ],
+        "tags": [
+          "zest",
+          "stackingdao",
+          "stbtc",
+          "borrowing",
+          "lending",
+          "planned"
+        ],
+        "relatedIds": [
+          "genesis-bond",
+          "genesis-sbtc-pool",
+          "stackingdao-stbtc"
+        ],
+        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "sourceIds": [
+          "stackingdao-zest-vault-architecture"
+        ],
+        "attestation": {
+          "scope": "Planned Zest Protocol support for StackingDAO stBTC",
+          "ownerOrganization": "StackingDAO and Zest Protocol",
+          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewCadenceDays": 7,
+          "sourceIds": [
+            "stackingdao-zest-vault-architecture"
+          ]
+        },
+        "partnerId": "zest-protocol",
+        "productId": "stackingdao-stbtc",
+        "role": "planned stBTC collateral, sBTC borrowing, and yield-vault infrastructure",
+        "network": "mainnet",
+        "status": "planned"
+      }
+    ],
+    "sources": [
+      {
+        "id": "genesis-bond-owner-attestation",
+        "title": "Stacks Labs Genesis Bond owner attestation",
+        "sourceType": "owner_attestation",
+        "dataStatus": "published",
+        "retrievedAt": "2026-08-06T00:00:00.000Z"
+      },
+      {
+        "id": "stackingdao-zest-vault-architecture",
+        "title": "StackingDAO and Zest Protocol stBTC vault architecture note",
+        "sourceType": "owner_attestation",
+        "dataStatus": "published",
+        "retrievedAt": "2026-08-06T00:00:00.000Z"
+      },
+      {
+        "id": "stacks-institutional-bitcoin-staking-access",
+        "title": "Stacks Institutional Bitcoin Staking access page",
+        "url": "https://www.stacks.co/institutional-bitcoin-staking",
+        "sourceType": "official_docs",
+        "dataStatus": "published"
+      },
+      {
+        "id": "staking-application-owner-attestation",
+        "title": "Stacks Bitcoin Staking application destination owner attestation",
+        "sourceType": "owner_attestation",
+        "dataStatus": "published",
+        "retrievedAt": "2026-08-06T00:00:00.000Z"
+      }
+    ]
+  }
+}

@@ -20,6 +20,7 @@ class OfflineProvider extends StacksProvider {
   override async getProtocolStatus(): Promise<any> { this.statusReads += 1; const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, chainId: this.chainId, contractId: this.networkName === "mainnet" ? "SP000000000000000000002Q6VF78.pox-5" : "ST000000000000000000002AMW42H.pox-5", pox5Active: true, pox5Scheduled: false, currentBurnchainBlockHeight: 10, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async listProtocolBonds(): Promise<any> { this.bondScanReads += 1; const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 10, scannedBondIndices: [0, 1, 2], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
   override async getOnChainBond(): Promise<any> { return undefined; }
+  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 100 + bondIndex * 4200, durationRewardCycles: 12, durationBurnBlocks: 25200, approximateDurationDays: 175, l1LockDurationBurnBlocks: 24150, approximateL1LockDurationDays: 167.7, endRewardCycle: 153 + bondIndex * 2, endBurnHeight: 25300 + bondIndex * 4200, l1UnlockBurnHeight: 24250 + bondIndex * 4200, currentBurnchainBlockHeight: 10, remainingBurnBlocks: 4290, estimatedStartAt: "2026-09-05T14:00:00.000Z", estimatedEndAt: "2027-02-27T14:00:00.000Z", estimatedL1UnlockAt: "2027-02-20T07:00:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture using Bitcoin's ten-minute target.", durationEstimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
   override async getParticipantStatus(address: string): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { address, network: this.networkName, accountStatus: null, stakerInfo: null, bondMembership: null, bondAllowanceSats: null, requestedBondId: null, requestedBondDataStatus: null, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
 }
 class FailingProvider extends OfflineProvider { override async getProtocolStatus(): Promise<any> { throw new ServiceError("UPSTREAM_ERROR", "Live network unavailable.", true); } }
@@ -28,12 +29,19 @@ function offlinePrices() { return new CoinGeckoPriceProvider({ now: offlineNow, 
 function offlineService(provider: StacksProvider = new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" })) { return new BitcoinStakingService({ stacks: provider, testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices: offlinePrices(), now: offlineNow }); }
 const profile = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "100000000" } as const;
 
-test("MCP exposes the complete 14-tool read-only production-beta contract", async (context) => {
+test("MCP exposes the complete 15-tool read-only production contract", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const { tools } = await client.listTools(); assert.deepEqual(tools.map((tool) => tool.name), [...EXPECTED_TOOL_NAMES]);
   for (const tool of tools) { assert.equal(tool.annotations?.readOnlyHint, true); assert.equal(tool.annotations?.destructiveHint, false); assert.ok(tool.outputSchema); }
-  const liveRegistryReads = new Set(["get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "build_diligence_report", "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status", "check_compatibility", "simulate_yield", "compare_staking_paths", "build_participation_plan"]);
+  const liveRegistryReads = new Set(["get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "build_diligence_report", "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status", "check_compatibility", "simulate_yield", "compare_staking_paths", "build_participation_plan", "search_current_facts"]);
   for (const tool of tools) assert.equal(tool.annotations?.openWorldHint, liveRegistryReads.has(tool.name), `${tool.name} openWorldHint`);
+});
+
+test("catalog search rejects unknown status filters before querying the registry", async (context) => {
+  const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
+  const result = await client.callTool({ name: "search_current_facts", arguments: { status: "definitely-not-a-status" } });
+  assert.equal(result.isError, true);
+  assert.match(JSON.stringify(result.content), /status|invalid/i);
 });
 
 test("market snapshot grounds the first turn in two routes", async (context) => {
@@ -41,7 +49,9 @@ test("market snapshot grounds the first turn in two routes", async (context) => 
   const result = await client.callTool({ name: "get_market_snapshot", arguments: { network: "mainnet" } });
   assert.equal(result.isError, undefined); const content = result.structuredContent as any;
   assert.deepEqual(content.routes.map((route: any) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
-  assert.equal(content.routes.find((route: any) => route.routeType === "sbtc_pool")?.poolOperator, "StackingDAO");
+  assert.equal(content.bonds[0].protocolSchedule.startRewardCycle, 143);
+  assert.equal(content.bonds[0].protocolSchedule.durationRewardCycles, 12);
+  assert.equal(content.bonds[0].protocolSchedule.approximateDurationDays, 175);
   assert.match(content.precedence, /on-chain.*outranks owner/i);
   assert.ok(content.sources.some((source: any) => source.id === "custody-registry"));
 });
@@ -71,28 +81,28 @@ test("every tool validates structured output and exposes no transaction fields",
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const calls = [
     { name: "get_market_snapshot", arguments: { network: "mainnet" } }, { name: "get_protocol_status", arguments: { network: "mainnet" } }, { name: "list_protocol_bonds", arguments: { network: "testnet" } },
-    { name: "get_security_guidance", arguments: { topic: "audit_status" } }, { name: "build_diligence_report", arguments: { bondId: "genesis-bond-cycle-142", profile } },
-    { name: "list_bonds", arguments: { includeDemo: true } }, { name: "list_custody_paths", arguments: {} }, { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond-cycle-142" } },
-    { name: "get_bond", arguments: { bondId: "genesis-bond-cycle-142" } }, { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78" } },
-    { name: "check_compatibility", arguments: { bondId: "genesis-bond-cycle-142", provider: "Leather", keyControlPreference: "custodian" } },
-    { name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalSats: "100000000", durationDays: 365, feeBps: 0 } },
-    { name: "compare_staking_paths", arguments: profile }, { name: "build_participation_plan", arguments: { bondId: "genesis-bond-cycle-142", profile } },
+    { name: "get_security_guidance", arguments: { topic: "audit_status" } }, { name: "build_diligence_report", arguments: { bondId: "genesis-bond", profile } },
+    { name: "list_bonds", arguments: { includeDemo: true } }, { name: "list_custody_paths", arguments: {} }, { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond" } },
+    { name: "get_bond", arguments: { bondId: "genesis-bond" } }, { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78" } },
+    { name: "check_compatibility", arguments: { bondId: "genesis-bond", provider: "Leather", keyControlPreference: "custodian" } },
+    { name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalSats: "100000000", durationDays: 365, annualRateBps: 300, feeBps: 0 } },
+    { name: "compare_staking_paths", arguments: profile }, { name: "build_participation_plan", arguments: { bondId: "genesis-bond", profile } },
+    { name: "search_current_facts", arguments: { category: "product", limit: 10 } },
   ];
   for (const call of calls) { const result = await client.callTool(call); assert.equal(result.isError, undefined, `${call.name}: ${JSON.stringify(result.content)}`); SuccessfulToolOutputSchemas[call.name as keyof typeof SuccessfulToolOutputSchemas].parse(result.structuredContent); const serialized = JSON.stringify(result.structuredContent); assert.doesNotMatch(serialized, /"(?:psbt|rawTransaction|signedTransaction|signature|broadcastPayload)"\s*:/i); }
 });
 
 test("yield uses live CoinGecko prices and three-decimal quantity displays", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalSats: "2500000000" } });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalSats: "2500000000", durationDays: 365, annualRateBps: 300 } });
   assert.equal(result.isError, undefined);
   const content = result.structuredContent as any;
   assert.equal(content.priceSnapshot.provider, "CoinGecko");
   assert.equal(content.priceSnapshot.btcUsd, 64_415);
   assert.equal(content.priceSnapshot.stxUsd, 0.129774);
   assert.equal(content.priceSnapshot.display.stxUsd, "$0.130");
-  assert.equal(content.pairedStxRequirement.scenarios[0].requiredStxUnits, 620_453.635);
-  assert.equal(content.pairedStxRequirement.scenarios[0].requiredStxUnitsDisplay, "620453.635 STX");
-  assert.equal(content.grossRewardDisplay, "0.358 BTC");
+  assert.equal(content.pairedStxRequirement, null);
+  assert.equal(content.grossRewardDisplay, "0.750 BTC");
   assert.equal(content.netRewardSats, undefined);
   assert.ok(content.assumptions.some((assumption: string) => /CoinGecko Simple Price observations/i.test(assumption)));
   assert.ok(content.assumptions.every((assumption: string) => !/price enrichment was unavailable/i.test(assumption)));
@@ -104,7 +114,7 @@ test("yield returns gross economics when fees and optional price enrichment are 
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { priceRequests += 1; throw new Error("prices offline"); } });
   const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-stackingdao-sbtc-pool", principalBtc: "1 sBTC" } });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-sbtc-pool", principalBtc: "1 sBTC", durationDays: 365, annualRateBps: 300 } });
   assert.equal(result.isError, undefined);
   const content = result.structuredContent as any;
   assert.ok(content.grossRewardSats);
@@ -117,7 +127,7 @@ test("optional price failure does not invalidate a complete deterministic sats c
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { throw new Error("prices offline"); } });
   const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", principalBtc: "1 BTC", durationDays: 365, annualRateBps: 300, feeBps: 0 } });
+  const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalBtc: "1 BTC", durationDays: 365, annualRateBps: 300, feeBps: 0 } });
   assert.equal(result.isError, undefined);
   const content = YieldOutputSchema.parse(result.structuredContent);
   assert.equal(content.principalSats, "100000000");
@@ -185,7 +195,7 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
   assert.doesNotMatch(serverInstructions, /Scout|Hi, I'm|Try asking|fewer than 100 words/i);
   const resource = await client.readResource({ uri: "bitcoin-staking://capabilities" }); const text = (resource.contents[0] as any).text as string;
   assert.match(text, new RegExp(`Contract version: ${CONTRACT_VERSION}`)); assert.match(text, new RegExp(`Server version: ${SERVER_VERSION}`));
-  assert.match(text, new RegExp(`Skill version: ${SKILL_VERSION.replace(/\./g, "\\.")}`)); assert.match(text, /Registry version: 2026-08-06\.1/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
+  assert.match(text, new RegExp(`Skill version: ${SKILL_VERSION.replace(/\./g, "\\.")}`)); assert.match(text, /Registry version: rev-/); assert.match(text, /Registry hash: sha256:[a-f0-9]{64}/); assert.match(text, /Registry review status: current/);
   const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: {} }); const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text"); if (content?.type === "text") {
     assert.match(content.text, /Onboarding follows the user's intent/i);
@@ -206,6 +216,15 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /specific question, skip the general welcome/i);
     assert.match(content.text, /For opportunity or timing, call get_market_snapshot/i);
     assert.match(content.text, /direct how-to-participate question/i);
+    assert.match(content.text, /Where do I sign up.*handoff intent/i);
+    assert.match(content.text, /direct native-L1 Bitcoin Staking path.*do not use an internal bond name/i);
+    assert.match(content.text, /primary CTA labeled 'Register your interest here'/i);
+    assert.match(content.text, /connects you with the Stacks team/i);
+    assert.match(content.text, /follow up to guide you through onboarding and the next allocation steps/i);
+    assert.match(content.text, /you'll be able to visit staking\.stacks\.co/i);
+    assert.match(content.text, /without adding enrollment, allocation, configuration, or availability caveats to the conclusion/i);
+    assert.match(content.text, /label the primary CTA 'Start enrollment'/i);
+    assert.match(content.text, /Do not restart route discovery/i);
     assert.match(content.text, /allocation and enrollment mechanics as silent background context, not an investor-facing checklist/i);
     assert.match(content.text, /Do not proactively mention address binding, allocation immutability, partial enrollment or top-ups, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs/i);
     assert.match(content.text, /only when the user asks about it, it materially changes the selected route or immediate next step, or it is needed to correct a false assumption/i);
@@ -220,21 +239,22 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /Like any financial software, risk is not zero/i);
     assert.match(content.text, /Do not open with 'your Bitcoin cannot be guaranteed completely safe'/i);
     assert.match(content.text, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
-    assert.match(content.text, /retaining control of native BTC on Bitcoin L1 through a preferred wallet or custody provider versus potentially using a staked BTC position in DeFi/i);
-    assert.match(content.text, /do not equate this route with using only a self-custody wallet/i);
+    assert.match(content.text, /keeping Bitcoin on L1 in self-custody versus using the staked position to borrow, lend, or unlock additional yield opportunities/i);
+    assert.match(content.text, /do not imply that this route supports only self-custody/i);
     assert.match(content.text, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from list_custody_paths rather than a fixed provider list/i);
     assert.match(content.text, /Describe the pooled route first as 'Join a pool'/i);
-    assert.match(content.text, /Which matters more to you: retaining control of native BTC on Bitcoin L1 through your preferred wallet or custody provider/i);
+    assert.match(content.text, /Which matters more to you: keeping your Bitcoin on L1 in self-custody, or using your staked position to borrow, lend, or unlock additional yield opportunities/i);
     assert.match(content.text, /two stable route types when route detail is relevant/i);
     assert.match(content.text, /multiple pools with different input assets, operators, and LST designs/i);
-    assert.match(content.text, /current pool names, requirements, token designs, terms, and integrations from MCP evidence/i);
+    assert.match(content.text, /current pool names, requirements, token designs, products, terms, and integrations from the live registry/i);
     assert.doesNotMatch(content.text, /native-L1 direct for larger allowlisted institutional participation/i);
     assert.doesNotMatch(content.text, /permissionless sBTC pooling through StackingDAO/i);
     assert.match(content.text, /without adding 'No conversion to sBTC is required\.'/i);
     assert.match(content.text, /show the sourced gross reward, label net reward unknown/i);
     assert.match(content.text, /prices may enrich the scenario, but do not replace missing rate or duration inputs/i);
     assert.match(content.text, /three-decimal display fields/i);
-    assert.match(content.text, /positive planned-yield structure above with values returned by current MCP evidence and deterministic calculations/i);
+    assert.match(content.text, /positive planned-yield structure above with values returned by current registry evidence and deterministic calculations/i);
+    assert.match(content.text, /State only the economics returned by the current MCP read/i);
     assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
     assert.match(content.text, /State a supported capability first and explain how it works/i);
@@ -249,11 +269,12 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /wallet- or custody-only question/i);
     assert.match(content.text, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
     assert.match(content.text, /Do not narrate the absence of an amount-related rejection/i);
+    assert.match(content.text, /read the current registry economics/i);
     assert.match(content.text, /State the returned annualized rate, approximate term, and reward asset/i);
     assert.match(content.text, /Call simulate_yield with a 1 BTC principal/i);
     assert.match(content.text, /do not calculate the worked return in prose/i);
     assert.match(content.text, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
-    assert.match(content.text, /Never retain a current rate, duration, reward asset, fee, capacity, or worked return/i);
+    assert.match(content.text, /contract-fixed 12-cycle term is a stable protocol invariant/i);
     assert.match(content.text, /Invite the user to provide their BTC amount for a personalized estimate/i);
     assert.match(content.text, /Avoid stacked qualifiers and status jargon/i);
   }
@@ -262,25 +283,51 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
 test("alternate schedule and economics flow from runtime evidence rather than prompt copy", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "bitcoin-staking-runtime-facts-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
-  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond-cycle-142.json"), "utf8"));
+  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond.json"), "utf8"));
   bond.timing = { ...bond.timing, scheduledLaunchDate: "2026-09-17", startsRewardCycle: 145 };
   bond.economics = {
-    ...bond.economics,
     targetRateBps: 425,
     rewardAsset: "BTC",
+    rewardAssetOptions: ["BTC", "sBTC"],
+    rewardModel: "target_principal_rate",
+    rewardSource: "Alternate runtime fixture.",
     termsStatus: "reference_program_model",
     referenceModel: {
-      ...bond.economics.referenceModel,
+      id: "alternate-reference-model",
+      status: "public_reference_model",
+      sourceIds: ["genesis-bond-owner-attestation"],
       annualTargetRateBps: 425,
+      pairedStxMinimumValueRatioBps: 500,
       bondingPeriodCycles: 7,
       daysPerCycle: 13,
       bondingPeriodDays: 91,
+      initialCapacityBtc: 50,
+      targetCoverageRatio: 1,
+      calculationMethod: "simple_non_compounding",
     },
   };
   const alternatePool = bond.participationRoutes.find((route: any) => route.routeType === "sbtc_pool");
   alternatePool.name = "Alternate BTC pool";
   alternatePool.poolOperator = { id: "alternate-pool", name: "Alternate Pool" };
-  alternatePool.lst = { ...alternatePool.lst, tokenSymbol: "altBTC" };
+  alternatePool.lst = {
+    tokenSymbol: "altBTC",
+    productStatus: "in_progress",
+    verification: ["product_owner_confirmed"],
+    attestation: {
+      scope: "Alternate pool LST fixture",
+      ownerOrganization: "Fixture",
+      reviewedAt: "2026-08-06T00:00:00.000Z",
+      reviewCadenceDays: 7,
+      sourceIds: ["genesis-bond-owner-attestation"],
+    },
+    transferable: true,
+    redemption: { method: "Fixture redemption.", timing: "Fixture timing.", status: "unverified" },
+    liquidityEvidence: { status: "unverified", description: "Fixture has no verified liquidity.", sourceIds: ["genesis-bond-owner-attestation"] },
+    oracleEvidence: { status: "unverified", description: "Fixture has no verified oracle.", sourceIds: ["genesis-bond-owner-attestation"] },
+    supportedMarkets: [],
+    verifiedDefiIntegrations: [],
+    sourceIds: ["genesis-bond-owner-attestation"],
+  };
   await writeFile(join(directory, "alternate-bond.json"), JSON.stringify(bond), "utf8");
 
   const service = new BitcoinStakingService({
@@ -338,7 +385,7 @@ test("alternate schedule and economics flow from runtime evidence rather than pr
   const content = prompt.messages[0]?.content;
   assert.equal(content?.type, "text");
   if (content?.type === "text") {
-    assert.match(content.text, /use the current launch date returned by MCP evidence/i);
+    assert.match(content.text, /protocol-derived cycle, burn height, and approximate calendar estimate returned by current MCP evidence/i);
     assert.match(content.text, /Call simulate_yield with a 1 BTC principal/i);
     assert.match(content.text, /planned product targets and public reference-model assumptions distinct from bond-specific terms and final on-chain configured terms/i);
   }

@@ -1,4 +1,4 @@
-name: Product registry review
+name: Live registry review
 
 on:
   schedule:
@@ -13,8 +13,8 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -22,6 +22,8 @@ jobs:
       - id: registry
         continue-on-error: true
         shell: bash
+        env:
+          BITCOIN_STAKING_REGISTRY_URL: ${{ vars.BITCOIN_STAKING_REGISTRY_URL }}
         run: npm run registry:validate:live | tee registry-review.md
       - if: always()
         run: cat registry-review.md >> "$GITHUB_STEP_SUMMARY"
@@ -30,7 +32,7 @@ jobs:
         with:
           script: |
             const title = 'registry-review-due';
-            const body = 'The nightly Bitcoin Staking product-registry validation failed. Review the workflow log, refresh owner attestations or unreachable sources, and run `npm run registry:validate:live`.';
+            const body = 'The nightly Scout Vercel registry validation failed. Review snapshot freshness, canonical hash, owner attestations, and evidence URLs in the workflow log, then run `npm run registry:validate:live`.';
             const { data } = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 100 });
             const existing = data.find(issue => issue.title === title && !issue.pull_request);
             if (existing) await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body });

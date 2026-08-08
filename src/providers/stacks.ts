@@ -4,6 +4,7 @@ import {
   bondPeriodToRewardCycle,
   bondPhaseRanges,
   bondStatus,
+  computeBondUnlockHeight,
   fetchAccountStatus,
   fetchBondAllowance,
   fetchBondMembership,
@@ -25,12 +26,14 @@ import {
 
 const DEFAULT_MAINNET_API_BASE = "https://api.mainnet.hiro.so";
 const DEFAULT_TESTNET_API_BASE = "https://api.testnet-pox5.hiro.so";
+export const POX5_BOND_LENGTH_CYCLES = 12;
 
 export interface StacksProviderOptions {
   network?: StacksNetworkName;
   apiBaseUrl?: string;
   chainId?: number;
   timeoutMs?: number;
+  now?: () => Date;
 }
 
 export class StacksProvider {
@@ -39,6 +42,7 @@ export class StacksProvider {
   readonly chainId: number;
   readonly timeoutMs: number;
   private readonly network;
+  private readonly now: () => Date;
 
   constructor(options: StacksProviderOptions = {}) {
     this.networkName = options.network ?? "mainnet";
@@ -59,10 +63,77 @@ export class StacksProvider {
     }
     this.timeoutMs =
       options.timeoutMs ?? Number(process.env.BITCOIN_STAKING_UPSTREAM_TIMEOUT_MS ?? "8000");
+    this.now = options.now ?? (() => new Date());
     this.network = createNetwork({
       network: { ...baseNetwork, chainId: this.chainId },
       client: { baseUrl: this.apiBaseUrl },
     });
+  }
+
+  async getBondSchedule(bondIndex: number) {
+    if (!Number.isSafeInteger(bondIndex) || bondIndex < 0) {
+      throw new ServiceError("INVALID_INPUT", "bondIndex must be a non-negative safe integer.");
+    }
+    const verifiedAt = this.now();
+    try {
+      const info = await withTimeout(fetchPoxInfo({ network: this.network }), this.timeoutMs, `${this.networkName} PoX API`);
+      const startRewardCycle = bondPeriodToRewardCycle({ bondIndex, poxInfo: info });
+      const startBurnHeight = bondPeriodToBurnHeight({ bondIndex, poxInfo: info });
+      const endRewardCycle = startRewardCycle + POX5_BOND_LENGTH_CYCLES;
+      const endBurnHeight = bondPeriodToBurnHeight({
+        bondIndex: bondIndex + BOND_END_OFFSET_PERIODS,
+        poxInfo: info,
+      });
+      const l1UnlockBurnHeight = computeBondUnlockHeight({ bondIndex, poxInfo: info });
+      const durationBurnBlocks = endBurnHeight - startBurnHeight;
+      const l1LockDurationBurnBlocks = l1UnlockBurnHeight - startBurnHeight;
+      const approximateDurationDays =
+        Math.round((durationBurnBlocks * 10 * 10) / (60 * 24)) / 10;
+      const approximateL1LockDurationDays =
+        Math.round((l1LockDurationBurnBlocks * 10 * 10) / (60 * 24)) / 10;
+      const remainingBurnBlocks = Math.max(0, startBurnHeight - info.currentBurnchainBlockHeight);
+      const remainingEndBurnBlocks = Math.max(0, endBurnHeight - info.currentBurnchainBlockHeight);
+      const remainingUnlockBurnBlocks = Math.max(0, l1UnlockBurnHeight - info.currentBurnchainBlockHeight);
+      return {
+        network: this.networkName,
+        bondIndex,
+        startRewardCycle,
+        startBurnHeight,
+        durationRewardCycles: POX5_BOND_LENGTH_CYCLES,
+        durationBurnBlocks,
+        approximateDurationDays,
+        l1LockDurationBurnBlocks,
+        approximateL1LockDurationDays,
+        endRewardCycle,
+        endBurnHeight,
+        l1UnlockBurnHeight,
+        currentBurnchainBlockHeight: info.currentBurnchainBlockHeight,
+        remainingBurnBlocks,
+        estimatedStartAt: new Date(verifiedAt.getTime() + remainingBurnBlocks * 10 * 60_000).toISOString(),
+        estimatedEndAt: new Date(verifiedAt.getTime() + remainingEndBurnBlocks * 10 * 60_000).toISOString(),
+        estimatedL1UnlockAt: new Date(verifiedAt.getTime() + remainingUnlockBurnBlocks * 10 * 60_000).toISOString(),
+        estimateStatus: "approximate" as const,
+        estimateBasis: "Current burn height plus remaining burn blocks at Bitcoin's ten-minute target; actual block timing varies.",
+        durationEstimateBasis: "PoX-5 fixes every bond term at 12 reward cycles and derives the native-L1 unlock one-half reward cycle before bond end. Calendar days use the live reward-cycle length and Bitcoin's ten-minute target; actual block timing varies.",
+        dataStatus: "derived" as const,
+        sources: [this.sourceRef(verifiedAt.toISOString()), {
+          id: "pox5-release-contract",
+          title: "PoX-5 bond-duration constants in stacks-core 4.0.1",
+          url: "https://github.com/stacks-network/stacks-core/blob/4.0.1/stackslib/src/chainstate/stacks/boot/pox-5.clar#L72-L76",
+          sourceType: "source_code" as const,
+          dataStatus: "published" as const,
+          sourceVersion: "4.0.1",
+        }],
+        assumptions: [
+          "PoX-5 bond period mapping and the 12-reward-cycle term are protocol-derived.",
+          "Calendar timestamps and day counts are estimates; the native-L1 unlock height is separately derived one-half reward cycle before the bond end.",
+        ],
+        verifiedAt: verifiedAt.toISOString(),
+      };
+    } catch (error) {
+      if (error instanceof ServiceError) throw error;
+      throw new ServiceError("UPSTREAM_ERROR", `Unable to derive PoX-5 bond period ${bondIndex}: ${error instanceof Error ? error.message : String(error)}`, true);
+    }
   }
 
   sourceRef(retrievedAt = new Date().toISOString()): SourceRef {

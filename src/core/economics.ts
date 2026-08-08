@@ -121,10 +121,11 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
   ) {
     throw new ServiceError("INVALID_INPUT", "Invalid duration, annual-rate, or fee input.");
   }
-  if (
+  const explicitTargetModel = input.durationDays !== undefined && input.annualRateBps !== undefined;
+  if (!explicitTargetModel && (
     bond.economics.rewardModel !== "target_principal_rate" ||
     !["BTC", "sBTC"].includes(bond.economics.rewardAsset)
-  ) {
+  )) {
     throw new ServiceError(
       "INSUFFICIENT_DATA",
       "This route does not expose a supported target-principal-rate model.",
@@ -183,7 +184,7 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
     "Simple non-compounding scenario; not a yield forecast or guarantee.",
     bond.economics.termsStatus === "reference_program_model"
       ? "The rate, STX ratio, and reference period come from the published public economic model, not final on-chain bond configuration."
-      : "The rate comes from bond-specific terms or an explicit user scenario.",
+      : "The rate comes from bond-specific terms or explicitly supplied scenario inputs.",
   ];
   if (projectionPeriod === "reference_model_duration") {
     assumptions.push(

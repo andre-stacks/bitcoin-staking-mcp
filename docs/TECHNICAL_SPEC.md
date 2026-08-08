@@ -6,7 +6,7 @@
 flowchart LR
   A["Stacks mainnet API"] --> P["Live provider"]
   T["Configured testnet API"] --> P
-  B["Versioned bond manifests"] --> M["Manifest provider"]
+  B["Atomic Vercel registry snapshot"] --> M["Registry provider"]
   P --> C["Staking intelligence core"]
   M --> C
   C --> S["MCP tools and resources"]
@@ -15,7 +15,7 @@ flowchart LR
   S --> Z["Other MCP clients"]
 ```
 
-The TypeScript core has no model dependency and is not a separately deployed service. The stdio server constructs a new MCP instance per connection. Remote Streamable HTTP is deferred.
+The TypeScript core has no model dependency. The stdio server constructs a new MCP instance per connection. The separate Next.js registry console publishes data, not MCP requests.
 
 ## Runtime and dependencies
 
@@ -54,13 +54,13 @@ The Stacks provider uses `STACKS_API_BASE_URL` for mainnet and `BITCOIN_STAKING_
 
 Testnet is never assumed to have activated PoX-5 merely because of its hostname. The provider reads `contract_versions` and exposes the scheduled PoX-5 activation height, first reward cycle, and blocks remaining. `list_protocol_bonds` requires `/v2/pox` to report an active `.pox-5` contract before reading bonds. It then derives the current bond period, scans the six-period active lookback plus two future periods by default, and returns only indices whose `get-protocol-bond` read proves on-chain configuration. Testnet records carry `availability: live_testnet_demo`: they describe the working prototype environment and never a mainnet opportunity.
 
-The manifest provider reads and validates every JSON file in `data/bonds`. Duplicate IDs, invalid URLs, invalid data-status combinations, and incomplete fixed-unit reward models fail closed.
+The registry provider reads one hash-verified schema-v3 snapshot, revalidates it with ETags every 60 seconds, and exposes specialized bond and custody views. Duplicate IDs or aliases, missing evidence, malformed records, future attestations, and content-hash mismatches fail closed. The bundled snapshot is an outage fallback only while its seven-day review window is current.
 
 Each compatibility claim must cite at least one source ID contained in the same manifest. Manifest-backed on-chain and participant reads route through the provider for that manifest's network; a testnet manifest cannot silently query mainnet. Live verification sources are appended without overwriting manifest provenance.
 
 ## MCP interfaces
 
-Fourteen tools are registered:
+Fifteen tools are registered:
 
 - `get_protocol_status`
 - `list_protocol_bonds`
@@ -76,6 +76,7 @@ Fourteen tools are registered:
 - `simulate_yield`
 - `compare_staking_paths`
 - `build_participation_plan`
+- `search_current_facts`
 
 All declare read-only and non-destructive annotations. Live network tools additionally declare open-world behavior. Inputs and successful outputs are Zod-validated. Errors return `INVALID_INPUT`, `NOT_FOUND`, `INSUFFICIENT_DATA`, `UPSTREAM_ERROR`, or `UPSTREAM_TIMEOUT`, plus a retryable flag.
 
@@ -86,12 +87,13 @@ Resources:
 - `bitcoin-staking://methodology/yield`
 - `bitcoin-staking://security`
 - `bitcoin-staking://custody-paths`
+- `bitcoin-staking://catalog`
 - `bitcoin-staking://methodology/sources`
 - `bitcoin-staking://methodology/response-standard`
 - `bitcoin-staking://bonds/{bondId}`
 - `bitcoin-staking://sources/{sourceId}`
 
-The `bitcoin-staking-concierge` prompt contains workflow instructions, not registry facts or math. On an empty invocation it calls the market snapshot, introduces the two bond-scoped routes, and asks one priority question. When a request is supplied it proceeds directly. Codex also discovers `.agents/skills/bitcoin-staking-concierge` and uses the same behavior and tool sequence. `bitcoin-staking://capabilities` maps all fourteen tools and exposes contract, server, and skill versions.
+The `bitcoin-staking-concierge` prompt contains workflow instructions, not changing registry facts. On an empty invocation it introduces Scout and its capabilities; specific requests proceed directly. Codex also discovers `.agents/skills/bitcoin-staking-concierge`. `bitcoin-staking://capabilities` maps all fifteen tools and exposes contract, server, and skill versions.
 
 The prompt and skill share one institutional response contract. CFO/investment questions lead with availability, custody, liquidity, economics, and material risk. Technical/security/custody questions lead with mechanisms, component boundaries, deterministic verification, and pinned sources. Mixed questions receive a short executive conclusion followed by compact technical evidence. MCP initialize instructions contain only the technical server baseline so raw tool clients are not given Scout's onboarding or response persona.
 
@@ -99,7 +101,7 @@ For generic opportunity and diligence requests, the orchestration layer hides ne
 
 The versioned custody registry in `data/custody-paths.json` is product-level rather than bond-level. It distinguishes available, not-currently-supported, in-integration, and unknown paths; records a review cadence and verification method; and cites its sources. The scheduled `custody-registry-review` workflow validates freshness and source reachability every week. It flags review work but never changes a partner's status automatically.
 
-The upcoming Genesis manifest can contain a versioned `reference_program_model` sourced to a public economic model. Current rate, paired-STX ratio, duration, capacity, coverage, and reward-asset values remain in registry evidence rather than static instructions. `simulate_yield` uses a bond-specific duration or the sourced reference period. A missing duration or rate blocks the projection; missing route or selected-LST fees leave net yield unknown without suppressing the sourced gross result. Cached CoinGecko BTC and STX prices supply the default paired-STX calculation; explicit prices override live observations and price failure does not block deterministic reward sats. Every result distinguishes planned product targets, public reference-model assumptions, bond-specific terms, and final on-chain configured terms.
+Genesis stores stable bond period/index 1, not an editable cycle or date. `bond-period-to-reward-cycle` and `bond-period-to-burn-height` are evaluated from live PoX information. The pinned PoX-5 contract fixes `BOND_LENGTH_CYCLES` at 12, so every bond term is 12 reward cycles, approximately six months on mainnet. `getBondSchedule` returns the start and end cycles and heights, the 12-cycle duration, an approximate day count, and the separately derived native-L1 unlock height one-half reward cycle before bond end. Calendar estimates use remaining burn blocks at Bitcoin's ten-minute target and are always labeled approximate. Live on-chain state outranks protocol-derived timing, which outranks owner-reviewed product targets. Current rates, paired-STX ratios, capacities, coverage, reward assets, fees, operators, and integrations remain registry evidence rather than static instructions. `simulate_yield` uses a bond-specific duration or sourced reference period. A missing duration or rate blocks the projection; missing route or selected-LST fees leave net yield unknown without suppressing the sourced gross result. Cached CoinGecko BTC and STX prices supply the default paired-STX calculation; explicit prices override live observations and price failure does not block deterministic reward sats. Every result distinguishes planned product targets, public reference-model assumptions, bond-specific terms, and final on-chain configured terms.
 
 That response contract is evidence-gated. Current MCP structured output and resources are the only factual input. Missing evidence produces the fixed abstention “This MCP does not currently verify that,” plus the evidence required to answer. Live-read failure cannot be replaced with demo, stale, or remembered state. Unknown and empty results remain unknown and empty. The technical evidence baseline is present in server instructions; the full response policy is duplicated deliberately in the MCP prompt, the response-standard resource, and the repo skill. Contract tests guard both scopes.
 
@@ -125,13 +127,13 @@ For live PoX-5 protocol bonds, the target scenario mirrors the contract calculat
 
 The checked-in `.codex/config.toml` starts `node dist/stdio.js` and the repo-scoped skill is available after the project is trusted. `.mcp.json` provides the equivalent Claude Code project configuration. Build before opening either host.
 
-For cross-repository use, `dist/cli.js` is the package binary. `setup` verifies the exact fourteen-tool contract, server/contract/skill versions, registry version/hash/freshness, and selected hosts. It autodetects Codex and Claude, skips absent default hosts, fails for an absent explicitly requested host, and installs a hashed concierge skill. `update` repeats the safe registration flow. `uninstall` removes only the named registrations and skill. The portable default pins `#v0.3.0`; unpinned `main` is development-only.
+For cross-repository use, `dist/cli.js` is the package binary. `setup` verifies the exact fifteen-tool contract, server/contract/skill versions, registry revision/hash/freshness, and selected hosts. It autodetects Codex and Claude, skips absent default hosts, fails for an absent explicitly requested host, and installs a hashed concierge skill. `update` repeats the safe registration flow. `uninstall` removes only the named registrations and skill. The portable default pins `#v0.4.0`; unpinned `main` is development-only.
 
 Claude exposes the MCP prompt as `/mcp__bitcoin_staking__bitcoin_staking_concierge`. Codex invokes `$bitcoin-staking-concierge`; both use the same MCP tools.
 
 ## Testing
 
-The default suite is offline. It covers v1 normalization, v2 route schemas, attestations and stale-data labeling, ETag/cache/fallback behavior, deterministic gross economics with pending net fees, participant journeys, network conflicts and provenance, invocation of all fourteen tools, read-only annotations, installer integrity checks, and targeted uninstall behavior.
+The default suite is offline. It covers registry contracts, immutable publication and rollback, auth and CSRF gates, ETag/cache/fallback behavior, PoX-5 period mapping, deterministic economics, participant journeys, network conflicts and provenance, invocation of all fifteen tools, read-only annotations, installer integrity checks, and targeted uninstall behavior.
 
 `npm run test:live` performs the opt-in mainnet PoX smoke test. `npm run test:testnet` verifies that the dedicated testnet publishes either scheduled or active PoX-5 state; after activation, any returned bonds must remain explicitly labeled as live testnet demos. `npm run check` runs type checking, offline tests, and a production build.
 

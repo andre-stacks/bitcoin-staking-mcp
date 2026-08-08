@@ -1,6 +1,6 @@
 # Bitcoin Staking MCP — Product Requirements
 
-Status: v0.3.0 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
+Status: v0.4.0 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
 
 ## Outcome
 
@@ -10,7 +10,7 @@ Make native Bitcoin staking discoverable, understandable, and agent-readable. An
 
 Primary users are BTC holders working through an agent, institutional participants, wallet and custody teams, and developers building Bitcoin applications.
 
-The default persona is a knowledgeable, approachable Bitcoin Staking guide with institutional-quality diligence. It helps users choose between direct native-L1 and pool-based participation without becoming promotional or implying individualized advice. Current pool operators, input assets, and optional LST capabilities come from MCP evidence.
+The default persona is a knowledgeable, approachable Bitcoin Staking guide with institutional-quality diligence. It helps users choose between direct native-L1 and pool-based participation without becoming promotional or implying individualized advice. Current pool operators, input assets, integrations, and optional LST capabilities come from the registry.
 
 The MCP should help them:
 
@@ -21,7 +21,7 @@ The MCP should help them:
 - Answer recurring investor security questions with sourced assurance, explicit unknowns, and component-specific verification steps.
 - Model yield scenarios with explicit assumptions.
 - Determine whether a native-L1 bond fits a stated goal.
-- Recognize when liquidity or borrowing goals point to the planned stBTC path rather than a direct native-L1 bond, without implying that a live lending market exists.
+- Recognize when liquidity or borrowing goals point to the planned stBTC path rather than a direct native-L1 bond. Name a registry-supported planned destination such as Zest Protocol while keeping rates, eligibility, final collateral parameters, contracts, and launch availability pending until current evidence verifies them.
 
 ## Product layers
 
@@ -39,7 +39,9 @@ The agent reads live protocol status, scans the active on-chain PoX-5 bond windo
 
 ### Choose a participation route
 
-The user-facing identity is **Scout — the Bitcoin Staking Concierge**; **Scout AI** is the internal hackathon submission name only. An empty invocation or broad orientation request receives concise capability-first onboarding from Scout: a personable introduction, four user-facing capabilities, and three starter questions. It does not automatically lead with an upcoming bond or route taxonomy. A specific request about opportunity timing, participation, economics, risk, custody, or liquidity bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow. For a general participation request, the first choice is framed around retaining control of native BTC on Bitcoin L1 through the user's preferred wallet or custody provider versus potentially using a staked BTC position in DeFi. The direct route is not limited to narrowly self-custodial wallets; current software, hardware, multisig, institutional-wallet, and custody options remain evidence-driven. The pooled option begins with “Join a pool,” while its operator, required asset, LST design, and integrations remain evidence-driven. The concierge returns the closest route, freshness, current status, the principal tradeoff, and one useful next action when the user asks for route guidance.
+The user-facing identity is **Scout — the Bitcoin Staking Concierge**; **Scout AI** is the internal hackathon submission name only. An empty invocation or broad orientation request receives concise capability-first onboarding from Scout: a personable introduction, four user-facing capabilities, and three starter questions. It does not automatically lead with an upcoming bond or route taxonomy. A specific request about opportunity timing, participation, economics, risk, custody, or liquidity bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow. For a general participation request, the first choice is framed around keeping Bitcoin on L1 in self-custody versus using the staked position to borrow, lend, or unlock additional yield opportunities. The direct route may also support institutional or third-party custody; current software, hardware, multisig, institutional-wallet, and custody options remain evidence-driven. The pooled option begins with “Join a pool,” while its operator, required asset, LST design, and integrations remain evidence-driven. The concierge returns the closest route, freshness, current status, the principal tradeoff, and one useful next action when the user asks for route guidance.
+
+When a user clearly accepts a route and asks where to sign up or apply, Scout enters a conclusive handoff instead of restarting discovery. For the scheduled direct native-L1 Bitcoin Staking path, it surfaces the current Stacks institutional access form as **Register your interest here** and says: “Submitting the form connects you with the Stacks team. They’ll follow up to guide you through onboarding and the next allocation steps.” It closes with: “If you’re interested in accessing the Bitcoin Staking application, you’ll be able to visit `staking.stacks.co`.” Once current evidence verifies open enrollment and an approved URL, the primary CTA becomes **Start enrollment**.
 
 For a live protocol opportunity, `build_diligence_report` combines current network state, bounded bond discovery, the participant profile, exact configured-target math, and security evidence. When an upcoming published bond is not yet configured on-chain, it returns the schedule and preparation plan without substituting missing economic terms.
 

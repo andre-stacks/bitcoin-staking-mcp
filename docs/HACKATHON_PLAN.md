@@ -7,7 +7,7 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 ## Milestones
 
 - M1: Live mainnet PoX status, the dedicated testnet's scheduled/active PoX-5 state, and the explicitly labeled demo manifest are visible through MCP.
-- M2: All fourteen tools return validated structured output and the offline suite passes.
+- M2: All fifteen tools return validated structured output and the offline suite passes.
 - M3: The concierge completes the native-yield and liquidity/borrowing journeys in Codex and Claude.
 - M4: A clean clone installs, builds, runs, and supports the recorded demo.
 
@@ -43,7 +43,8 @@ Deadline: Friday, August 7, 2026 at 5:00 PM ET. Stdio is required. Remote HTTP, 
 7. Build the participation plan and run a 1 BTC yield scenario.
 8. Ask for continuous liquidity and borrowing without selling.
 9. Show a native-bond constraint conflict and route to the closest planned stBTC path without inventing a live DeFi product.
-10. End in Inspector on the tool schemas, read-only annotations, security sources, and structured output.
+10. Show Inspector briefly for the tool schemas, read-only annotations, security sources, and structured output.
+11. Return to Scout and ask, “The direct native-L1 path sounds right. Where do I get started?” End on the evidence-backed **Register your interest here** CTA for the current Stacks institutional access form, explain the team follow-up, and close with future access to the Bitcoin Staking application at `staking.stacks.co`.
 
 The exact prompts, state branches, fallback command, and recording close are in `docs/DEMO_RUNBOOK.md`.
 

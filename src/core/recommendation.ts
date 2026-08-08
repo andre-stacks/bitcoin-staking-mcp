@@ -97,7 +97,7 @@ export function assessRoute(
         unsupportedRequirements.push("The requested horizon is shorter than the bond lock.");
         fit = "no_match";
       } else {
-        missingEvidence.push("The requested horizon is shorter than the published reference period, while final lock duration remains unconfirmed.");
+        missingEvidence.push("The requested horizon is shorter than the published reference period; the exact calendar end remains block-time-dependent.");
         if (fit === "strong") fit = "conditional";
       }
     }
@@ -129,7 +129,7 @@ export function assessRoute(
 
     const viableCustodyPaths = custodyPaths.filter((path) =>
       path.status === "available" &&
-      route.custodyPathIds.includes(path.id) &&
+      (route.custodyPathIds.length === 0 || route.custodyPathIds.includes(path.id)) &&
       isReviewCurrent(path.attestation.reviewedAt, now, path.attestation.reviewCadenceDays)
     );
     if (viableCustodyPaths.length === 0) {
@@ -143,7 +143,7 @@ export function assessRoute(
       if (path && current && path.status === "not_currently_supported") {
         unsupportedRequirements.push(`${path.name} is currently confirmed as unsupported for this route.`);
         fit = "no_match";
-      } else if (!path || path.status !== "available" || !route.custodyPathIds.includes(path.id) || !current) {
+      } else if (!path || path.status !== "available" || (route.custodyPathIds.length > 0 && !route.custodyPathIds.includes(path.id)) || !current) {
         missingEvidence.push(`${profile.walletOrCustodian} is not a current approved custody path for this route.`);
         if (fit === "strong") fit = "conditional";
       } else reasons.push(`${path.name} is a current approved custody path.`);
@@ -200,6 +200,9 @@ export function assessRoute(
         isReviewCurrent(route.lst.attestation.reviewedAt, now, route.lst.attestation.reviewCadenceDays);
       const lender = lstCurrent ? route.lst?.verifiedDefiIntegrations.find((item) => (item.capability === "borrowing" || item.capability === "lending") && item.status === "live" && item.collateralTerms) : undefined;
       if (!lender) {
+        if (route.lst?.productStatus === "in_progress" && route.lst.supportedMarkets.length > 0) {
+          reasons.push(`The current plan points to ${route.lst.tokenSymbol} borrowing or lending through ${route.lst.supportedMarkets.join(", ")}; launch availability and final collateral terms are not yet verified.`);
+        }
         unsupportedRequirements.push("No named live lender with sourced collateral terms is verified.");
         fit = "no_match";
       }

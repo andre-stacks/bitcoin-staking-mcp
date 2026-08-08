@@ -26,32 +26,25 @@ test("early-exit guidance leads with the supported mechanism without reflexive c
   assert.doesNotMatch(entry.answer, /but it is cooperative rather than an instant withdrawal/i);
 });
 
-test("Genesis v2 publishes exactly direct L1 and StackingDAO pool routes", async () => {
-  const bond = await bondFile("genesis-bond-cycle-142.json");
+test("Genesis v2 publishes stable direct L1 and planned StackingDAO pool route types", async () => {
+  const bond = await bondFile("genesis-bond.json");
   assert.equal(bond.schemaVersion, 2);
-  assert.equal(bond.economics.rewardAsset, "sBTC");
+  assert.equal(bond.economics.rewardAsset, "unknown");
   assert.deepEqual(bond.participationRoutes.map((route) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   const pool = bond.participationRoutes[1];
   assert.equal(pool?.routeType, "sbtc_pool");
   if (pool?.routeType === "sbtc_pool") {
-    assert.equal(pool.poolOperator.name, "StackingDAO");
+    assert.equal(pool.poolOperator.id, "stackingdao");
     assert.equal(pool.investorInputs, "sbtc_only");
     assert.equal(pool.lst?.tokenSymbol, "stBTC");
+    assert.equal(pool.lst?.productStatus, "in_progress");
+    assert.deepEqual(pool.lst?.verifiedDefiIntegrations, []);
   }
   assert.equal(bond.participationRoutes.some((route) => (route.routeType as string) === "liquid_staking_token"), false);
   assert.equal(bond.participationRoutes[0]?.routeType, "native_l1_direct");
   if (bond.participationRoutes[0]?.routeType === "native_l1_direct") {
     assert.equal(bond.participationRoutes[0].earlyExit.status, "unknown");
   }
-});
-
-test("published economics remain parseable by strict v0.3 clients", async () => {
-  const bond = await bondFile("genesis-bond-cycle-142.json");
-  const v03EconomicsKeys = new Set([
-    "targetRateBps", "managerFeeBps", "rewardAsset", "rewardModel",
-    "rewardSource", "termsStatus", "fixedRewardUnits", "referenceModel",
-  ]);
-  assert.deepEqual(Object.keys(bond.economics).filter((key) => !v03EconomicsKeys.has(key)), []);
 });
 
 test("v1 manifests normalize to one unconfirmed native-L1 v2 route", () => {
@@ -83,7 +76,7 @@ test("v1 normalization remains compatible when the legacy source is not an owner
 });
 
 test("overdue owner attestation is needs_review and never available", async () => {
-  const bond = await bondFile("genesis-bond-cycle-142.json");
+  const bond = await bondFile("genesis-bond.json");
   assert.equal(routeEffectiveAvailability(bond.participationRoutes[0]!, new Date("2026-08-10T00:00:00.000Z")), "scheduled");
   assert.equal(routeEffectiveAvailability(bond.participationRoutes[0]!, new Date("2026-08-14T00:00:00.000Z")), "needs_review");
   assert.equal(routeEffectiveAvailability(bond.participationRoutes[0]!, new Date("2026-08-10T00:00:00.000Z"), true), "conflict");
@@ -100,12 +93,12 @@ test("demo route yield is deterministic and includes sourced zero fee", async ()
 });
 
 test("pool and optional LST fees are applied sequentially", async () => {
-  const bond = await bondFile("genesis-bond-cycle-142.json");
+  const bond = await bondFile("genesis-bond.json");
   const route = bond.participationRoutes.find((item) => item.routeType === "sbtc_pool")!;
   assert.equal(route.routeType, "sbtc_pool");
   if (route.routeType !== "sbtc_pool" || !route.lst) return;
   const complete = { ...route, feeBps: 1000, lst: { ...route.lst, feeBps: 500 } };
-  const result = simulateYield({ ...bond, timing: { ...bond.timing, lockDurationDays: 365 } }, complete, { principalSats: "100000000", includeLst: true });
+  const result = simulateYield(bond, complete, { principalSats: "100000000", durationDays: 365, annualRateBps: 300, includeLst: true });
   assert.equal(result.grossRewardSats, "3000000");
   assert.equal(result.routeFeeSats, "300000");
   assert.equal(result.lstFeeSats, "135000");
@@ -113,40 +106,36 @@ test("pool and optional LST fees are applied sequentially", async () => {
 });
 
 test("unknown pool fee preserves gross economics while leaving net reward pending", async () => {
-  const bond = await bondFile("genesis-bond-cycle-142.json");
+  const bond = await bondFile("genesis-bond.json");
   const pool = bond.participationRoutes.find((route) => route.routeType === "sbtc_pool")!;
-  const result = simulateYield(bond, pool, { principalSats: "100000000" });
+  const result = simulateYield(bond, pool, { principalSats: "100000000", durationDays: 365, annualRateBps: 300 });
   assert.ok(result.grossRewardSats);
   assert.equal(result.routeFeeBps, null);
   assert.equal(result.netRewardSats, undefined);
   assert.match(result.netRewardDisplay, /pending applicable fees/i);
 });
 
-test("25 BTC Genesis public model returns a 174-day gross scenario and a 1.25 BTC-equivalent STX requirement", async () => {
-  const bond = await bondFile("genesis-bond-cycle-142.json");
+test("Genesis yield requires explicitly sourced terms instead of bundled current economics", async () => {
+  const bond = await bondFile("genesis-bond.json");
   const direct = bond.participationRoutes.find((route) => route.routeType === "native_l1_direct")!;
   const result = simulateYield(bond, direct, {
     principalSats: "2500000000",
+    durationDays: 365,
+    annualRateBps: 300,
     feeBps: 0,
     btcPriceUsd: 100_000,
     stxPriceScenariosUsd: [1, 2.5],
   });
-  assert.equal(result.projectionPeriod, "reference_model_duration");
-  assert.equal(result.durationDays, 174);
+  assert.equal(result.projectionPeriod, "specified_duration");
+  assert.equal(result.durationDays, 365);
   assert.equal(result.annualRateBps, 300);
-  assert.equal(result.grossRewardBtc, "0.358");
-  assert.equal(result.grossRewardBtcExact, "0.35753424");
-  assert.equal(result.grossRewardDisplay, "0.358 BTC");
+  assert.equal(result.grossRewardBtc, "0.750");
+  assert.equal(result.grossRewardBtcExact, "0.75");
+  assert.equal(result.grossRewardDisplay, "0.750 BTC");
   assert.equal(result.netRewardSats, result.grossRewardSats);
-  assert.equal(result.pairedStxRequirement?.minimumValueRatioPercent, 5);
-  assert.equal(result.pairedStxRequirement?.minimumBtcEquivalent, "1.25");
-  assert.equal(result.pairedStxRequirement?.scenarios[0]?.requiredStxUnits, 125_000);
-  assert.equal(result.pairedStxRequirement?.scenarios[0]?.requiredStxUnitsDisplay, "125000.000 STX");
-  assert.equal(result.pairedStxRequirement?.scenarios[1]?.requiredStxUnits, 50_000);
-  assert.equal(result.modelContext?.bondingPeriodCycles, 12);
-  assert.equal(result.modelContext?.targetCoverageRatio, 1.5);
-  assert.equal(result.modelContext?.sourceStatus, "reference_not_final_bond_terms");
-  assert.ok(result.sources.some((source) => source.id === "protocol-bonds-public-model"));
+  assert.equal(result.pairedStxRequirement, null);
+  assert.equal(result.modelContext, null);
+  assert.ok(result.assumptions.some((item) => /explicitly supplied/i.test(item)));
 });
 
 test("participant amount must be positive", () => {

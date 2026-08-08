@@ -51,6 +51,7 @@ class SnapshotProvider extends RecordingProvider {
     return { network: this.networkName, pox5Active: true, currentBurnchainBlockHeight: 1, scannedBondIndices: [0], bonds: [], dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt };
   }
   override async getOnChainBond(): Promise<any> { return undefined; }
+  override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 100, durationRewardCycles: 12, durationBurnBlocks: 25200, approximateDurationDays: 175, l1LockDurationBurnBlocks: 24150, approximateL1LockDurationDays: 167.7, endRewardCycle: 153 + bondIndex * 2, endBurnHeight: 25300, l1UnlockBurnHeight: 24250, currentBurnchainBlockHeight: 1, remainingBurnBlocks: 99, estimatedStartAt: "2026-08-07T11:30:00.000Z", estimatedEndAt: "2027-01-29T11:30:00.000Z", estimatedL1UnlockAt: "2027-01-22T04:30:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture.", durationEstimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
 }
 
 function publishedTestnetManifest() {
@@ -177,7 +178,7 @@ test("participant network resolution rejects bond, request, and address conflict
 test("runtime conflict overrides a fresh owner claim in snapshot, bond detail, report, comparison, and plan", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "bitcoin-staking-runtime-conflict-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
-  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond-cycle-142.json"), "utf8"));
+  const bond = JSON.parse(await readFile(resolve("data/bonds/genesis-bond.json"), "utf8"));
   Object.assign(bond, { productStatus: "production", enrollmentStatus: "open" });
   Object.assign(bond.participationRoutes[0], { productStatus: "production", enrollmentStatus: "open" });
   bond.participationRoutes[0].enrollment.url = "https://example.com/enroll";
@@ -189,15 +190,15 @@ test("runtime conflict overrides a fresh owner claim in snapshot, bond detail, r
 
   const snapshot = await service.getMarketSnapshot();
   assert.equal(snapshot.routes.find((route) => route.routeType === "native_l1_direct")?.effectiveAvailability, "conflict");
-  const detail = await service.getBond("genesis-bond-cycle-142");
+  const detail = await service.getBond("genesis-bond");
   assert.equal(detail.onChainReconciliation.status, "conflict");
   assert.equal(detail.bond.participationRoutes[0]?.effectiveAvailability, "conflict");
   assert.equal(detail.bond.participationRoutes[1]?.effectiveAvailability, "scheduled");
   const comparison = await service.compareStakingPaths(profile);
   assert.equal(comparison.recommendedRouteId, null);
-  const plan = await service.buildParticipationPlan("genesis-bond-cycle-142", profile);
+  const plan = await service.buildParticipationPlan("genesis-bond", profile);
   assert.equal(plan.selectedRouteId, null);
-  const report = await service.buildDiligenceReport({ bondId: "genesis-bond-cycle-142", routeId: "genesis-native-l1-direct", profile });
+  const report = await service.buildDiligenceReport({ bondId: "genesis-bond", routeId: "genesis-native-l1-direct", profile });
   assert.equal(report.operationalFit, "not_assessable");
   assert.equal(report.bondAvailability.onChainReconciliation[0]?.status, "conflict");
 });

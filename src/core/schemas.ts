@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RegistryPublicationMetadataSchema, REGISTRY_REVIEW_CADENCE_DAYS, REGISTRY_SCHEMA_VERSION } from "@bitcoin-staking/registry-contract";
 
 const IdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*$/);
 const SatsSchema = z.string().regex(/^\d+$/);
@@ -35,15 +36,19 @@ export const RegistrySourceModeSchema = z.enum([
 export const SourceRefSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
-  url: z.url(),
+  url: z.url().optional(),
   sourceType: z.enum([
-    "chain_api", "market_data_api", "official_docs", "source_code", "security_statement", "public_manifest", "demo_manifest", "economic_model",
+    "chain_api", "market_data_api", "official_docs", "source_code", "security_statement", "public_manifest", "demo_manifest", "economic_model", "owner_attestation",
   ]),
   dataStatus: DataStatusSchema,
   retrievedAt: z.iso.datetime().optional(),
   sourceVersion: z.string().min(1).optional(),
   contentHashSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
-}).strict();
+}).strict().superRefine((value, context) => {
+  if (value.sourceType !== "owner_attestation" && !value.url) {
+    context.addIssue({ code: "custom", path: ["url"], message: "A URL is required unless the source is an owner attestation." });
+  }
+});
 export type SourceRef = z.infer<typeof SourceRefSchema>;
 
 export const OwnerAttestationSchema = z.object({
@@ -160,7 +165,7 @@ export const NativeL1DirectRouteSchema = z.object({
     status: z.enum(["available", "not_available", "unknown"]),
   }).strict(),
   participantTypes: z.array(z.enum(["institution", "individual"])).min(1),
-  custodyPathIds: z.array(IdSchema),
+  custodyPathIds: z.array(IdSchema).describe("Optional route restriction: an empty list uses every current path approved by the native-L1 custody registry; a non-empty list restricts the route to those path IDs."),
   minimumSats: SatsSchema.optional(),
   maximumSats: SatsSchema.optional(),
   pairedStx: z.object({ required: z.boolean(), minimumValueRatioBps: z.number().int().min(0).max(10_000).optional() }).strict(),
@@ -199,6 +204,7 @@ export const EconomicsSchema = z.object({
   targetRateBps: z.number().int().nonnegative().max(100_000).optional(),
   managerFeeBps: z.number().int().nonnegative().max(10_000).optional(),
   rewardAsset: z.enum(["BTC", "sBTC", "STX", "unknown"]),
+  rewardAssetOptions: z.array(z.enum(["BTC", "sBTC", "STX"])).min(1).optional(),
   rewardModel: z.enum(["target_principal_rate", "fixed_reward_units", "unknown"]),
   rewardSource: z.string().min(1).optional(),
   termsStatus: z.enum(["bond_specific", "reference_program_model", "demo"]).optional(),
@@ -220,6 +226,7 @@ export const EconomicsSchema = z.object({
 
 export const BondManifestV2Schema = z.object({
   schemaVersion: z.literal(2), id: IdSchema, title: z.string().min(1), description: z.string().min(1),
+  aliases: z.array(IdSchema).default([]),
   network: StacksNetworkSchema, onChainBondIndex: z.number().int().nonnegative().optional(),
   lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]), dataStatus: z.enum(["published", "demo"]),
   productStatus: ProductStatusSchema, enrollmentStatus: EnrollmentStatusSchema,
@@ -241,7 +248,7 @@ export const BondManifestV2Schema = z.object({
   const attestationSourceTypes: SourceRef["sourceType"][] =
     value.dataStatus === "demo"
       ? ["demo_manifest", "public_manifest"]
-      : ["public_manifest"];
+      : ["public_manifest", "owner_attestation"];
   const allowedAttestationTypes = (status: z.infer<typeof ProductStatusSchema>, verification: Array<z.infer<typeof VerificationLevelSchema>>) =>
     status === "unconfirmed" && !verification.includes("product_owner_confirmed")
       ? SourceRefSchema.shape.sourceType.options
@@ -287,6 +294,8 @@ export const BondManifestV2Schema = z.object({
   if (value.timing.startsRewardCycle !== undefined && value.timing.endsRewardCycle !== undefined && value.timing.startsRewardCycle > value.timing.endsRewardCycle) context.addIssue({ code: "custom", path: ["timing", "endsRewardCycle"], message: "endsRewardCycle must not precede startsRewardCycle." });
   if (value.economics.rewardModel === "fixed_reward_units" && value.economics.fixedRewardUnits === undefined) context.addIssue({ code: "custom", path: ["economics", "fixedRewardUnits"], message: "Fixed-unit reward models require fixedRewardUnits." });
   if (value.economics.rewardModel === "target_principal_rate" && value.economics.targetRateBps === undefined && value.economics.referenceModel === undefined) context.addIssue({ code: "custom", path: ["economics", "targetRateBps"], message: "Target-principal-rate models require a bond rate or sourced reference model." });
+  if (value.economics.rewardAssetOptions && new Set(value.economics.rewardAssetOptions).size !== value.economics.rewardAssetOptions.length) context.addIssue({ code: "custom", path: ["economics", "rewardAssetOptions"], message: "Reward-asset options must be unique." });
+  if (value.economics.rewardAssetOptions && value.economics.rewardAsset !== "unknown" && !value.economics.rewardAssetOptions.includes(value.economics.rewardAsset)) context.addIssue({ code: "custom", path: ["economics", "rewardAsset"], message: "The modeled reward asset must be one of the published reward-asset options." });
   if (value.enrollmentStatus === "open" && value.productStatus !== "production") context.addIssue({ code: "custom", path: ["productStatus"], message: "Open bond enrollment requires production product status." });
   if (value.enrollmentStatus === "open" && !value.verification.includes("product_owner_confirmed")) context.addIssue({ code: "custom", path: ["verification"], message: "Open bond enrollment requires product-owner confirmation." });
   const routeIds = value.participationRoutes.map((route) => route.id);
@@ -314,6 +323,7 @@ export function normalizeBondManifest(value: unknown): BondManifestV2 {
   const attestation = { scope: `${old.id}:native-l1-direct legacy source scope`, ownerOrganization: "Unconfirmed", reviewedAt: old.verifiedAt, reviewCadenceDays: 7 as const, sourceIds };
   return BondManifestV2Schema.parse({
     schemaVersion: 2, id: old.id, title: old.title, description: old.description, network: old.network,
+    aliases: [],
     ...(old.onChainBondIndex === undefined ? {} : { onChainBondIndex: old.onChainBondIndex }),
     lifecycleStatus: old.lifecycleStatus, dataStatus: old.dataStatus, productStatus: "unconfirmed", enrollmentStatus: "unknown",
     verification: [], attestation, timing: old.timing, economics: old.economics,
@@ -338,6 +348,131 @@ export const BondRegistrySchema = z.object({
   if (new Set(value.bondFiles).size !== value.bondFiles.length) context.addIssue({ code: "custom", path: ["bondFiles"], message: "Duplicate bond file." });
 });
 export type BondRegistry = z.output<typeof BondRegistrySchema>;
+
+export const CatalogCategorySchema = z.enum(["project", "product", "announcement"]);
+export const CatalogStatusSchema = z.enum(["planned", "in_progress", "available", "paused", "completed", "retired", "unknown"]);
+export const IntegrationStatusSchema = z.enum(["planned", "in_integration", "tested", "available", "paused", "retired", "unknown"]);
+export const CurrentFactStatusSchema = z.union([CatalogStatusSchema, IntegrationStatusSchema]);
+
+const CurrentRecordShape = {
+  id: IdSchema,
+  title: z.string().min(1),
+  summary: z.string().min(1),
+  aliases: z.array(IdSchema).default([]),
+  tags: z.array(z.string().min(1)).default([]),
+  relatedIds: z.array(IdSchema).default([]),
+  effectiveAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime().optional(),
+  sourceIds: z.array(z.string().min(1)).min(1),
+  attestation: OwnerAttestationSchema,
+};
+
+export const CatalogFactSchema = z.object({
+  ...CurrentRecordShape,
+  category: CatalogCategorySchema,
+  status: CatalogStatusSchema,
+}).strict().superRefine((value, context) => {
+  if (value.category === "announcement" && !value.expiresAt) {
+    context.addIssue({ code: "custom", path: ["expiresAt"], message: "Announcements require an expiration time." });
+  }
+  if (value.expiresAt && new Date(value.expiresAt) <= new Date(value.effectiveAt)) {
+    context.addIssue({ code: "custom", path: ["expiresAt"], message: "expiresAt must be after effectiveAt." });
+  }
+});
+export type CatalogFact = z.infer<typeof CatalogFactSchema>;
+
+export const IntegrationClaimSchema = z.object({
+  ...CurrentRecordShape,
+  partnerId: IdSchema,
+  productId: IdSchema,
+  role: z.string().min(1),
+  network: StacksNetworkSchema.optional(),
+  status: IntegrationStatusSchema,
+}).strict().superRefine((value, context) => {
+  if (value.expiresAt && new Date(value.expiresAt) <= new Date(value.effectiveAt)) {
+    context.addIssue({ code: "custom", path: ["expiresAt"], message: "expiresAt must be after effectiveAt." });
+  }
+});
+export type IntegrationClaim = z.infer<typeof IntegrationClaimSchema>;
+
+export const ConciergeRegistryContentSchema = z.object({
+  schemaVersion: z.literal(REGISTRY_SCHEMA_VERSION),
+  reviewedAt: z.iso.datetime(),
+  reviewCadenceDays: z.literal(REGISTRY_REVIEW_CADENCE_DAYS),
+  bonds: z.array(BondManifestV2Schema).min(1),
+  custody: CustodyRegistrySchema,
+  facts: z.array(CatalogFactSchema).default([]),
+  integrations: z.array(IntegrationClaimSchema).default([]),
+  sources: z.array(SourceRefSchema).default([]),
+}).strict().superRefine((value, context) => {
+  const ids = new Set<string>();
+  const aliases = new Set<string>();
+  const register = (id: string, recordAliases: string[], path: Array<string | number>) => {
+    if (ids.has(id) || aliases.has(id)) context.addIssue({ code: "custom", path, message: `Duplicate registry ID or alias: ${id}` });
+    ids.add(id);
+    for (const alias of recordAliases) {
+      if (aliases.has(alias) || ids.has(alias)) context.addIssue({ code: "custom", path, message: `Duplicate registry alias: ${alias}` });
+      aliases.add(alias);
+    }
+  };
+  value.bonds.forEach((item, index) => {
+    register(item.id, item.aliases, ["bonds", index, "id"]);
+    item.participationRoutes.forEach((route, routeIndex) => register(route.id, [], ["bonds", index, "participationRoutes", routeIndex, "id"]));
+  });
+  value.custody.paths.forEach((item, index) => register(item.id, [], ["custody", "paths", index, "id"]));
+  value.facts.forEach((item, index) => register(item.id, item.aliases, ["facts", index, "id"]));
+  value.integrations.forEach((item, index) => register(item.id, item.aliases, ["integrations", index, "id"]));
+  const integrationDimensions = new Set<string>();
+  value.integrations.forEach((item, index) => {
+    const key = [item.partnerId, item.productId, item.role, item.network ?? "all-networks"].map((part) => part.toLocaleLowerCase()).join("|");
+    if (integrationDimensions.has(key)) context.addIssue({ code: "custom", path: ["integrations", index], message: `Duplicate partner/product/role/network integration: ${key}` });
+    integrationDimensions.add(key);
+  });
+  [...value.facts, ...value.integrations].forEach((item) => item.relatedIds.forEach((relatedId) => {
+    if (!ids.has(relatedId)) context.addIssue({ code: "custom", path: [item.id, "relatedIds"], message: `Missing related record ID: ${relatedId}` });
+  }));
+  validateUniqueSourceIds(value.sources, context);
+  validateReferences(value.facts, value.sources, context, "facts");
+  validateReferences(value.integrations, value.sources, context, "integrations");
+  value.facts.forEach((item, index) => validateAttestation(item.attestation, value.sources, context, ["facts", index, "attestation"], ["public_manifest", "official_docs", "owner_attestation"]));
+  value.integrations.forEach((item, index) => validateAttestation(item.attestation, value.sources, context, ["integrations", index, "attestation"], ["public_manifest", "official_docs", "owner_attestation"]));
+});
+export type ConciergeRegistryContent = z.infer<typeof ConciergeRegistryContentSchema>;
+
+export const ConciergeRegistrySnapshotSchema = z.object({
+  registryVersion: z.string().min(1),
+  reviewedAt: z.iso.datetime(),
+  reviewCadenceDays: z.literal(REGISTRY_REVIEW_CADENCE_DAYS),
+  reviewDueAt: z.iso.datetime(),
+  revision: z.string().min(1),
+  contentHash: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+  publishedAt: z.iso.datetime(),
+  publishedBy: z.string().min(1),
+  content: ConciergeRegistryContentSchema,
+}).strict().superRefine((value, context) => {
+  const { content: _content, ...metadata } = value;
+  if (!RegistryPublicationMetadataSchema.safeParse(metadata).success) context.addIssue({ code: "custom", path: [], message: "Invalid shared registry publication metadata." });
+  if (value.reviewedAt !== value.content.reviewedAt) {
+    context.addIssue({ code: "custom", path: ["reviewedAt"], message: "Snapshot and content reviewedAt values must match." });
+  }
+  if (value.reviewCadenceDays !== value.content.reviewCadenceDays) {
+    context.addIssue({ code: "custom", path: ["reviewCadenceDays"], message: "Snapshot and content review cadence values must match." });
+  }
+  if (value.reviewDueAt !== reviewDueAt(value.reviewedAt, value.reviewCadenceDays)) {
+    context.addIssue({ code: "custom", path: ["reviewDueAt"], message: "Snapshot reviewDueAt must match the seven-day review window." });
+  }
+});
+export type ConciergeRegistrySnapshot = z.infer<typeof ConciergeRegistrySnapshotSchema>;
+
+export function currentRecordStatus(
+  record: { status: string; effectiveAt: string; expiresAt?: string | undefined; attestation: OwnerAttestation },
+  now: Date,
+): "current" | "scheduled" | "expired" | "needs_review" {
+  if (!isReviewCurrent(record.attestation.reviewedAt, now, record.attestation.reviewCadenceDays)) return "needs_review";
+  if (new Date(record.effectiveAt).getTime() > now.getTime()) return "scheduled";
+  if (record.expiresAt && new Date(record.expiresAt).getTime() <= now.getTime()) return "expired";
+  return "current";
+}
 
 export const ParticipantProfileSchema = z.object({
   goal: z.enum(["earn_yield", "prioritize_safety", "retain_flexibility", "borrow_without_selling", "compare_options"]),

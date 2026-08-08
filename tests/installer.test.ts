@@ -20,7 +20,7 @@ test("installer options default to both hosts and support aliases", () => {
   const defaults = parseInstallerOptions("setup", []);
   assert.deepEqual(defaults.hosts, ["codex", "claude"]);
   assert.equal(defaults.packageSpec, DEFAULT_PACKAGE_SPEC);
-  assert.match(defaults.packageSpec, /#v0\.3\.0$/);
+  assert.match(defaults.packageSpec, /#v0\.4\.0$/);
 
   const selected = parseInstallerOptions("setup", [
     "--hosts=both",
@@ -58,7 +58,7 @@ test("setup registers both hosts, installs the global skill, and verifies regist
     packageRoot: resolve("."),
     homeDirectory: fakeHome,
     verificationCwd: tmpdir(),
-    verifyServer: async () => 14,
+    verifyServer: async () => 15,
   });
 
   assert.equal(result.ok, true);
@@ -111,7 +111,7 @@ test("check reports a missing explicitly selected host registration", async (con
   const result = await runInstaller(parseInstallerOptions("check", ["--hosts", "codex"]), {
     runCommand: async () => ({ code: 1, stdout: "", stderr: "not found" }),
     homeDirectory: fakeHome,
-    verifyServer: async () => 14,
+    verifyServer: async () => 15,
   });
 
   assert.equal(result.ok, false);
@@ -134,13 +134,13 @@ test("uninstall removes only selected registrations and the product skill", asyn
     runCommand,
     packageRoot: resolve("."),
     homeDirectory: fakeHome,
-    verifyServer: async () => 14,
+    verifyServer: async () => 15,
   });
   const result = await runInstaller(parseInstallerOptions("uninstall", ["--hosts", "codex"]), {
     runCommand,
     packageRoot: resolve("."),
     homeDirectory: fakeHome,
-    verifyServer: async () => 14,
+    verifyServer: async () => 15,
   });
 
   assert.equal(result.ok, true);
@@ -226,7 +226,7 @@ test("Claude registration verification rejects a mismatched command", async () =
     runCommand: async (_command, args) => args.join(" ") === "--version"
       ? { code: 0, stdout: "Claude", stderr: "" }
       : { code: 0, stdout: "bitcoin-staking:\n  Command: node\n  Args: wrong.js\n", stderr: "" },
-    verifyServer: async () => 14,
+    verifyServer: async () => 15,
   });
   assert.equal(result.ok, false);
   assert.ok(result.steps.some((step) => step.target === "claude" && step.status === "failed" && /does not match/i.test(step.message)));
