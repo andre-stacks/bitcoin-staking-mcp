@@ -79,7 +79,7 @@ test("bond schema rejects invalid limits, paired-STX terms, reward fields, and c
   assert.equal(BondManifestSchema.safeParse(mismatchedRewardAsset).success, false);
 
   const contract = await genesis();
-  contract.participationRoutes[1].contracts = [{ role: "pool", contractId: "ST000000000000000000002AMW42H.pool", network: "testnet" }];
+  contract.participationRoutes[1].contracts = [{ role: "pool", contractId: "ST000000000000000000002AMW42H.pool", network: "devnet" }];
   assert.equal(BondManifestSchema.safeParse(contract).success, false);
 });
 

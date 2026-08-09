@@ -11,7 +11,7 @@ This catalog translates recurring investor and integration questions into public
 
 Audit-status answers remain topic-local. A simple status question should not expand into report, scope, findings, remediation, commit-attestation, or integration caveats. Those details are progressive disclosure for a relevant follow-up. Audit answers must not introduce a named wallet or custodian from an earlier turn unless the current question asks whether it was covered.
 | How is the timelock constructed? | `timelock_construction` | Explain P2WSH, the CLTV maturity branch, the separate early-exit branch, participant unlock material, and the complete-script commitment. |
-| How do we know the Leather transaction is safe? | `leather_transaction_safety` | Separate SDK/app construction from Leather account selection and PSBT signing; require destination comparison and release-specific testnet proof. |
+| How do we know the Leather transaction is safe? | `leather_transaction_safety` | Separate SDK/app construction from Leather account selection and PSBT signing; require destination comparison and release-specific pre-production proof. |
 | What must be checked before sending BTC? | `pre_funding_validation` | Derive the expected complete script and P2WSH destination from exact public inputs before funding. |
 | Can BTC be recovered if the app disappears? | `maturity_recovery` | Explain the protocol maturity path and separately identify key, script-data, and product-UX dependencies. |
 | Can BTC exit early? | `early_exit` | State that PoX-5 supports an optional early-exit path, then check current bond and route evidence before saying the user can use it. When enabled, explain the Stacks transaction followed by the Bitcoin wallet approval. State forfeited yield, paired-STX timing, and network fees directly. Reserve coordinator, co-signing, reclaim, unlock-material, and signer-policy terminology for technical follow-up. |
@@ -31,6 +31,6 @@ Audit-status answers remain topic-local. A simple status question should not exp
 - Signer-manager control, upgradeability, fee caps, and admin-key risk.
 - Custodian-specific PSBT and witness-script support.
 - Recovery-material retention and operational runbooks.
-- Testnet evidence for the exact wallet/app release combination.
+- End-to-end pre-production evidence for the exact wallet/app release combination.
 - Audit report links, scope, reviewed commits, and remediation status from current evidence.
 - Bitcoin reorg, fee, stuck-transaction, and maturity-spend operational risks.

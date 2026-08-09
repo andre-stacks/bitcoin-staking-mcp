@@ -31,7 +31,7 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /require a current named live integration/i);
   assert.match(skill, /Do not fill missing terms from memory/i);
   assert.match(skill, /Never construct, sign, or broadcast a transaction/);
-  assert.match(skill, /Never present it as an investable fallback/i);
+  assert.match(skill, /Use mainnet runtime and reviewed mainnet product evidence only/i);
   assert.match(skill, /list_custody_paths/);
   assert.match(skill, /tool menu/i);
   assert.match(skill, /Onboarding follows the user's intent/i);
@@ -113,25 +113,25 @@ test("Codex skill metadata presents Scout as the Bitcoin Staking Concierge", asy
   assert.match(metadata, /introduce Scout/);
 });
 
-test("hackathon and user-facing names remain distinct", async () => {
-  const [plan, uxReview] = await Promise.all([
-    readFile(resolve("docs/HACKATHON_PLAN.md"), "utf8"),
+test("Scout uses one durable product identity", async () => {
+  const [readme, requirements, uxReview] = await Promise.all([
+    readFile(resolve("README.md"), "utf8"),
+    readFile(resolve("docs/PRODUCT_REQUIREMENTS.md"), "utf8"),
     readFile(resolve("docs/UX_REVIEW.md"), "utf8"),
   ]);
 
-  assert.match(plan, /Submission name: \*\*Scout AI\*\*/);
-  assert.match(plan, /Scout — the Bitcoin Staking Concierge/);
-  assert.match(uxReview, /Scout AI.*internal hackathon submission/i);
-  assert.match(uxReview, /not used as the concierge's name in onboarding/i);
+  for (const surface of [readme, requirements, uxReview]) {
+    assert.match(surface, /Scout — the Bitcoin Staking Concierge/);
+    assert.doesNotMatch(surface, /Scout AI|hackathon/i);
+  }
 });
 
-test("README examples stay network-agnostic", async () => {
+test("README positions Scout as a mainnet product", async () => {
   const readme = await readFile(resolve("README.md"), "utf8");
 
-  assert.match(readme, /Users do not need to choose a network/);
+  assert.match(readme, /Scout is built for mainnet/);
   assert.match(readme, /best currently available data/);
-  assert.doesNotMatch(readme, /On the configured testnet, which protocol bonds/);
-  assert.doesNotMatch(readme, /Build an institutional diligence report for the PoX-5 testnet/);
+  assert.doesNotMatch(readme, /testnet|hackathon|synthetic demo/i);
   assert.match(readme, /direct native-L1.*current pool-based routes/i);
   assert.match(readme, /Fifteen read-only MCP tools/i);
 });
@@ -223,7 +223,6 @@ test("static Scout policy surfaces do not retain current schedule or economics",
   const paths = [
     ".agents/skills/bitcoin-staking-concierge/SKILL.md",
     "README.md",
-    "docs/DEMO_RUNBOOK.md",
     "docs/INSTITUTIONAL_RESPONSE_STANDARD.md",
     "docs/PRODUCT_REQUIREMENTS.md",
     "docs/SECURITY_QUESTION_CATALOG.md",

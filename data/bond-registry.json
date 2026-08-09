@@ -4,7 +4,6 @@
   "reviewedAt": "2026-08-06T00:00:00.000Z",
   "reviewCadenceDays": 7,
   "bondFiles": [
-    "genesis-bond.json",
-    "demo-native-bitcoin-bond.json"
+    "genesis-bond.json"
   ]
 }

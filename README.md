@@ -1,72 +1,71 @@
-# Bitcoin Staking MCP
+# Scout — the Bitcoin Staking Concierge
 
-The agent-readable interface for discovering, understanding, and planning native Bitcoin staking on Stacks.
+Scout helps people find the right Bitcoin Staking path, understand the tradeoffs, and prepare to participate using current mainnet evidence.
 
-Bitcoin Staking MCP combines current PoX state, on-chain protocol-bond discovery, a live versioned bond and custody registry, deterministic route-aware scenarios, sourced security diligence, compatibility evidence, and a guided concierge. It is intentionally read-only: it cannot construct, sign, or broadcast transactions.
+Ask a question in plain language. Scout checks live protocol state, reviewed product records, custody evidence, and sourced terms before it answers. It shows where the information came from, when it was verified, and what still needs confirmation.
 
-## Why this exists
+Scout is powered by the Bitcoin Staking MCP, a read-only intelligence layer for Bitcoin Staking on Stacks. It can research, compare, explain, and calculate. It cannot construct, sign, or broadcast a transaction.
 
-Bitcoin staking crosses Bitcoin L1, Stacks, wallets, custodians, economic assumptions, and product-specific enrollment rules. Agents need structured facts and explicit uncertainty—not another generic FAQ bot.
+[Try Scout](#quick-start) · [See how it works](#see-how-it-works) · [Technical documentation](#technical-documentation)
 
-This server keeps four kinds of information separate:
+## What Scout helps you do
 
-- `live`: current chain or API state;
-- `published`: public documentation or product metadata;
-- `derived`: deterministic calculations or fit assessments;
-- `demo`: synthetic hackathon data that is never presented as available capital infrastructure.
+- **Find current and upcoming opportunities.** See what is open, what is scheduled, and what you can prepare for now.
+- **Compare ways to participate.** Understand how each path affects custody, liquidity, eligibility, and the asset you hold.
+- **Understand rewards and risks.** Review sourced economics, lockups, fees, security controls, recovery paths, and missing evidence.
+- **Build a participation plan.** Move from a broad goal to a practical route, compatible wallet or custodian, and verified next step.
 
-## Architecture
+Scout keeps the experience conversational. Users do not need to learn the underlying tool catalog or translate protocol fields themselves.
 
-```mermaid
-flowchart LR
-  A["Current production data"] --> C["Bitcoin Staking intelligence core"]
-  T["Pre-production network data"] --> C
-  B["Vercel live knowledge registry"] --> C
-  C --> M["Read-only MCP server"]
-  M --> X["Codex concierge skill"]
-  M --> Y["Claude concierge prompt"]
-  M --> Z["Any MCP client"]
-```
+## See how it works
 
-The intelligence core contains schemas, provenance, economics, compatibility, and recommendation rules. It has no LLM dependency. The concierge is a thin workflow over MCP tools, not a separate service.
+A typical conversation moves from discovery to a concrete next step. Scout refreshes the relevant evidence at each stage.
 
-The concierge is an approachable Bitcoin Staking guide with institutional-quality diligence. It leads with the closest route, explains what is upcoming versus live, and turns pending terms into a practical preparation plan.
+1. **“When is the next bond?”**
 
-### Live registry console
+   Scout checks live mainnet protocol state and current product records, then explains what is open or coming next in ordinary language. If timing is estimated from chain data, Scout labels it as an estimate.
 
-`apps/registry-console` is a Next.js application intended for the Stacks Labs Vercel team. Vercel Global Config (formerly Edge Config) holds the shared draft and current published snapshot; private Vercel Blob objects hold immutable revision history. Sign in with Vercel protects the editor, and `PUBLISHER_EMAILS` controls who may mutate data. The anonymous `GET /api/v1/registry` endpoint supports ETags and contains published user-facing facts only. See [registry deployment](docs/REGISTRY_CONSOLE.md).
+2. **“How can I participate?”**
 
-MCP clients use `BITCOIN_STAKING_REGISTRY_URL` and revalidate every 60 seconds. `BITCOIN_STAKING_BOND_REGISTRY_URL`, `BITCOIN_STAKING_CUSTODY_REGISTRY_URL`, `BITCOIN_STAKING_DATA_DIR`, and `BITCOIN_STAKING_CUSTODY_REGISTRY_PATH` remain deprecated compatibility inputs for the 0.4 release. A current bundled snapshot is used during an outage; once its seven-day review window expires, reads fail closed.
+   Scout compares the direct native-L1 and current pool-based routes. It starts with the outcome that matters to the user: keeping Bitcoin on L1, retaining key control, or using a staked position for liquidity and other financial activity. Pool operators, required assets, and integrations come from current evidence rather than static copy.
 
-The answer policy is evidence-gated. The concierge may use only current MCP structured output and MCP resources for factual claims. It does not complete missing answers from model memory, infer wallet support from protocol behavior, treat an audit statement as end-to-end wallet proof, or substitute demo data after a live-read failure. When the corpus cannot answer a question, it says: “This MCP does not currently verify that,” and identifies the missing evidence.
+3. **“Does my wallet or custodian work?”**
 
-The Genesis Bond has stable ID `genesis-bond` and PoX-5 bond period/index 1. The MCP derives its eligible reward cycle and burn height from live PoX information. The pinned contract fixes every bond term at 12 reward cycles, approximately six months on mainnet; Scout derives the end and native-L1 unlock heights separately and estimates calendar time from Bitcoin's ten-minute target. Product targets, operators, integrations, and economic terms come from the live registry and remain separate from protocol eligibility. Scout keeps planned product timing, public reference-model assumptions, bond-specific terms, and final on-chain configured terms distinct. Yield scenarios use sourced rate and duration inputs; when an applicable fee is missing, the supported gross projection remains available and net yield remains unknown.
+   Scout checks the maintained custody directory for product-level support. When a bond has been selected, it checks exact bond compatibility separately. General wallet support is not treated as proof that every bond-specific flow is ready.
 
-For a user who is ready to proceed with the direct native-L1 Bitcoin Staking path, Scout presents the current [Institutional Bitcoin Staking access request](https://www.stacks.co/institutional-bitcoin-staking) as **Register your interest here**. Submitting the form connects the user with the Stacks team, who will follow up to guide them through onboarding and the next allocation steps. If the user is interested in accessing the Bitcoin Staking application, they’ll be able to visit `staking.stacks.co`.
+4. **“What are the risks?”**
+
+   Scout explains the Bitcoin-enforced lock and recovery conditions first, then the audits and transaction checks a participant can verify. It closes with the implementation and operational risks that remain, such as using the wrong key, signing an incorrect transaction, or losing recovery information.
+
+5. **“Where do I get started?”**
+
+   Once the user chooses a route, Scout re-checks the current access record and gives one verified next step. An interest form or Bitcoin transfer alone is not presented as proof that enrollment is complete.
+
+The same journey works for a short question or a detailed profile. A user can start with an amount, wallet, custodian, liquidity requirement, or security concern and go directly to the relevant step.
 
 ## Quick start
 
-Requires Node 22.
-
-Install for both Codex and Claude Code from any directory:
+Scout requires Node 22. Install it for Codex and Claude Code from any directory:
 
 ```bash
 npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 setup
 ```
 
-The installer performs a real MCP handshake, registers `bitcoin-staking` in the user-level configuration for both hosts, installs the global Codex concierge skill, and prints the first prompts. Restart both hosts after setup, then verify at any time:
+The installer starts the packaged server, performs an MCP handshake, registers the server in the available hosts, and installs the Codex concierge skill. Restart Codex and Claude Code after setup so they reload the MCP and skill metadata.
 
-```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 check
+Open Scout in Codex:
+
+```text
+$bitcoin-staking-concierge
 ```
 
-To install only one host, use `--hosts codex` or `--hosts claude`. See [Installation](docs/INSTALLATION.md) for local-checkout, pinned-source, JSON, update, and uninstall options.
+Or open the concierge prompt in Claude Code:
 
-### First conversation
+```text
+/mcp__bitcoin_staking__bitcoin_staking_concierge
+```
 
-Open `$bitcoin-staking-concierge` in Codex or `/mcp__bitcoin_staking__bitcoin_staking_concierge` in Claude Code. With no question attached, or with a broad statement such as “I'd like to get started with Bitcoin staking,” Scout introduces itself as the Bitcoin Staking Concierge, summarizes how it can help, and offers three useful starter questions. It does not make users learn bond routes before choosing a direction.
-
-Ask naturally. For example:
+Try asking:
 
 ```text
 When is the next bond launching?
@@ -74,193 +73,67 @@ How can I get started staking?
 Which participation option is right for me?
 ```
 
-A specific first question bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow.
+A specific question goes directly to that workflow. An empty invocation introduces Scout, summarizes what it can help with, and offers useful starting points.
 
-The single concierge command is the user-facing entry point. Fifteen read-only MCP tools remain directly available to agents, developers, and MCP Inspector; users do not need to know their names.
+Verify the installation at any time:
+
+```bash
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 check
+```
+
+Use `--hosts codex` or `--hosts claude` to install only one host. See the [installation guide](docs/INSTALLATION.md) for local-checkout, pinned-source, JSON, update, and uninstall options.
+
+## Why users can trust the answer
+
+Scout is built for mainnet. It starts with the best currently available data and applies a clear evidence order before presenting an opportunity or recommendation.
+
+| Evidence | What it means |
+| --- | --- |
+| `live` | A current public mainnet chain or API observation. |
+| `published` | An official document or owner-reviewed product record. |
+| `derived` | A deterministic calculation or assessment built from sourced inputs. |
+
+Product claims are checked independently. Protocol activation does not establish that a bond is open. A supported custody path does not establish exact compatibility with every bond. A published rate or duration does not establish final on-chain configuration. Scout keeps those questions separate so the conclusion matches the evidence.
+
+Every factual response can carry source records and verification times. When the available corpus cannot support a claim about availability, yield, compatibility, or security, Scout identifies what is missing. Deterministic calculations require sourced or user-supplied inputs, and an unpublished fee is never assumed to be zero.
+
+This makes the workflow suitable for a mainnet product: the same read-only tools can support discovery, diligence, route selection, and preparation while the wallet or custodian remains responsible for approvals and signing. Current availability is always determined from current evidence; the README does not imply that enrollment is open.
+
+## For developers
+
+```mermaid
+flowchart LR
+  U["User question"] --> S["Scout concierge"]
+  S --> M["Bitcoin Staking MCP"]
+  M --> P["Live mainnet protocol state"]
+  M --> R["Reviewed product registry"]
+  M --> C["Deterministic calculations"]
+  M --> E["Sources and verification"]
+```
+
+Scout is the conversational workflow over the MCP. The intelligence core owns schemas, source precedence, registry freshness, compatibility checks, economics, and recommendation rules. The core has no LLM dependency, so any MCP client can reuse the same structured facts and calculations.
+
+Fifteen read-only MCP tools support the single Scout experience. The repository also ships an stdio server, portable setup and verification commands, a Codex skill, a Claude Code prompt, versioned data contracts, and a protected registry console for reviewed product facts. The `bitcoin-staking://capabilities` resource maps user goals to the tools and reports the server, contract, skill, and registry versions.
 
 For repository development:
 
 ```bash
 npm ci
 npm run check
-npm start
-```
-
-For development:
-
-```bash
-npm run dev
-```
-
-### Live data selection
-
-Users do not need to choose a network. For a general opportunity or diligence question, the concierge:
-
-1. checks verified mainnet state and published bond data;
-2. uses that data when an opportunity is available;
-3. otherwise checks the configured testnet automatically for protocol-only pre-production evidence;
-4. uses demo data only when the user explicitly requests an illustration.
-
-This routing keeps the user experience stable: when a bond becomes published or available on mainnet, higher-precedence production data replaces the testnet preview without requiring different questions or prompts.
-
-The current live demo source is Hiro's dedicated PoX-5 testnet at `https://api.testnet-pox5.hiro.so`. Before activation, the server reports the activation schedule rather than inventing a bond. After activation, it returns only bonds proven on-chain and labels them `live_testnet_demo`. Testnet uses test assets and is not a mainnet opportunity. On-chain configuration alone never implies product routes, profile fit, custody support, enrollment, or usable economics; those require a current owner-reviewed product manifest.
-
-For a complete state-aware proof—current status, opportunity routing, security evidence, explicit demo data, no-match journey, and tool annotations—run:
-
-```bash
-npm run demo:proof
-```
-
-The environment variables in `.env.example` can override the endpoint or chain ID for another compatible test network.
-
-### Codex
-
-The repository includes `.codex/config.toml` and the repo-scoped `$bitcoin-staking-concierge` skill. Build the project, trust/open the repository in Codex, restart if needed, and inspect `/mcp`.
-
-Manual configuration:
-
-```bash
-codex mcp add bitcoin-staking -- node /absolute/path/to/bitcoin-staking-mcp/dist/cli.js serve
-```
-
-Then ask:
-
-```text
-$bitcoin-staking-concierge I want yield, must keep BTC on Bitcoin L1, and can lock for six months.
-```
-
-### Claude Code
-
-The repository includes `.mcp.json`. Build the project, open Claude Code in the repository, approve the project MCP configuration, and verify:
-
-```bash
-claude mcp list
-```
-
-Invoke the server prompt:
-
-```text
-/mcp__bitcoin_staking__bitcoin_staking_concierge
-```
-
-### MCP Inspector
-
-```bash
-npx @modelcontextprotocol/inspector node dist/cli.js serve
-```
-
-Use Inspector to review the instructions, all tool schemas and annotations, resources, prompt, valid calls, and error cases.
-
-## Tools
-
-| Tool | Purpose |
-| --- | --- |
-| `get_market_snapshot` | Load the reviewed bond, route, custody, and live-protocol front door. |
-| `get_protocol_status` | Read current PoX-5 and reward-cycle state. |
-| `list_protocol_bonds` | Discover configured on-chain bonds in the active mainnet or testnet window. |
-| `get_security_guidance` | Answer audit, timelock, Leather, validation, recovery, and early-exit questions with evidence boundaries. |
-| `build_diligence_report` | Combine live status, a verified protocol bond if present, profile fit, exact PoX-5 target math, and security evidence. |
-| `list_bonds` | List public manifests and optionally separate demo records. |
-| `list_custody_paths` | List current product-level custody paths, explicit non-support, and review freshness. |
-| `list_bond_participation_routes` | Explain the direct native-L1 and current pool-based routes, including any registry-published LST capability. |
-| `get_bond` | Read one normalized manifest and optional on-chain verification. |
-| `check_participant_status` | Read public Stacks staking and bond state. |
-| `check_compatibility` | Check cited wallet or custodian support; preserve unknowns. |
-| `simulate_yield` | Fetch current CoinGecko BTC/STX prices and calculate gross yield plus paired STX units. |
-| `compare_staking_paths` | Compare direct native-L1 and current pool-based routes for a participant profile, including any registry-published LST considerations. |
-| `build_participation_plan` | Produce fit, tradeoffs, gaps, and safe next steps. |
-| `search_current_facts` | Search current projects, products, notices, partners, and integrations. |
-
-Resources expose the capability catalog, glossary, yield methodology, bond manifests, and source records under `bitcoin-staking://` URIs.
-
-`bitcoin-staking://capabilities` maps the user-facing services to all fifteen MCP tools and exposes the server, contract, and skill versions.
-
-`bitcoin-staking://custody-paths` exposes the maintained native-L1 Bitcoin Staking custody directory. It is deliberately separate from bond manifests: a provider can have a product integration path even when no bond is open, while exact compatibility for a particular bond still requires manifest evidence.
-
-Bond route details come from `list_bond_participation_routes`, which keeps direct and pool-based paths attached to their bond and nests each optional LST capability under the pool that issues it. Current operators, products, notices, and integrations come from `search_current_facts` and `bitcoin-staking://catalog`.
-
-`bitcoin-staking://security` exposes the complete security-diligence catalog. Security answers always distinguish published assurance, protocol/source behavior, SDK construction, wallet behavior, and end-to-end integration proof.
-
-`bitcoin-staking://methodology/sources` exposes the source hierarchy and known corpus gaps. `bitcoin-staking://methodology/response-standard` exposes the institutional persona, audience adaptation, evidence language, and response contract.
-
-## Example prompts
-
-```text
-What is the current Bitcoin Staking protocol status, and are any public bonds available?
-```
-
-```text
-Which Bitcoin staking opportunities are currently available or coming next? Separate investable opportunities from pre-production data.
-```
-
-```text
-Using the current registry evidence, assess the gross reward scenario for 25 BTC. Keep planned targets and public reference-model assumptions distinct from bond-specific and final configured terms. If rate or duration is missing, say what is needed; if an applicable fee is missing, keep net reward unknown.
-```
-
-```text
-Build an institutional diligence report using the best currently available data. I have 1 BTC, require Bitcoin L1, want control of the maturity key, use Leather, and can lock for six months.
-```
-
-```text
-Has PoX-5 been audited, how is the Bitcoin timelock constructed, and what must I verify before signing the Leather transaction?
-```
-
-```text
-Include demo opportunities. I have 1 BTC, want native-L1 yield, control my keys, and can lock for 180 days. Show the assumptions and sources.
-```
-
-```text
-I want to borrow without selling and need access to my Bitcoin at any time. Compare the direct native-L1 route and current pool-based routes, including an LST only when the current registry verifies redemption, liquidity, and a named lender.
-```
-
-## Demo-data disclosure
-
-`data/bonds/demo-native-bitcoin-bond.json` is synthetic. Its capacity, rate, fee, duration, eligibility, and compatibility fields are illustrative hackathon inputs. It has no on-chain bond index and is not open, published, investable, or available for enrollment.
-
-Demo manifests:
-
-- must carry `dataStatus: "demo"` and a demo source;
-- are excluded by default;
-- appear only in the separate `demoBonds` array when `includeDemo: true`;
-- never override live or published data.
-
-## Validation
-
-```bash
-npm run typecheck
-npm test
-npm run build
 npm run test:live
-npm run test:testnet
-npm run demo:proof
 ```
 
-The default tests are offline. The mainnet and configured-testnet tests are opt-in and read current public chain state. The checked-in concierge skill also passes the `skill-creator` quick validator. No command constructs or broadcasts a transaction.
+The default release gate is offline and checks types, registry contracts, the build, MCP behavior, installer integrity, and the registry console. `npm run test:live` is an opt-in read of current public mainnet protocol state.
 
-The offline suite invokes all fifteen tools through an in-process MCP client, validates complete output contracts, checks registry caching and freshness, exercises the two route journeys and upstream failures, and tests the shared prompt/skill evidence contract. Prompt controls materially reduce unsupported answers, but callers should treat returned provenance and explicit unknown states as the enforceable trust boundary.
+## Technical documentation
 
-The bond, route, LST, and custody registries use a deliberate hard seven-day owner-review cadence. `reviewDueAt` provides the warning boundary; immediately after that boundary, claims remain visible only as historical context and cannot support a current route or bundled fallback. There is no runtime grace period. `npm run registry:validate` validates schemas, references, formats, duplicates, and status-specific fields while reporting overdue attestations as `needs_review`; `npm run registry:validate:live` requires current attestations and also checks external evidence URLs. A nightly GitHub Actions workflow opens or updates one `registry-review-due` issue when live validation fails. The check never promotes a partner automatically: changed or stale claims require product-owner confirmation through a reviewed registry PR. Registry authenticity currently relies on GitHub transport, repository controls, review history, and the reported content hash; signed manifests are not yet implemented.
-
-## Documentation
-
-- [Product requirements](docs/PRODUCT_REQUIREMENTS.md)
-- [Installation](docs/INSTALLATION.md)
-- [Technical specification](docs/TECHNICAL_SPEC.md)
-- [Hackathon delivery plan](docs/HACKATHON_PLAN.md)
+- [Installation and host configuration](docs/INSTALLATION.md)
+- [Architecture, interfaces, and tool catalog](docs/TECHNICAL_SPEC.md)
+- [Registry console and publication model](docs/REGISTRY_CONSOLE.md)
 - [Security question catalog](docs/SECURITY_QUESTION_CATALOG.md)
-- [Institutional response standard](docs/INSTITUTIONAL_RESPONSE_STANDARD.md)
 - [Canonical source corpus](docs/SOURCE_CORPUS.md)
-- [Hackathon demo runbook](docs/DEMO_RUNBOOK.md)
-- [Implementation audit](docs/IMPLEMENTATION_AUDIT.md)
-- [User experience review](docs/UX_REVIEW.md)
-
-## Roadmap
-
-1. Read-only MCP and public bond manifests.
-2. Dedicated concierge UI and additional verified data adapters.
-3. Operator/BD intelligence and unmet-demand reporting.
-4. Separately approved, human-reviewed transaction preparation.
+- [Product requirements](docs/PRODUCT_REQUIREMENTS.md)
 
 ## Safety boundary
 
-This is experimental informational software, not financial advice. Verify every opportunity, wallet path, custody arrangement, economic assumption, and transaction through its authoritative source before committing capital.
+Scout is informational software, not financial advice. Verify the opportunity, custody path, economic terms, and transaction details through their authoritative sources before committing capital.

@@ -49,7 +49,7 @@ test("Genesis v2 publishes stable direct L1 and planned StackingDAO pool route t
 
 test("v1 manifests normalize to one unconfirmed native-L1 v2 route", () => {
   const old = {
-    schemaVersion: 1, id: "legacy-bond", title: "Legacy", description: "Legacy fixture", network: "testnet", lifecycleStatus: "upcoming", participationPath: "native_l1_btc", dataStatus: "published",
+    schemaVersion: 1, id: "legacy-bond", title: "Legacy", description: "Legacy fixture", network: "mainnet", lifecycleStatus: "upcoming", participationPath: "native_l1_btc", dataStatus: "published",
     timing: {}, economics: { rewardAsset: "unknown", rewardModel: "unknown" }, capacity: {},
     requirements: { allowlistRequired: true, pairedStxRequired: true, pairedStxMinimumValueRatioBps: 500, btcLocation: "bitcoin_l1", keyControl: "unknown", borrowingAgainstPosition: "unknown", earlyExit: "unknown" },
     compatibility: [], notes: ["Legacy."], sources: [{ id: "legacy", title: "Legacy", url: "https://example.com/legacy", sourceType: "public_manifest", dataStatus: "published" }], verifiedAt: "2026-08-06T00:00:00.000Z",
@@ -65,7 +65,7 @@ test("v1 manifests normalize to one unconfirmed native-L1 v2 route", () => {
 
 test("v1 normalization remains compatible when the legacy source is not an owner manifest", () => {
   const old = {
-    schemaVersion: 1, id: "legacy-doc-bond", title: "Legacy docs", description: "Legacy fixture", network: "testnet", lifecycleStatus: "upcoming", participationPath: "native_l1_btc", dataStatus: "published",
+    schemaVersion: 1, id: "legacy-doc-bond", title: "Legacy docs", description: "Legacy fixture", network: "mainnet", lifecycleStatus: "upcoming", participationPath: "native_l1_btc", dataStatus: "published",
     timing: {}, economics: { rewardAsset: "unknown", rewardModel: "unknown" }, capacity: {},
     requirements: { allowlistRequired: false, pairedStxRequired: false, btcLocation: "bitcoin_l1", keyControl: "unknown", borrowingAgainstPosition: "unknown", earlyExit: "unknown" },
     compatibility: [], notes: ["Legacy."], sources: [{ id: "legacy-doc", title: "Legacy documentation", url: "https://example.com/docs", sourceType: "official_docs", dataStatus: "published" }], verifiedAt: "2026-08-06T00:00:00.000Z",
@@ -82,14 +82,14 @@ test("overdue owner attestation is needs_review and never available", async () =
   assert.equal(routeEffectiveAvailability(bond.participationRoutes[0]!, new Date("2026-08-10T00:00:00.000Z"), true), "conflict");
 });
 
-test("demo route yield is deterministic and includes sourced zero fee", async () => {
-  const bond = await bondFile("demo-native-bitcoin-bond.json");
+test("published route yield is deterministic with an explicit zero-fee scenario", async () => {
+  const bond = await bondFile("genesis-bond.json");
   const route = bond.participationRoutes[0]!;
-  const result = simulateYield(bond, route, { principalSats: "100000000", btcPriceUsd: 100_000 });
+  const result = simulateYield(bond, route, { principalSats: "100000000", durationDays: 180, annualRateBps: 500, feeBps: 0, btcPriceUsd: 100_000 });
   assert.equal(result.grossRewardSats, "2465753");
   assert.equal(result.feeSats, "0");
   assert.equal(result.netRewardSats, "2465753");
-  assert.equal(result.dataStatus, "demo");
+  assert.equal(result.dataStatus, "derived");
 });
 
 test("pool and optional LST fees are applied sequentially", async () => {

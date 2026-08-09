@@ -13,7 +13,6 @@ async function json(path: string): Promise<unknown> {
 
 const bonds = await Promise.all([
   "data/bonds/genesis-bond.json",
-  "data/bonds/demo-native-bitcoin-bond.json",
 ].map(async (path) => BondManifestV2Schema.parse(await json(path))));
 const custody = CustodyRegistrySchema.parse(await json("data/custody-paths.json"));
 const source = {

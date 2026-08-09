@@ -3,8 +3,8 @@
   "reviewedAt": "2026-08-06T00:00:00.000Z",
   "reviewCadenceDays": 7,
   "reviewDueAt": "2026-08-13T00:00:00.000Z",
-  "revision": "rev-20260806000000000-e9ee75f850b3",
-  "contentHash": "sha256:e9ee75f850b3e73e73ef59e9fba2879a7fd160c1ed890fa2708530f633e5908b",
+  "revision": "rev-20260806000000000-a5fe2f119511",
+  "contentHash": "sha256:a5fe2f1195110d224313665c654259e828f884162febeabb44e9becf9d83efc3",
   "publishedAt": "2026-08-06T00:00:00.000Z",
   "publishedBy": "registry-bootstrap@stackslabs.com",
   "content": {
@@ -237,111 +237,6 @@
             "sourceType": "owner_attestation",
             "dataStatus": "published",
             "retrievedAt": "2026-08-06T00:00:00.000Z"
-          }
-        ],
-        "verifiedAt": "2026-08-06T00:00:00.000Z"
-      },
-      {
-        "schemaVersion": 2,
-        "id": "demo-native-bitcoin-bond",
-        "title": "Illustrative Native Bitcoin Bond",
-        "description": "Synthetic v2 manifest for tests and demonstrations; never an available opportunity.",
-        "aliases": [],
-        "network": "testnet",
-        "lifecycleStatus": "upcoming",
-        "dataStatus": "demo",
-        "productStatus": "tested",
-        "enrollmentStatus": "closed",
-        "verification": [
-          "testnet_verified"
-        ],
-        "attestation": {
-          "scope": "Synthetic test fixture",
-          "ownerOrganization": "Bitcoin Staking MCP",
-          "reviewedAt": "2026-08-06T00:00:00.000Z",
-          "reviewCadenceDays": 7,
-          "sourceIds": [
-            "demo-native-bitcoin-bond-manifest"
-          ]
-        },
-        "timing": {
-          "lockDurationDays": 180
-        },
-        "economics": {
-          "targetRateBps": 500,
-          "managerFeeBps": 0,
-          "rewardAsset": "sBTC",
-          "rewardModel": "target_principal_rate",
-          "termsStatus": "demo"
-        },
-        "protocolTerms": {
-          "coverageBoundary": "Synthetic testnet-only example.",
-          "signerAndAdministrationControls": "Synthetic.",
-          "audits": [],
-          "unresolvedTerms": []
-        },
-        "participationRoutes": [
-          {
-            "id": "demo-native-l1-direct",
-            "name": "Demo native-L1 direct",
-            "productStatus": "tested",
-            "enrollmentStatus": "closed",
-            "verification": [
-              "testnet_verified"
-            ],
-            "attestation": {
-              "scope": "Synthetic direct route",
-              "ownerOrganization": "Bitcoin Staking MCP",
-              "reviewedAt": "2026-08-06T00:00:00.000Z",
-              "reviewCadenceDays": 7,
-              "sourceIds": [
-                "demo-native-bitcoin-bond-manifest"
-              ]
-            },
-            "sourceIds": [
-              "demo-native-bitcoin-bond-manifest"
-            ],
-            "summary": "Synthetic direct route.",
-            "routeType": "native_l1_direct",
-            "whitelist": {
-              "required": true,
-              "status": "available"
-            },
-            "participantTypes": [
-              "institution",
-              "individual"
-            ],
-            "custodyPathIds": [],
-            "minimumSats": "10000000",
-            "maximumSats": "1000000000",
-            "pairedStx": {
-              "required": true,
-              "minimumValueRatioBps": 500
-            },
-            "keyControl": "custodian_or_participant",
-            "enrollment": {
-              "method": "Demo only."
-            },
-            "recovery": {
-              "status": "documented",
-              "evidence": "Synthetic recovery flow."
-            },
-            "earlyExit": {
-              "status": "unknown",
-              "evidence": "Not tested."
-            }
-          }
-        ],
-        "notes": [
-          "DEMO ONLY: not live, configured, or investable."
-        ],
-        "sources": [
-          {
-            "id": "demo-native-bitcoin-bond-manifest",
-            "title": "Illustrative v2 bond manifest",
-            "url": "https://github.com/andre-stacks/bitcoin-staking-mcp/blob/main/data/bonds/demo-native-bitcoin-bond.json",
-            "sourceType": "demo_manifest",
-            "dataStatus": "demo"
           }
         ],
         "verifiedAt": "2026-08-06T00:00:00.000Z"

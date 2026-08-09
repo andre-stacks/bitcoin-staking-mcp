@@ -114,7 +114,7 @@ test("deprecated local registry paths are honored when the unified registry URL 
 test("manifest registry content hash changes when a referenced manifest changes", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "btc-manifest-hash-")); context.after(() => rm(directory, { recursive: true, force: true }));
   const manifestPath = join(directory, "bond.json");
-  const original = JSON.parse(await readFile(resolve("data/bonds/demo-native-bitcoin-bond.json"), "utf8"));
+  const original = JSON.parse(await readFile(resolve("data/bonds/genesis-bond.json"), "utf8"));
   await writeFile(manifestPath, JSON.stringify(original));
   const store = new ManifestStore(directory, { now: () => new Date("2026-08-06T12:00:00.000Z") });
   const first = await store.listWithMetadata();
@@ -139,7 +139,7 @@ test("remote manifest failure falls back to the current bundled registry and lab
   });
   const result = await store.listWithMetadata();
   assert.equal(result.metadata.sourceMode, "bundled_snapshot");
-  assert.equal(result.bonds.length, 2);
+  assert.equal(result.bonds.length, 1);
   assert.match(result.metadata.contentHash, /^sha256:/);
   assert.match(result.metadata.fallbackReason ?? "", /HTTP 503/);
 });

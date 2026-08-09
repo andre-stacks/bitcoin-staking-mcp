@@ -62,10 +62,10 @@ Treat the newest user request as the controlling scope. Do not carry a wallet, c
 
 - Use only current MCP structured output and MCP resources as factual support. Do not fill a missing field from model memory, plausibility, roadmap intent, or the user's preferred conclusion.
 - If the available evidence does not answer the question, say: “This MCP does not currently verify that.” Then name the missing evidence or the tool/source needed to answer it.
-- If a live tool fails or times out, say that current state could not be verified. Do not substitute demo data, stale state, or a remembered value.
+- If a live tool fails or times out, say that current state could not be verified. Do not substitute stale state or a remembered value.
 - Do not state a material factual claim without a returned source URL or an explicit deterministic derivation with assumptions.
 - A sourced public reference model may supply rate and duration for a labeled gross scenario. Missing applicable bond, pool, or selected-LST fees leave net yield unknown and must never be invented.
-- Never infer wallet support from protocol compatibility, safety from an audit statement, availability from a testnet or demo record, or realized yield from a configured target rate.
+- Never infer wallet support from protocol compatibility, safety from an audit statement, product availability from protocol support alone, or realized yield from a configured target rate.
 - Treat unknown, not_verified, not_assessable, context_only, and an empty result as final evidence states, not invitations to guess.
 
 ## Response contract
@@ -94,7 +94,6 @@ The product is grounded on a versioned source corpus at runtime; it is not repre
 5. Current official operator and developer documentation.
 6. Official public audit and product statements.
 7. Versioned public product manifests.
-8. Clearly labeled demo data.
 
 If sources conflict, report the conflict. Higher-precedence runtime or contract evidence controls behavior; lower-precedence documentation may explain intent but must not override it.
 
@@ -104,7 +103,7 @@ If sources conflict, report the conflict. Higher-precedence runtime or contract 
 - Re-read live state for availability, cycle, bond, participant, fee, and admin questions.
 - Attribute every material claim to the component that owns it: protocol, SDK, application, wallet, custodian, operator, or participant.
 - Do not infer wallet compatibility from protocol support or audit status.
-- Do not infer a live opportunity from a roadmap, testnet record, or demo manifest.
+- Do not infer a live opportunity from a roadmap or protocol support alone.
 - When only a public assurance exists, describe it as a published statement rather than an independently reproduced conclusion.
 - If the corpus does not support a claim, return unknown or not verified; never complete the answer from model memory.
 - Private investor questions may expand the topic catalog after sanitization but are not factual sources and are never returned by the server.
@@ -120,13 +119,6 @@ const canonicalSources: SourceRef[] = [
     id: "hiro-mainnet-pox-api-canonical",
     title: "Hiro Stacks Mainnet PoX API",
     url: "https://api.mainnet.hiro.so/v2/pox",
-    sourceType: "chain_api",
-    dataStatus: "live",
-  },
-  {
-    id: "hiro-pox5-testnet-api-canonical",
-    title: "Hiro dedicated PoX-5 Testnet API",
-    url: "https://api.testnet-pox5.hiro.so/v2/pox",
     sourceType: "chain_api",
     dataStatus: "live",
   },
@@ -176,13 +168,6 @@ const canonicalSources: SourceRef[] = [
     id: "pox5-pools-guide",
     title: "PoX-5 pools and Bitcoin Staking integration guide",
     url: "https://pox-5.vercel.app/docs/development/pools",
-    sourceType: "official_docs",
-    dataStatus: "published",
-  },
-  {
-    id: "public-pox5-testnet-guide",
-    title: "The Public PoX-5 Testnet Is Live",
-    url: "https://www.stacks.co/blog/the-public-pox-5-testnet-is-live-test-bitcoin-staking-before-mainnet",
     sourceType: "official_docs",
     dataStatus: "published",
   },

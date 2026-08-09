@@ -26,7 +26,7 @@ class OfflineProvider extends StacksProvider {
 class FailingProvider extends OfflineProvider { override async getProtocolStatus(): Promise<any> { throw new ServiceError("UPSTREAM_ERROR", "Live network unavailable.", true); } }
 const offlineNow = () => new Date("2026-08-06T19:00:00.000Z");
 function offlinePrices() { return new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200, headers: { "content-type": "application/json" } }) }); }
-function offlineService(provider: StacksProvider = new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" })) { return new BitcoinStakingService({ stacks: provider, testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices: offlinePrices(), now: offlineNow }); }
+function offlineService(provider: StacksProvider = new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" })) { return new BitcoinStakingService({ stacks: provider, prices: offlinePrices(), now: offlineNow }); }
 const profile = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "100000000" } as const;
 
 test("MCP exposes the complete 15-tool read-only production contract", async (context) => {
@@ -46,7 +46,7 @@ test("catalog search rejects unknown status filters before querying the registry
 
 test("market snapshot grounds the first turn in two routes", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "get_market_snapshot", arguments: { network: "mainnet" } });
+  const result = await client.callTool({ name: "get_market_snapshot", arguments: {} });
   assert.equal(result.isError, undefined); const content = result.structuredContent as any;
   assert.deepEqual(content.routes.map((route: any) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   assert.equal(content.bonds[0].protocolSchedule.startRewardCycle, 143);
@@ -56,33 +56,12 @@ test("market snapshot grounds the first turn in two routes", async (context) => 
   assert.ok(content.sources.some((source: any) => source.id === "custody-registry"));
 });
 
-test("testnet diligence returns a protocol-only preview through MCP without duplicate chain reads", async (context) => {
-  const testnet = new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
-  const service = new BitcoinStakingService({
-    stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
-    testnetStacks: testnet,
-    prices: offlinePrices(),
-    now: offlineNow,
-  });
-  const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "build_diligence_report", arguments: { network: "testnet", profile } });
-  assert.equal(result.isError, undefined, JSON.stringify(result.content));
-  const content = SuccessfulToolOutputSchemas.build_diligence_report.parse(result.structuredContent);
-  assert.equal(content.assessmentStatus, "network_protocol_preview");
-  assert.equal(content.economics.status, "not_available");
-  assert.equal(content.operationalFit, "not_assessable");
-  assert.deepEqual(content.routeAssessments, []);
-  assert.match(content.bondAvailability.coverageBoundary, /does not establish product availability/i);
-  assert.equal(testnet.statusReads, 1);
-  assert.equal(testnet.bondScanReads, 1);
-});
-
 test("every tool validates structured output and exposes no transaction fields", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const calls = [
-    { name: "get_market_snapshot", arguments: { network: "mainnet" } }, { name: "get_protocol_status", arguments: { network: "mainnet" } }, { name: "list_protocol_bonds", arguments: { network: "testnet" } },
+    { name: "get_market_snapshot", arguments: {} }, { name: "get_protocol_status", arguments: {} }, { name: "list_protocol_bonds", arguments: {} },
     { name: "get_security_guidance", arguments: { topic: "audit_status" } }, { name: "build_diligence_report", arguments: { bondId: "genesis-bond", profile } },
-    { name: "list_bonds", arguments: { includeDemo: true } }, { name: "list_custody_paths", arguments: {} }, { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond" } },
+    { name: "list_bonds", arguments: {} }, { name: "list_custody_paths", arguments: {} }, { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond" } },
     { name: "get_bond", arguments: { bondId: "genesis-bond" } }, { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78" } },
     { name: "check_compatibility", arguments: { bondId: "genesis-bond", provider: "Leather", keyControlPreference: "custodian" } },
     { name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalSats: "100000000", durationDays: 365, annualRateBps: 300, feeBps: 0 } },
@@ -112,7 +91,7 @@ test("yield uses live CoinGecko prices and three-decimal quantity displays", asy
 test("yield returns gross economics when fees and optional price enrichment are unavailable", async (context) => {
   let priceRequests = 0;
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { priceRequests += 1; throw new Error("prices offline"); } });
-  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
+  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
   const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-sbtc-pool", principalBtc: "1 sBTC", durationDays: 365, annualRateBps: 300 } });
   assert.equal(result.isError, undefined);
@@ -125,7 +104,7 @@ test("yield returns gross economics when fees and optional price enrichment are 
 
 test("optional price failure does not invalidate a complete deterministic sats calculation", async (context) => {
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { throw new Error("prices offline"); } });
-  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
+  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
   const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalBtc: "1 BTC", durationDays: 365, annualRateBps: 300, feeBps: 0 } });
   assert.equal(result.isError, undefined);
@@ -333,7 +312,6 @@ test("alternate schedule and economics flow from runtime evidence rather than pr
   const service = new BitcoinStakingService({
     manifests: new ManifestStore(directory, { now: offlineNow }),
     stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
-    testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }),
     prices: offlinePrices(),
     now: offlineNow,
   });

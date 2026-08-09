@@ -14,7 +14,7 @@ import {
   firstPox5RewardCycle,
   isInPreparePhase,
 } from "@stacks/bitcoin-staking";
-import { createNetwork, STACKS_MAINNET, STACKS_TESTNET } from "@stacks/network";
+import { createNetwork, STACKS_MAINNET } from "@stacks/network";
 import { validateStacksAddress } from "@stacks/transactions";
 import { ServiceError, withTimeout } from "../core/errors.js";
 import {
@@ -25,7 +25,6 @@ import {
 } from "../core/schemas.js";
 
 const DEFAULT_MAINNET_API_BASE = "https://api.mainnet.hiro.so";
-const DEFAULT_TESTNET_API_BASE = "https://api.testnet-pox5.hiro.so";
 export const POX5_BOND_LENGTH_CYCLES = 12;
 
 export interface StacksProviderOptions {
@@ -45,19 +44,18 @@ export class StacksProvider {
   private readonly now: () => Date;
 
   constructor(options: StacksProviderOptions = {}) {
+    const requestedNetwork = (options as { network?: string }).network;
+    if (requestedNetwork !== undefined && requestedNetwork !== "mainnet") {
+      throw new ServiceError("INVALID_INPUT", "Scout's Stacks provider supports mainnet only.");
+    }
     this.networkName = options.network ?? "mainnet";
-    const baseNetwork = this.networkName === "mainnet" ? STACKS_MAINNET : STACKS_TESTNET;
-    const configuredApiBase =
-      this.networkName === "mainnet"
-        ? process.env.STACKS_API_BASE_URL
-        : process.env.BITCOIN_STAKING_TESTNET_API_BASE_URL;
-    const configuredChainId =
-      this.networkName === "testnet" ? process.env.BITCOIN_STAKING_TESTNET_CHAIN_ID : undefined;
+    const baseNetwork = STACKS_MAINNET;
+    const configuredApiBase = process.env.STACKS_API_BASE_URL;
     this.apiBaseUrl =
       options.apiBaseUrl ??
       configuredApiBase ??
-      (this.networkName === "mainnet" ? DEFAULT_MAINNET_API_BASE : DEFAULT_TESTNET_API_BASE);
-    this.chainId = options.chainId ?? (configuredChainId ? Number(configuredChainId) : baseNetwork.chainId);
+      DEFAULT_MAINNET_API_BASE;
+    this.chainId = options.chainId ?? baseNetwork.chainId;
     if (!Number.isSafeInteger(this.chainId) || this.chainId < 0) {
       throw new ServiceError("INVALID_INPUT", "Stacks chain ID must be a non-negative safe integer.");
     }
@@ -137,10 +135,9 @@ export class StacksProvider {
   }
 
   sourceRef(retrievedAt = new Date().toISOString()): SourceRef {
-    const label = this.networkName === "mainnet" ? "Mainnet" : "Testnet";
     return {
       id: `hiro-${this.networkName}-pox-api`,
-      title: `Hiro Stacks ${label} PoX API`,
+      title: "Hiro Stacks Mainnet PoX API",
       url: `${this.apiBaseUrl}/v2/pox`,
       sourceType: "chain_api",
       dataStatus: "live",
@@ -334,15 +331,12 @@ export class StacksProvider {
             stxValueRatio: bond.stxValueRatio,
             minUstxRatioBps: bond.minUstxRatioBps,
             earlyUnlockBytes: bond.earlyUnlockBytes,
-            availability:
-              this.networkName === "testnet" ? "live_testnet_demo" : "mainnet_on_chain",
+            availability: "mainnet_on_chain" as const,
             dataStatus: "live" as const,
             sources: [this.sourceRef(verifiedAt)],
             assumptions: [
               "This record proves on-chain bond configuration and timing, not wallet compatibility or participant eligibility.",
-              this.networkName === "testnet"
-                ? "This is the live demo/prototype environment for the intended mainnet journey. It uses test assets and is not a mainnet opportunity."
-                : "Mainnet availability still depends on allowance, compatibility, custody, and participant requirements.",
+              "Mainnet availability still depends on allowance, compatibility, custody, and participant requirements.",
             ],
             verifiedAt,
           },

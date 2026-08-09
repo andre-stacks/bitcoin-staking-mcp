@@ -131,7 +131,7 @@ const guidance = {
       "Confirm the Bitcoin public key returned for the selected Leather account is the key used in the participant unlock script.",
       "Independently derive the expected PoX-5 P2WSH destination and compare it with the funded PSBT output before signing.",
       "Inspect the amount, network, fee, change, and lock destination presented for signature.",
-      "Complete a testnet lock, registration, maturity, and reclaim flow with the exact app, SDK, and wallet release versions.",
+      "Complete a pre-production lock, registration, maturity, and reclaim rehearsal with the exact app, SDK, and wallet release versions.",
     ],
     sourceIds: [
       "pox5-lock-script-source",
@@ -178,7 +178,7 @@ const guidance = {
     verificationChecklist: [
       "Confirm the committed public key belongs to the retained wallet account before funding.",
       "Retain the complete witness script inputs and maturity height outside the application UI.",
-      "Test construction and signing of the maturity reclaim on testnet with the intended wallet/custody path.",
+      "Test construction and signing of the maturity reclaim in a controlled pre-production environment with the intended wallet or custody path.",
     ],
     sourceIds: ["sip-045", "pox5-lock-script-source", "stacksjs-build-unlock-script"],
   },

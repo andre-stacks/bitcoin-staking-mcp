@@ -21,7 +21,7 @@ test("packaged CLI serve command initializes and serves tools", async (context) 
   const { tools } = await client.listTools();
   assert.ok(tools.some((tool) => tool.name === "get_protocol_status"));
 
-  const result = await client.callTool({ name: "list_bonds", arguments: { includeDemo: false } });
+  const result = await client.callTool({ name: "list_bonds", arguments: {} });
   assert.equal(result.isError, undefined);
-  assert.equal((result.structuredContent as { demoIncluded: boolean }).demoIncluded, false);
+  assert.equal((result.structuredContent as { count: number }).count, 1);
 });
