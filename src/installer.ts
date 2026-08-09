@@ -291,23 +291,31 @@ async function installCodexSkill(
   };
 }
 
-async function checkCodexSkill(homeDirectory: string): Promise<InstallerStepResult> {
+async function checkCodexSkill(
+  homeDirectory: string,
+  packageRoot: string,
+): Promise<InstallerStepResult> {
   const skillPath = join(homeDirectory, ".agents", "skills", SKILL_NAME, "SKILL.md");
+  const packagedSkillPath = join(packageRoot, ".agents", "skills", SKILL_NAME, "SKILL.md");
   try {
     const skill = await readFile(skillPath);
+    const packagedSkill = await readFile(packagedSkillPath);
     const integrity = JSON.parse(await readFile(join(dirname(skillPath), ".integrity.json"), "utf8")) as { skillVersion?: string; sha256?: string };
     const actualHash = createHash("sha256").update(skill).digest("hex");
-    if (integrity.skillVersion !== SKILL_VERSION || integrity.sha256 !== actualHash) throw new Error("Skill version or hash mismatch.");
+    const packagedHash = createHash("sha256").update(packagedSkill).digest("hex");
+    if (integrity.skillVersion !== SKILL_VERSION || integrity.sha256 !== actualHash || actualHash !== packagedHash) {
+      throw new Error("Skill version or hash mismatch.");
+    }
     return {
       target: "codex-skill",
       status: "verified",
-      message: `Global concierge skill found at ${skillPath}.`,
+      message: `Global concierge skill matches the packaged skill at ${skillPath}.`,
     };
   } catch {
     return {
       target: "codex-skill",
       status: "failed",
-      message: `Global concierge skill not found at ${skillPath}.`,
+      message: `Global concierge skill is missing or does not match the packaged skill at ${skillPath}.`,
     };
   }
 }
@@ -440,7 +448,7 @@ export async function runInstaller(
       steps.push(await checkHostRegistration(host, runCommand, verificationCwd, source));
     }
     if (availableHosts.includes("codex")) {
-      steps.push(await checkCodexSkill(homeDirectory));
+      steps.push(await checkCodexSkill(homeDirectory, packageRoot));
     }
   } else {
     for (const host of availableHosts) {
@@ -460,7 +468,7 @@ export async function runInstaller(
       ? [
           "Restart Codex and Claude Code so they reload MCP and skill metadata.",
           "Open Scout, the Bitcoin Staking Concierge, in Codex with $bitcoin-staking-concierge, or in Claude Code with /mcp__bitcoin_staking__bitcoin_staking_concierge.",
-          "Start with: I'd like to get started with Bitcoin staking.",
+          "Start with: How can I get started staking?",
           "Or ask: When is the next bond launching?",
           "Or ask: What security evidence should I review before participating through Leather?",
           "You can also invoke Scout without a question for a guided overview of what it can help with.",

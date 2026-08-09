@@ -73,7 +73,7 @@ How can I get started staking?
 Which participation option is right for me?
 ```
 
-A specific question goes directly to that workflow. An empty invocation introduces Scout, summarizes what it can help with, and offers useful starting points.
+Any non-empty request goes directly to that workflow. An empty invocation introduces Scout once, summarizes what it can help with, and offers useful starting points.
 
 Verify the installation at any time:
 

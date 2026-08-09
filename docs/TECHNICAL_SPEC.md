@@ -90,7 +90,7 @@ Resources:
 - `bitcoin-staking://bonds/{bondId}`
 - `bitcoin-staking://sources/{sourceId}`
 
-The `bitcoin-staking-concierge` prompt contains workflow instructions, not changing registry facts. On an empty invocation it introduces Scout and its capabilities; specific requests proceed directly. Codex also discovers `.agents/skills/bitcoin-staking-concierge`. `bitcoin-staking://capabilities` maps all fifteen tools and exposes contract, server, and skill versions.
+The `bitcoin-staking-concierge` prompt contains workflow instructions, not changing registry facts. On an empty invocation it introduces Scout and its capabilities; every non-empty request proceeds directly. Codex also discovers `.agents/skills/bitcoin-staking-concierge`. `bitcoin-staking://capabilities` maps all fifteen tools and exposes contract, server, and skill versions.
 
 The prompt and skill share one institutional response contract. CFO/investment questions lead with availability, custody, liquidity, economics, and material risk. Technical/security/custody questions lead with mechanisms, component boundaries, deterministic verification, and pinned sources. Mixed questions receive a short executive conclusion followed by compact technical evidence. MCP initialize instructions contain only the technical server baseline so raw tool clients are not given Scout's onboarding or response persona.
 

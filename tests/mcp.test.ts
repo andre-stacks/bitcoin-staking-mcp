@@ -192,9 +192,10 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /How can I get started staking/i);
     assert.match(content.text, /Which participation option is right for me/i);
     assert.match(content.text, /Do not lead this general welcome with an upcoming bond/i);
-    assert.match(content.text, /specific question, skip the general welcome/i);
+    assert.match(content.text, /Any non-empty request skips the general welcome/i);
+    assert.match(content.text, /welcome must never repeat after Scout has already shown it/i);
     assert.match(content.text, /For opportunity or timing, call get_market_snapshot/i);
-    assert.match(content.text, /direct how-to-participate question/i);
+    assert.match(content.text, /Broad requests such as 'I'd like to get started with Bitcoin staking'.*are participation intent/i);
     assert.match(content.text, /Where do I sign up.*handoff intent/i);
     assert.match(content.text, /direct native-L1 Bitcoin Staking path.*do not use an internal bond name/i);
     assert.match(content.text, /primary CTA labeled 'Register your interest here'/i);
@@ -210,6 +211,12 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /fully enrolled based only on a Bitcoin funding or lock transaction/i);
     assert.match(content.text, /required Stacks registration is complete/i);
     assert.match(content.text, /provider-specific setup requirements only when the user names that provider/i);
+    assert.match(content.text, /do not enumerate providers before the user chooses the direct route or names one/i);
+    assert.match(content.text, /preserve explicit route-changing constraints such as L1 custody, key control, liquidity, and early-exit requirements/i);
+    assert.match(content.text, /Treat the asset path and custody model as separate decisions/i);
+    assert.match(content.text, /current compatibility evidence supports Fireblocks.*requirement is to keep BTC native under their existing custody arrangement/i);
+    assert.match(content.text, /Ask about sole-key control or governance only when the user explicitly requires that control model/i);
+    assert.match(content.text, /product compatibility does not prove unilateral early exit/i);
     assert.match(content.text, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
     assert.match(content.text, /How will I know my Bitcoin is safe/i);
     assert.match(content.text, /security-foundation, independent-verification, bounded-residual-risk sequence/i);
@@ -218,11 +225,11 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /Like any financial software, risk is not zero/i);
     assert.match(content.text, /Do not open with 'your Bitcoin cannot be guaranteed completely safe'/i);
     assert.match(content.text, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
-    assert.match(content.text, /keeping Bitcoin on L1 in self-custody versus using the staked position to borrow, lend, or unlock additional yield opportunities/i);
-    assert.match(content.text, /do not imply that this route supports only self-custody/i);
+    assert.match(content.text, /keeping BTC on Bitcoin L1 in self-custody or with a supported custodian versus using sBTC to borrow, lend, or unlock additional yield opportunities/i);
+    assert.match(content.text, /Describe the direct route as keeping BTC native on Bitcoin L1 through the user's preferred supported self-custody or custody arrangement/i);
     assert.match(content.text, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from list_custody_paths rather than a fixed provider list/i);
     assert.match(content.text, /Describe the pooled route first as 'Join a pool'/i);
-    assert.match(content.text, /Which matters more to you: keeping your Bitcoin on L1 in self-custody, or using your staked position to borrow, lend, or unlock additional yield opportunities/i);
+    assert.match(content.text, /Which matters more to you: keeping your BTC on Bitcoin L1 in self-custody or with a supported custodian, or using sBTC to borrow, lend, or unlock additional yield opportunities/i);
     assert.match(content.text, /two stable route types when route detail is relevant/i);
     assert.match(content.text, /multiple pools with different input assets, operators, and LST designs/i);
     assert.match(content.text, /current pool names, requirements, token designs, products, terms, and integrations from the live registry/i);
@@ -236,6 +243,8 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /State only the economics returned by the current MCP read/i);
     assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
+    assert.match(content.text, /close with one short provenance note naming the primary returned source or sources and the returned verification time/i);
+    assert.match(content.text, /applications are not open yet/i);
     assert.match(content.text, /State a supported capability first and explain how it works/i);
     assert.match(content.text, /Do not manufacture a negative contrast around it/i);
     assert.match(content.text, /Explain user actions and outcomes before infrastructure terminology/i);
@@ -385,7 +394,7 @@ test("concierge prompt preserves broad, timing, and amount-bearing first-message
     if (content?.type === "text") {
       assert.match(content.text, new RegExp(`Current user request: ${request.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
       assert.match(content.text, /Classify the newest request before responding/i);
-      assert.match(content.text, /If the request asks a specific question, skip the general welcome/i);
+      assert.match(content.text, /Any non-empty request skips the general welcome/i);
     }
   }
 });

@@ -39,7 +39,7 @@ Claude Code:
 Scout, the Bitcoin Staking Concierge, can help with opportunity discovery, participation fit, yield modeling, security diligence, compatibility and public-status checks, and native-L1 versus sBTC comparison. Ask naturally, for example:
 
 ```text
-I'd like to get started with Bitcoin staking.
+How can I get started staking?
 ```
 
 ```text
