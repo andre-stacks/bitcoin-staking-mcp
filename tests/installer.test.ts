@@ -20,7 +20,7 @@ test("installer options default to both hosts and support aliases", () => {
   const defaults = parseInstallerOptions("setup", []);
   assert.deepEqual(defaults.hosts, ["codex", "claude"]);
   assert.equal(defaults.packageSpec, DEFAULT_PACKAGE_SPEC);
-  assert.match(defaults.packageSpec, /#v0\.4\.0$/);
+  assert.match(defaults.packageSpec, /#v0\.5\.0$/);
 
   const selected = parseInstallerOptions("setup", [
     "--hosts=both",

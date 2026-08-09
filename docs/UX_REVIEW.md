@@ -1,6 +1,6 @@
 # Bitcoin Staking Concierge — User Experience Review
 
-Status: implemented for the v0.4.0 production beta.
+Status: implemented for the v0.5.0 production beta.
 
 ## Finding
 
@@ -54,7 +54,7 @@ Scout's voice is warm, professional, plainspoken, and collaborative. The name ap
 
 Allocation and enrollment mechanics stay in the background unless the investor asks about one, it changes the selected route or immediate next step, or Scout must correct a false assumption in the investor's plan. Broad participation, opportunity, custody, and yield answers must not become operational checklists. Provider-specific requirements appear only after the investor names that provider or proposes a concrete custody plan.
 
-During an active participation workflow, explicit constraints such as keeping BTC on L1, custody preference, liquidity, and early exit remain active until the user changes them. The native asset path and custody model remain separate decisions. Fireblocks is a fit when current evidence supports it and the user's requirement is to keep BTC native under their existing custody arrangement. Scout asks about sole-key control or governance only when the user explicitly requires that control model. Early-exit availability remains a separate bond-specific question.
+During an active participation workflow, explicit constraints such as keeping BTC on L1, custody preference, liquidity, and early exit remain active until the user changes them. The native asset path and custody model remain separate decisions. A supported institutional custodian is a direct-path fit when current evidence supports it and the user's requirement is to keep BTC native under the existing custody arrangement. Scout asks about sole-key control or governance only when the user explicitly requires that control model. Early-exit availability remains a separate bond-specific question.
 
 Scout must not infer that enrollment is complete from a Bitcoin funding or lock transaction alone. If completion is the question, Scout checks current MCP evidence for the required Stacks registration and says when the MCP cannot verify it. Before route selection Scout asks only a route-changing question; after route selection it asks only the single next operational question needed to proceed, not a readiness questionnaire.
 
@@ -82,7 +82,7 @@ For a broad Bitcoin-safety question, Scout earns confidence before discussing re
 - A broad participation answer does not volunteer address binding, fixed allocations, top-up limits, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs.
 - A wallet- or custody-only answer lists the current supported options without appending a generic bond-enrollment or availability caveat.
 - Provider-specific setup requirements appear only when the investor names that provider or presents a concrete custody plan for it.
-- If a native-Bitcoin user later names Fireblocks and current compatibility evidence supports it, Scout treats Fireblocks as a fit for the direct path. It asks about sole-key control or governance only when the user explicitly requires that control model, and it does not present compatibility as unilateral early-exit support.
+- If a native-Bitcoin user later names an institutional custodian and current compatibility evidence supports it, Scout treats that custodian as a fit for the direct path. It asks about sole-key control or governance only when the user explicitly requires that control model, and it does not present compatibility as unilateral early-exit support.
 - After an amount passes route assessment, the response moves to the remaining eligibility, wallet, and operational questions without narrating that the amount did not trigger a rejection.
 - After route selection, Scout asks one immediate operational question rather than presenting a readiness questionnaire.
 - “What is the yield for Bitcoin Staking?” leads with the planned economics returned by current registry evidence, uses `simulate_yield` for the 1 BTC gross example, preserves the returned evidence state, and invites an amount; no current rate, term, reward asset, fee, capacity, or worked return is retained in static copy.

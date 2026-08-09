@@ -164,10 +164,10 @@ test("Stacks provider rejects non-mainnet configuration", () => {
 
 test("participant status accepts mainnet addresses and rejects non-mainnet or invalid principals", async () => {
   const mainnet = new RecordingProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
-  const service = new BitcoinStakingService({ stacks: mainnet, now: () => new Date("2026-08-06T19:00:00.000Z") });
+  const service = new BitcoinStakingService({ stacks: mainnet, now: () => new Date("2026-08-09T19:00:00.000Z") });
   await service.checkParticipantStatus("SP000000000000000000002Q6VF78");
   await assert.rejects(service.checkParticipantStatus("ST000000000000000000002AMW42H"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /mainnet/i.test(error.message));
-  const validating = new BitcoinStakingService({ stacks: new StacksProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), now: () => new Date("2026-08-06T19:00:00.000Z") });
+  const validating = new BitcoinStakingService({ stacks: new StacksProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), now: () => new Date("2026-08-09T19:00:00.000Z") });
   await assert.rejects(validating.checkParticipantStatus("not-a-stacks-address"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT");
 });
 
@@ -180,7 +180,7 @@ test("runtime conflict overrides a fresh owner claim in snapshot, bond detail, r
   bond.participationRoutes[0].enrollment.url = "https://example.com/enroll";
   await writeFile(join(directory, "bond.json"), JSON.stringify(bond), "utf8");
   const mainnet = new SnapshotProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
-  const service = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: mainnet, now: () => new Date("2026-08-06T19:00:00.000Z") });
+  const service = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: mainnet, now: () => new Date("2026-08-09T19:00:00.000Z") });
   const profile = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000", stxAvailable: "yes" } as const;
 
   const snapshot = await service.getMarketSnapshot();

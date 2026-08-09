@@ -13,7 +13,7 @@ Usage:
   bitcoin-staking-mcp uninstall [--hosts codex,claude] [--keep-skill] [--json]
 
 Portable install:
-  npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 setup
+  npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 setup
 
 Options:
   --hosts HOSTS       codex, claude, both as a comma-separated list, or all

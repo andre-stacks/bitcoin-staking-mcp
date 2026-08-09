@@ -9,7 +9,7 @@ const path = resolve("data/registry-snapshot.json");
 const raw = await readFile(path, "utf8");
 
 test("unified registry revalidates with ETags at the 60-second boundary", async () => {
-  let now = new Date("2026-08-06T01:00:00.000Z"); let calls = 0; let conditional: string | null = null;
+  let now = new Date("2026-08-09T01:00:00.000Z"); let calls = 0; let conditional: string | null = null;
   const store = new RegistryStore({ path, remoteUrl: "https://registry.example/api/v1/registry", remoteEnabled: true, now: () => now, cacheTtlMs: 60_000, fetchImpl: async (_url, init) => { calls += 1; conditional = new Headers(init?.headers).get("if-none-match"); return calls === 1 ? new Response(raw, { status: 200, headers: { etag: '"seed"' } }) : new Response(null, { status: 304 }); } });
   assert.equal((await store.readWithMetadata()).metadata.sourceMode, "live_registry");
   now = new Date(now.getTime() + 59_999); assert.equal((await store.readWithMetadata()).metadata.sourceMode, "runtime_cache"); assert.equal(calls, 1);
@@ -17,19 +17,19 @@ test("unified registry revalidates with ETags at the 60-second boundary", async 
 });
 
 test("malformed upstream content uses only the current hash-verified bundled snapshot", async () => {
-  const store = new RegistryStore({ path, remoteUrl: "https://registry.example/api/v1/registry", remoteEnabled: true, now: () => new Date("2026-08-06T02:00:00.000Z"), fetchImpl: async () => new Response(JSON.stringify({ registryVersion: "broken" })) });
+  const store = new RegistryStore({ path, remoteUrl: "https://registry.example/api/v1/registry", remoteEnabled: true, now: () => new Date("2026-08-09T02:00:00.000Z"), fetchImpl: async () => new Response(JSON.stringify({ registryVersion: "broken" })) });
   const result = await store.readWithMetadata();
   assert.equal(result.metadata.sourceMode, "bundled_snapshot");
   assert.match(result.metadata.fallbackReason ?? "", /validation|invalid|expected|undefined/i);
 });
 
 test("stale bundled registry fails closed after an upstream outage", async () => {
-  const store = new RegistryStore({ path, remoteUrl: "https://registry.example/api/v1/registry", remoteEnabled: true, now: () => new Date("2026-08-14T00:00:00.001Z"), fetchImpl: async () => { throw new Error("offline"); } });
+  const store = new RegistryStore({ path, remoteUrl: "https://registry.example/api/v1/registry", remoteEnabled: true, now: () => new Date("2026-08-17T00:00:00.001Z"), fetchImpl: async () => { throw new Error("offline"); } });
   await assert.rejects(store.read(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE");
 });
 
 test("legacy bond aliases and catalog search resolve from the same atomic snapshot", async () => {
-  const store = new RegistryStore({ path, remoteEnabled: false, now: () => new Date("2026-08-06T12:00:00.000Z") });
+  const store = new RegistryStore({ path, remoteEnabled: false, now: () => new Date("2026-08-09T12:00:00.000Z") });
   assert.equal(await store.resolveId("genesis-bond-cycle-142"), "genesis-bond");
   const catalog = await store.search({ category: "product", query: "Genesis", limit: 5 });
   assert.equal(catalog.registryRevision.startsWith("rev-"), true);
@@ -41,8 +41,8 @@ test("catalog search excludes scheduled, expired, and overdue records from curre
   const snapshot = JSON.parse(raw);
   const base = snapshot.content.facts[0];
   snapshot.content.facts.push(
-    { ...base, id: "scheduled-product", title: "Scheduled Product", relatedIds: ["genesis-bond"], effectiveAt: "2026-08-08T00:00:00.000Z" },
-    { ...base, id: "expired-notice", title: "Expired Notice", category: "announcement", relatedIds: ["genesis-bond"], effectiveAt: "2026-08-01T00:00:00.000Z", expiresAt: "2026-08-07T11:59:59.000Z" },
+    { ...base, id: "scheduled-product", title: "Scheduled Product", relatedIds: ["genesis-bond"], effectiveAt: "2026-08-11T00:00:00.000Z" },
+    { ...base, id: "expired-notice", title: "Expired Notice", category: "announcement", relatedIds: ["genesis-bond"], effectiveAt: "2026-08-01T00:00:00.000Z", expiresAt: "2026-08-10T11:59:59.000Z" },
     { ...base, id: "overdue-product", title: "Overdue Product", relatedIds: ["genesis-bond"], attestation: { ...base.attestation, reviewedAt: "2026-07-01T00:00:00.000Z" } },
   );
   snapshot.contentHash = registryContentHash(snapshot.content);
@@ -50,7 +50,7 @@ test("catalog search excludes scheduled, expired, and overdue records from curre
     path,
     remoteUrl: "https://registry.example/api/v1/registry",
     remoteEnabled: true,
-    now: () => new Date("2026-08-07T12:00:00.000Z"),
+    now: () => new Date("2026-08-10T12:00:00.000Z"),
     fetchImpl: async () => new Response(JSON.stringify(snapshot), { status: 200, headers: { etag: '"filtered"' } }),
   });
   const result = await store.search();
@@ -64,7 +64,7 @@ test("catalog search excludes scheduled, expired, and overdue records from curre
 });
 
 test("catalog search exposes Zest as a planned stBTC integration without live terms", async () => {
-  const store = new RegistryStore({ path, remoteEnabled: false, now: () => new Date("2026-08-06T12:00:00.000Z") });
+  const store = new RegistryStore({ path, remoteEnabled: false, now: () => new Date("2026-08-09T12:00:00.000Z") });
   const result = await store.search({ query: "Zest" });
   assert.deepEqual(result.results.map((item) => item.id), ["zest-stbtc-borrowing"]);
   assert.equal(result.results[0]?.kind, "integration");
@@ -73,7 +73,7 @@ test("catalog search exposes Zest as a planned stBTC integration without live te
 });
 
 test("catalog distinguishes the live interest form from the planned staking application", async () => {
-  const store = new RegistryStore({ path, remoteEnabled: false, now: () => new Date("2026-08-06T12:00:00.000Z") });
+  const store = new RegistryStore({ path, remoteEnabled: false, now: () => new Date("2026-08-09T12:00:00.000Z") });
   const access = await store.search({ query: "signup" });
   assert.deepEqual(access.results.map((item) => item.id), ["institutional-bitcoin-staking-access"]);
   assert.equal(access.results[0]?.status, "available");

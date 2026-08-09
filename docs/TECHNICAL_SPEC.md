@@ -124,7 +124,7 @@ For live PoX-5 protocol bonds, the target scenario mirrors the contract calculat
 
 The checked-in `.codex/config.toml` starts `node dist/stdio.js` and the repo-scoped skill is available after the project is trusted. `.mcp.json` provides the equivalent Claude Code project configuration. Build before opening either host.
 
-For cross-repository use, `dist/cli.js` is the package binary. `setup` verifies the exact fifteen-tool contract, server/contract/skill versions, registry revision/hash/freshness, and selected hosts. It autodetects Codex and Claude, skips absent default hosts, fails for an absent explicitly requested host, and installs a hashed concierge skill. `update` repeats the safe registration flow. `uninstall` removes only the named registrations and skill. The portable default pins `#v0.4.0`; unpinned `main` is development-only.
+For cross-repository use, `dist/cli.js` is the package binary. `setup` verifies the exact fifteen-tool contract, server/contract/skill versions, registry revision/hash/freshness, and selected hosts. It autodetects Codex and Claude, skips absent default hosts, fails for an absent explicitly requested host, and installs a hashed concierge skill. `update` repeats the safe registration flow. `uninstall` removes only the named registrations and skill. The portable default pins `#v0.5.0`; unpinned `main` is development-only.
 
 Claude exposes the MCP prompt as `/mcp__bitcoin_staking__bitcoin_staking_concierge`. Codex invokes `$bitcoin-staking-concierge`; both use the same MCP tools.
 

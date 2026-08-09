@@ -4,7 +4,7 @@ import { BondManifestV2Schema, ConciergeRegistryContentSchema, ConciergeRegistry
 import { registryContentHash } from "../src/providers/registry-store.js";
 
 const root = resolve(import.meta.dirname, "..");
-const reviewedAt = process.env.REGISTRY_REVIEWED_AT ?? "2026-08-06T00:00:00.000Z";
+const reviewedAt = process.env.REGISTRY_REVIEWED_AT ?? "2026-08-09T00:00:00.000Z";
 const publishedAt = process.env.REGISTRY_PUBLISHED_AT ?? reviewedAt;
 
 async function json(path: string): Promise<unknown> {

@@ -134,7 +134,7 @@ test("remote manifest failure falls back to the current bundled registry and lab
     return new Response("missing remote manifest", { status: 503 });
   };
   const store = new ManifestStore(undefined, {
-    now: () => new Date("2026-08-06T12:00:00.000Z"), fetchImpl, remoteEnabled: true,
+    now: () => new Date("2026-08-09T12:00:00.000Z"), fetchImpl, remoteEnabled: true,
     remoteRegistryUrl: "https://example.com/data/bond-registry.json",
   });
   const result = await store.listWithMetadata();
@@ -153,7 +153,7 @@ test("hung remote manifest reads time out and preserve the fallback reason", asy
     return new Promise<Response>(() => {});
   };
   const store = new ManifestStore(undefined, {
-    now: () => new Date("2026-08-06T12:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5,
+    now: () => new Date("2026-08-09T12:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5,
     remoteRegistryUrl: "https://example.com/data/bond-registry.json",
   });
   const result = await store.listWithMetadata();
@@ -172,7 +172,7 @@ test("manifest timeout covers a stalled response body and aborts the request", a
     return new Response(new ReadableStream({ start() {} }), { status: 200 });
   };
   const store = new ManifestStore(undefined, {
-    now: () => new Date("2026-08-06T12:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5,
+    now: () => new Date("2026-08-09T12:00:00.000Z"), fetchImpl, remoteEnabled: true, timeoutMs: 5,
     remoteRegistryUrl: "https://example.com/data/bond-registry.json",
   });
   const result = await store.listWithMetadata();

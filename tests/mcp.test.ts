@@ -24,7 +24,7 @@ class OfflineProvider extends StacksProvider {
   override async getParticipantStatus(address: string): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { address, network: this.networkName, accountStatus: null, stakerInfo: null, bondMembership: null, bondAllowanceSats: null, requestedBondId: null, requestedBondDataStatus: null, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
 }
 class FailingProvider extends OfflineProvider { override async getProtocolStatus(): Promise<any> { throw new ServiceError("UPSTREAM_ERROR", "Live network unavailable.", true); } }
-const offlineNow = () => new Date("2026-08-06T19:00:00.000Z");
+const offlineNow = () => new Date("2026-08-09T19:00:00.000Z");
 function offlinePrices() { return new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200, headers: { "content-type": "application/json" } }) }); }
 function offlineService(provider: StacksProvider = new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" })) { return new BitcoinStakingService({ stacks: provider, prices: offlinePrices(), now: offlineNow }); }
 const profile = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "100000000" } as const;
@@ -42,6 +42,24 @@ test("catalog search rejects unknown status filters before querying the registry
   const result = await client.callTool({ name: "search_current_facts", arguments: { status: "definitely-not-a-status" } });
   assert.equal(result.isError, true);
   assert.match(JSON.stringify(result.content), /status|invalid/i);
+});
+
+test("mainnet-only tools reject removed legacy inputs instead of silently changing their meaning", async (context) => {
+  const { client, server } = await connectedClient(offlineService());
+  context.after(async () => { await client.close(); await server.close(); });
+  const staleCalls = [
+    { name: "get_market_snapshot", arguments: { network: "testnet" } },
+    { name: "get_protocol_status", arguments: { network: "testnet" } },
+    { name: "list_protocol_bonds", arguments: { network: "testnet" } },
+    { name: "list_bonds", arguments: { includeDemo: true } },
+    { name: "build_diligence_report", arguments: { network: "testnet", profile } },
+    { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78", network: "testnet" } },
+  ];
+  for (const call of staleCalls) {
+    const result = await client.callTool(call);
+    assert.equal(result.isError, true, `${call.name} accepted removed input: ${JSON.stringify(result.content)}`);
+    assert.match(JSON.stringify(result.content), /unrecognized|unknown|invalid/i);
+  }
 });
 
 test("market snapshot grounds the first turn in two routes", async (context) => {
@@ -125,7 +143,7 @@ test("MCP schemas contain no passthrough or unknown output shortcuts", async () 
 
 test("runtime failures stay explicit inside deterministic market snapshot", async (context) => {
   const { client, server } = await connectedClient(offlineService(new FailingProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }))); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "get_market_snapshot", arguments: { network: "mainnet" } });
+  const result = await client.callTool({ name: "get_market_snapshot", arguments: {} });
   assert.equal(result.isError, undefined); const content = result.structuredContent as any; assert.equal(content.protocol.status, "unavailable"); assert.equal(content.protocol.error.code, "UPSTREAM_ERROR");
 });
 
@@ -214,7 +232,7 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /do not enumerate providers before the user chooses the direct route or names one/i);
     assert.match(content.text, /preserve explicit route-changing constraints such as L1 custody, key control, liquidity, and early-exit requirements/i);
     assert.match(content.text, /Treat the asset path and custody model as separate decisions/i);
-    assert.match(content.text, /current compatibility evidence supports Fireblocks.*requirement is to keep BTC native under their existing custody arrangement/i);
+    assert.match(content.text, /current compatibility evidence supports the user's institutional custodian.*requirement is to keep BTC native under the existing custody arrangement/i);
     assert.match(content.text, /Ask about sole-key control or governance only when the user explicitly requires that control model/i);
     assert.match(content.text, /product compatibility does not prove unilateral early exit/i);
     assert.match(content.text, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);

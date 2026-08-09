@@ -71,7 +71,7 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /provider-specific setup requirements only when the user names that provider/i);
   assert.match(skill, /Do not enumerate wallet or custody providers before the user chooses the direct route or names a provider/i);
   assert.match(skill, /Treat the asset path and custody model as separate decisions/i);
-  assert.match(skill, /current compatibility evidence supports Fireblocks.*requirement is to keep BTC native under their existing custody arrangement/i);
+  assert.match(skill, /current compatibility evidence supports the user's institutional custodian.*requirement is to keep BTC native under the existing custody arrangement/i);
   assert.match(skill, /Ask about sole-key control or governance only when the user explicitly requires that control model/i);
   assert.match(skill, /product compatibility does not prove unilateral early exit/i);
   assert.match(skill, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
@@ -183,7 +183,7 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /provider-specific setup requirements only when the user names that provider/i);
   assert.match(standard, /Do not enumerate providers before the user selects the direct route or names one/i);
   assert.match(standard, /Treat the asset path and custody model as separate decisions/i);
-  assert.match(standard, /current compatibility evidence supports Fireblocks.*requirement is to keep BTC native under their existing custody arrangement/i);
+  assert.match(standard, /current compatibility evidence supports the user's institutional custodian.*requirement is to keep BTC native under the existing custody arrangement/i);
   assert.match(standard, /Ask about sole-key control or governance only when the user explicitly requires that control model/i);
   assert.match(standard, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(standard, /Where do I sign up.*handoff intent/i);

@@ -78,7 +78,7 @@ test("v1 normalization remains compatible when the legacy source is not an owner
 test("overdue owner attestation is needs_review and never available", async () => {
   const bond = await bondFile("genesis-bond.json");
   assert.equal(routeEffectiveAvailability(bond.participationRoutes[0]!, new Date("2026-08-10T00:00:00.000Z")), "scheduled");
-  assert.equal(routeEffectiveAvailability(bond.participationRoutes[0]!, new Date("2026-08-14T00:00:00.000Z")), "needs_review");
+  assert.equal(routeEffectiveAvailability(bond.participationRoutes[0]!, new Date("2026-08-17T00:00:00.000Z")), "needs_review");
   assert.equal(routeEffectiveAvailability(bond.participationRoutes[0]!, new Date("2026-08-10T00:00:00.000Z"), true), "conflict");
 });
 

@@ -8,7 +8,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { CONTRACT_VERSION, EXPECTED_TOOL_NAMES, SERVER_VERSION, SKILL_VERSION } from "./mcp/server.js";
 
-export const DEFAULT_PACKAGE_SPEC = "github:andre-stacks/bitcoin-staking-mcp#v0.4.0";
+export const DEFAULT_PACKAGE_SPEC = "github:andre-stacks/bitcoin-staking-mcp#v0.5.0";
 export const SERVER_NAME = "bitcoin-staking";
 export const SKILL_NAME = "bitcoin-staking-concierge";
 

@@ -35,7 +35,7 @@ test("custody directory is product-level, filterable, and freshness-aware", asyn
   assert.match(bitgo.paths[0]?.evidence ?? "", /STX stacking and sBTC support/i);
 
   const stale = new BitcoinStakingService({
-    now: () => new Date("2026-08-14T00:00:00.001Z"),
+    now: () => new Date("2026-08-17T00:00:00.001Z"),
   });
   await assert.rejects(stale.listCustodyPaths(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE");
 });

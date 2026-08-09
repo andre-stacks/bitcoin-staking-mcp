@@ -1,15 +1,15 @@
 {
   "registryVersion": "3.0.0",
-  "reviewedAt": "2026-08-06T00:00:00.000Z",
+  "reviewedAt": "2026-08-09T00:00:00.000Z",
   "reviewCadenceDays": 7,
-  "reviewDueAt": "2026-08-13T00:00:00.000Z",
-  "revision": "rev-20260806000000000-a5fe2f119511",
-  "contentHash": "sha256:a5fe2f1195110d224313665c654259e828f884162febeabb44e9becf9d83efc3",
-  "publishedAt": "2026-08-06T00:00:00.000Z",
+  "reviewDueAt": "2026-08-16T00:00:00.000Z",
+  "revision": "rev-20260809000000000-7ab60606ebd3",
+  "contentHash": "sha256:7ab60606ebd3e3ff423d3f99321df0a8f4b1ba8fcc8f5ce6fa8bb88dbd13de76",
+  "publishedAt": "2026-08-09T00:00:00.000Z",
   "publishedBy": "registry-bootstrap@stackslabs.com",
   "content": {
     "schemaVersion": 3,
-    "reviewedAt": "2026-08-06T00:00:00.000Z",
+    "reviewedAt": "2026-08-09T00:00:00.000Z",
     "reviewCadenceDays": 7,
     "bonds": [
       {
@@ -32,7 +32,7 @@
         "attestation": {
           "scope": "Genesis Bond identity, product status, and supported route types",
           "ownerOrganization": "Stacks Labs",
-          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewedAt": "2026-08-09T00:00:00.000Z",
           "reviewCadenceDays": 7,
           "sourceIds": [
             "genesis-bond-owner-attestation"
@@ -65,7 +65,7 @@
             "attestation": {
               "scope": "Direct native-L1 Genesis Bond route type",
               "ownerOrganization": "Stacks Labs",
-              "reviewedAt": "2026-08-06T00:00:00.000Z",
+              "reviewedAt": "2026-08-09T00:00:00.000Z",
               "reviewCadenceDays": 7,
               "sourceIds": [
                 "genesis-bond-owner-attestation"
@@ -114,7 +114,7 @@
             "attestation": {
               "scope": "Permissionless sBTC pool route type for the Genesis Bond",
               "ownerOrganization": "Stacks Labs",
-              "reviewedAt": "2026-08-06T00:00:00.000Z",
+              "reviewedAt": "2026-08-09T00:00:00.000Z",
               "reviewCadenceDays": 7,
               "sourceIds": [
                 "genesis-bond-owner-attestation"
@@ -153,7 +153,7 @@
               "attestation": {
                 "scope": "StackingDAO stBTC design and planned Zest Protocol use",
                 "ownerOrganization": "StackingDAO and Zest Protocol",
-                "reviewedAt": "2026-08-06T00:00:00.000Z",
+                "reviewedAt": "2026-08-09T00:00:00.000Z",
                 "reviewCadenceDays": 7,
                 "sourceIds": [
                   "stackingdao-zest-vault-architecture"
@@ -200,7 +200,7 @@
             "title": "Stacks Labs Genesis Bond owner attestation",
             "sourceType": "owner_attestation",
             "dataStatus": "published",
-            "retrievedAt": "2026-08-06T00:00:00.000Z"
+            "retrievedAt": "2026-08-09T00:00:00.000Z"
           },
           {
             "id": "sip-045",
@@ -236,18 +236,18 @@
             "title": "StackingDAO and Zest Protocol stBTC vault architecture note",
             "sourceType": "owner_attestation",
             "dataStatus": "published",
-            "retrievedAt": "2026-08-06T00:00:00.000Z"
+            "retrievedAt": "2026-08-09T00:00:00.000Z"
           }
         ],
-        "verifiedAt": "2026-08-06T00:00:00.000Z"
+        "verifiedAt": "2026-08-09T00:00:00.000Z"
       }
     ],
     "custody": {
       "schemaVersion": 1,
-      "registryVersion": "2026-08-06.1",
+      "registryVersion": "2026-08-09.1",
       "scope": "native_l1_bitcoin_staking",
       "reviewCadenceDays": 7,
-      "reviewedAt": "2026-08-06T00:00:00.000Z",
+      "reviewedAt": "2026-08-09T00:00:00.000Z",
       "verificationMethod": "product_owner_confirmed",
       "ownerOrganization": "Stacks Labs",
       "paths": [
@@ -265,7 +265,7 @@
           "attestation": {
             "scope": "Leather native-L1 direct participation",
             "ownerOrganization": "Stacks Labs",
-            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewedAt": "2026-08-09T00:00:00.000Z",
             "reviewCadenceDays": 7,
             "sourceIds": [
               "custody-registry"
@@ -286,7 +286,7 @@
           "attestation": {
             "scope": "Leather multisig native-L1 direct participation",
             "ownerOrganization": "Stacks Labs",
-            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewedAt": "2026-08-09T00:00:00.000Z",
             "reviewCadenceDays": 7,
             "sourceIds": [
               "custody-registry"
@@ -307,7 +307,7 @@
           "attestation": {
             "scope": "Ledger native-L1 direct participation",
             "ownerOrganization": "Stacks Labs",
-            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewedAt": "2026-08-09T00:00:00.000Z",
             "reviewCadenceDays": 7,
             "sourceIds": [
               "custody-registry"
@@ -328,7 +328,7 @@
           "attestation": {
             "scope": "Fordefi native-L1 direct participation",
             "ownerOrganization": "Stacks Labs",
-            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewedAt": "2026-08-09T00:00:00.000Z",
             "reviewCadenceDays": 7,
             "sourceIds": [
               "custody-registry"
@@ -350,7 +350,7 @@
           "attestation": {
             "scope": "Fireblocks native-L1 direct participation",
             "ownerOrganization": "Stacks Labs",
-            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewedAt": "2026-08-09T00:00:00.000Z",
             "reviewCadenceDays": 7,
             "sourceIds": [
               "custody-registry"
@@ -372,7 +372,7 @@
           "attestation": {
             "scope": "BitGo native-L1 direct participation non-support",
             "ownerOrganization": "Stacks Labs",
-            "reviewedAt": "2026-08-06T00:00:00.000Z",
+            "reviewedAt": "2026-08-09T00:00:00.000Z",
             "reviewCadenceDays": 7,
             "sourceIds": [
               "custody-registry"
@@ -439,14 +439,14 @@
         "relatedIds": [
           "genesis-bond"
         ],
-        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "effectiveAt": "2026-08-09T00:00:00.000Z",
         "sourceIds": [
           "genesis-bond-owner-attestation"
         ],
         "attestation": {
           "scope": "Genesis Bond product identity and corrected PoX-5 period mapping",
           "ownerOrganization": "Stacks Labs",
-          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewedAt": "2026-08-09T00:00:00.000Z",
           "reviewCadenceDays": 7,
           "sourceIds": [
             "genesis-bond-owner-attestation"
@@ -472,14 +472,14 @@
           "genesis-bond",
           "genesis-sbtc-pool"
         ],
-        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "effectiveAt": "2026-08-09T00:00:00.000Z",
         "sourceIds": [
           "stackingdao-zest-vault-architecture"
         ],
         "attestation": {
           "scope": "StackingDAO stBTC product design",
           "ownerOrganization": "StackingDAO and Zest Protocol",
-          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewedAt": "2026-08-09T00:00:00.000Z",
           "reviewCadenceDays": 7,
           "sourceIds": [
             "stackingdao-zest-vault-architecture"
@@ -508,14 +508,14 @@
           "genesis-bond",
           "genesis-native-l1-direct"
         ],
-        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "effectiveAt": "2026-08-09T00:00:00.000Z",
         "sourceIds": [
           "stacks-institutional-bitcoin-staking-access"
         ],
         "attestation": {
           "scope": "Current Institutional Bitcoin Staking access request",
           "ownerOrganization": "Stacks Labs",
-          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewedAt": "2026-08-09T00:00:00.000Z",
           "reviewCadenceDays": 7,
           "sourceIds": [
             "stacks-institutional-bitcoin-staking-access"
@@ -540,14 +540,14 @@
         "relatedIds": [
           "genesis-bond"
         ],
-        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "effectiveAt": "2026-08-09T00:00:00.000Z",
         "sourceIds": [
           "staking-application-owner-attestation"
         ],
         "attestation": {
           "scope": "Planned Bitcoin Staking landing page and application destination",
           "ownerOrganization": "Stacks Labs",
-          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewedAt": "2026-08-09T00:00:00.000Z",
           "reviewCadenceDays": 7,
           "sourceIds": [
             "staking-application-owner-attestation"
@@ -579,14 +579,14 @@
           "genesis-sbtc-pool",
           "stackingdao-stbtc"
         ],
-        "effectiveAt": "2026-08-06T00:00:00.000Z",
+        "effectiveAt": "2026-08-09T00:00:00.000Z",
         "sourceIds": [
           "stackingdao-zest-vault-architecture"
         ],
         "attestation": {
           "scope": "Planned Zest Protocol support for StackingDAO stBTC",
           "ownerOrganization": "StackingDAO and Zest Protocol",
-          "reviewedAt": "2026-08-06T00:00:00.000Z",
+          "reviewedAt": "2026-08-09T00:00:00.000Z",
           "reviewCadenceDays": 7,
           "sourceIds": [
             "stackingdao-zest-vault-architecture"
@@ -605,14 +605,14 @@
         "title": "Stacks Labs Genesis Bond owner attestation",
         "sourceType": "owner_attestation",
         "dataStatus": "published",
-        "retrievedAt": "2026-08-06T00:00:00.000Z"
+        "retrievedAt": "2026-08-09T00:00:00.000Z"
       },
       {
         "id": "stackingdao-zest-vault-architecture",
         "title": "StackingDAO and Zest Protocol stBTC vault architecture note",
         "sourceType": "owner_attestation",
         "dataStatus": "published",
-        "retrievedAt": "2026-08-06T00:00:00.000Z"
+        "retrievedAt": "2026-08-09T00:00:00.000Z"
       },
       {
         "id": "stacks-institutional-bitcoin-staking-access",
@@ -626,7 +626,7 @@
         "title": "Stacks Bitcoin Staking application destination owner attestation",
         "sourceType": "owner_attestation",
         "dataStatus": "published",
-        "retrievedAt": "2026-08-06T00:00:00.000Z"
+        "retrievedAt": "2026-08-09T00:00:00.000Z"
       }
     ]
   }

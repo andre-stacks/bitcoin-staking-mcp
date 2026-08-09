@@ -53,11 +53,11 @@ test("partner product roles are independently addressable and future attestation
   content.integrations.push({ ...base, id: "partner-product-custody-duplicate" });
   assert.equal(ConciergeRegistryContentSchema.safeParse(content).success, false);
   content.integrations.pop();
-  content.integrations[0]!.attestation.reviewedAt = "2026-08-08T00:00:00.000Z";
-  assert.throws(() => validatePublishableContent(content, new Date("2026-08-07T00:00:00.000Z")), /Future owner attestation/);
-  content.integrations[0]!.attestation.reviewedAt = "2026-08-07T00:00:00.000Z";
-  content.reviewedAt = "2026-08-08T00:00:00.000Z";
-  assert.throws(() => validatePublishableContent(content, new Date("2026-08-07T00:00:00.000Z")), /Future registry review timestamp/);
+  content.integrations[0]!.attestation.reviewedAt = "2026-08-10T00:00:00.000Z";
+  assert.throws(() => validatePublishableContent(content, new Date("2026-08-09T00:00:00.000Z")), /Future owner attestation/);
+  content.integrations[0]!.attestation.reviewedAt = "2026-08-09T00:00:00.000Z";
+  content.reviewedAt = "2026-08-10T00:00:00.000Z";
+  assert.throws(() => validatePublishableContent(content, new Date("2026-08-09T00:00:00.000Z")), /Future registry review timestamp/);
 });
 
 test("registry-wide IDs and related record references are unique and resolvable", () => {
@@ -73,9 +73,9 @@ test("draft, validation, publish, diff, discard, and rollback preserve immutable
   const backend = new MemoryBackend();
   const changed = structuredClone(seedSnapshot.content);
   changed.facts[0]!.summary = "Updated without an MCP release.";
-  await saveDraft(backend, changed, "publisher@stackslabs.com", new Date("2026-08-07T10:00:00.000Z"));
+  await saveDraft(backend, changed, "publisher@stackslabs.com", new Date("2026-08-09T10:00:00.000Z"));
   assert.equal(diffSummary(seedSnapshot, backend.state.draft).changed, true);
-  const first = await publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-07T10:01:00.000Z"));
+  const first = await publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-09T10:01:00.000Z"));
   assert.equal(backend.state.draft, null);
   assert.equal(backend.state.publishedSnapshot?.content.facts[0]?.summary, "Updated without an MCP release.");
   assert.equal(backend.state.publishedSnapshot?.publishedBy, "Stacks Labs registry team");
@@ -83,7 +83,7 @@ test("draft, validation, publish, diff, discard, and rollback preserve immutable
   assert.equal(backend.blobs.size, 2);
   assert.deepEqual(backend.state.revisions.map((entry) => entry.revision), [first.snapshot.revision, seedSnapshot.revision]);
   backend.writes = [];
-  const rolled = await rollbackToRevision(backend, seedSnapshot.revision, "publisher@stackslabs.com", new Date("2026-08-07T10:02:00.000Z"));
+  const rolled = await rollbackToRevision(backend, seedSnapshot.revision, "publisher@stackslabs.com", new Date("2026-08-09T10:02:00.000Z"));
   assert.notEqual(rolled.snapshot.revision, seedSnapshot.revision);
   assert.notEqual(rolled.snapshot.revision, first.snapshot.revision);
   assert.equal(backend.state.publishedSnapshot?.content.facts[0]?.summary, seedSnapshot.content.facts[0]?.summary);
@@ -97,7 +97,7 @@ test("publish retries reuse identical immutable archives after a partial config-
   const backend = new MemoryBackend();
   const changed = structuredClone(seedSnapshot.content);
   changed.facts[0]!.summary = "Retry the same deterministic publication.";
-  const now = new Date("2026-08-07T10:10:00.000Z");
+  const now = new Date("2026-08-09T10:10:00.000Z");
   await saveDraft(backend, changed, "publisher@stackslabs.com", now);
   backend.failWrites = 1;
   await assert.rejects(publishDraft(backend, "publisher@stackslabs.com", now), /simulated config write failure/);
@@ -112,12 +112,12 @@ test("invalid work can be saved privately but cannot validate or publish", async
   const backend = new MemoryBackend();
   const invalid = structuredClone(seedSnapshot.content);
   invalid.facts[0]!.sourceIds = ["source-still-being-added"];
-  await saveDraft(backend, invalid, "publisher@stackslabs.com", new Date("2026-08-07T11:00:00.000Z"));
+  await saveDraft(backend, invalid, "publisher@stackslabs.com", new Date("2026-08-09T11:00:00.000Z"));
   assert.equal(backend.state.draft?.content && typeof backend.state.draft.content === "object", true);
   const diff = diffSummary(seedSnapshot, backend.state.draft);
   assert.equal(diff.sections.facts?.after, seedSnapshot.content.facts.length);
-  assert.throws(() => validatePublishableContent(invalid, new Date("2026-08-07T11:01:00.000Z")));
-  await assert.rejects(publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-07T11:02:00.000Z")));
+  assert.throws(() => validatePublishableContent(invalid, new Date("2026-08-09T11:01:00.000Z")));
+  await assert.rejects(publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-09T11:02:00.000Z")));
   assert.equal(backend.state.publishedSnapshot?.revision, seedSnapshot.revision);
   assert.notEqual(backend.state.draft, null);
   assert.equal(backend.blobs.size, 0);

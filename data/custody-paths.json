@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-08-06.1",
+  "registryVersion": "2026-08-09.1",
   "scope": "native_l1_bitcoin_staking",
   "reviewCadenceDays": 7,
-  "reviewedAt": "2026-08-06T00:00:00.000Z",
+  "reviewedAt": "2026-08-09T00:00:00.000Z",
   "verificationMethod": "product_owner_confirmed",
   "ownerOrganization": "Stacks Labs",
   "paths": [
@@ -15,7 +15,7 @@
       "summary": "Available as the direct wallet path for the Bitcoin Staking product flow.",
       "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Leather as the primary launch wallet.",
       "sourceIds": ["custody-registry", "stacks-q2-2026"],
-      "attestation": { "scope": "Leather native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+      "attestation": { "scope": "Leather native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-09T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
     },
     {
       "id": "leather-multisig",
@@ -25,7 +25,7 @@
       "summary": "Available as the shared-control Leather custody path.",
       "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Leather multisig work for Bitcoin Staking.",
       "sourceIds": ["custody-registry", "stacks-q2-2026"],
-      "attestation": { "scope": "Leather multisig native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+      "attestation": { "scope": "Leather multisig native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-09T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
     },
     {
       "id": "ledger",
@@ -35,7 +35,7 @@
       "summary": "Available through the supported Ledger hardware-wallet path.",
       "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting Ledger support in the Leather launch path.",
       "sourceIds": ["custody-registry", "stacks-q2-2026"],
-      "attestation": { "scope": "Ledger native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+      "attestation": { "scope": "Ledger native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-09T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
     },
     {
       "id": "fordefi",
@@ -45,7 +45,7 @@
       "summary": "Available as an institutional wallet and signing path.",
       "evidence": "Current product-owner confirmation; the linked official Stacks publication identifies Fordefi as an institutional Bitcoin Staking integration path.",
       "sourceIds": ["custody-registry", "stacks-institutional-custody"],
-      "attestation": { "scope": "Fordefi native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+      "attestation": { "scope": "Fordefi native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-09T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
     },
     {
       "id": "fireblocks",
@@ -55,7 +55,7 @@
       "summary": "Available as an institutional MPC wallet and custody path.",
       "evidence": "Current product-owner confirmation, with the official Q2 ecosystem report documenting the Fireblocks custody integration.",
       "sourceIds": ["custody-registry", "stacks-q2-2026", "stacks-fireblocks"],
-      "attestation": { "scope": "Fireblocks native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+      "attestation": { "scope": "Fireblocks native-L1 direct participation", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-09T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
     },
     {
       "id": "bitgo",
@@ -65,7 +65,7 @@
       "summary": "BitGo does not currently support the native-L1 Bitcoin Staking bond flow.",
       "evidence": "Current product-owner confirmation. BitGo's adjacent STX stacking and sBTC support must not be presented as support for this native-L1 bond flow.",
       "sourceIds": ["custody-registry", "bitgo-stacks-docs", "bitgo-sbtc"],
-      "attestation": { "scope": "BitGo native-L1 direct participation non-support", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-06T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
+      "attestation": { "scope": "BitGo native-L1 direct participation non-support", "ownerOrganization": "Stacks Labs", "reviewedAt": "2026-08-09T00:00:00.000Z", "reviewCadenceDays": 7, "sourceIds": ["custody-registry"] }
     }
   ],
   "sources": [

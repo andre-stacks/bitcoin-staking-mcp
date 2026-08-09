@@ -1,6 +1,6 @@
 # Scout Live Knowledge Registry — Implementation Audit
 
-Audit date: August 7, 2026. Target: MCP/skill `0.4.0`, MCP contract `4.0.0`. Scope: the Vercel-hosted live knowledge registry, its editor, public API, mainnet-only MCP integration, migration, tests, Preview deployment, and pre-merge acceptance. This record does not authorize merge, Production deployment, package publication, or Codex registration changes.
+Audit date: August 9, 2026. Target: MCP/skill `0.5.0`, MCP contract `4.0.0`. Scope: the Vercel-hosted live knowledge registry, its editor, public API, mainnet-only MCP integration, migration, tests, Preview deployment, and pre-merge acceptance. This record does not authorize merge, Production deployment, package publication, or Codex registration changes.
 
 ## Verdict
 
@@ -8,7 +8,9 @@ The implementation and Preview-validation phases are complete. Every requirement
 
 The audit found and fixed five material gaps before reaching this verdict: the initial seeded snapshot was not automatically recoverable on first publish; rollback depended on an eventually consistent draft reread; root CI did not run the console suite/build; the package tarball omitted the shared contract workspace; and the public API did not independently verify the stored content hash. The final rollback design performs one atomic Global Config mutation and has been proven against the real Vercel service.
 
-Merge, Production deployment, corrected Production publication, the `0.4.0` release, and Codex registration refresh remain separate rollout gates.
+Merge, Production deployment, corrected Production publication, the `0.5.0` release, and Codex registration refresh remain separate rollout gates.
+
+Release blocker: the current Production registry still contains a legacy demo record that contract `4.0.0` rejects. The re-attested bundled snapshot remains a valid fallback through `2026-08-16T00:00:00.000Z`, but the cleaned snapshot must be published to Production before releasing `0.5.0`; the fallback window is not a substitute for that publication.
 
 ## Plan traceability
 
@@ -25,7 +27,7 @@ Merge, Production deployment, corrected Production publication, the `0.4.0` rele
 | Catalog and tools | Complete | `search_current_facts` is the fifteenth tool and applies deterministic query/category/status/limit filters. It returns freshness, sources, registry revision, and verification time. `bitcoin-staking://catalog` and market-snapshot highlights expose current facts/notices without allowing expired or overdue claims to support current answers. |
 | Dynamic dates and precedence | Complete | Genesis stores stable bond index `1`, not an editable reward cycle. Live reads derive Cycle 143 and burn height through the PoX-5 SDK and estimate time from remaining Bitcoin blocks at ten minutes per block. Precedence is live chain, protocol derivation, then owner-reviewed target. Cycle 142 exists only as the required legacy alias. |
 | Stale-copy cleanup | Complete | Static skill, MCP instructions, response standards, docs, and tests contain no current August 26 date, Cycle 142 eligibility claim, named current operator, or hard-coded current economics. Stable route mechanics remain static; current products, partners, terms, and integrations come from the registry. |
-| Versioning and packaging | Complete | Package/skill are `0.4.0`, contract is `4.0.0`, and the expected tool count is 15. The packed artifact includes `packages/registry-contract` and installs/initializes outside the repository. |
+| Versioning and packaging | Complete | Package/skill are `0.5.0`, contract is `4.0.0`, and the expected tool count is 15. The packed artifact includes `packages/registry-contract` and installs/initializes outside the repository. |
 | Nightly operations | Complete | The workflow validates the live Vercel snapshot, freshness, and every registry evidence URL, then opens or updates the existing review-due issue. |
 
 ## Scenario and edge-case proof
@@ -73,7 +75,7 @@ Post-merge gates, requiring separate authorization:
 
 1. Production Vercel deployment.
 2. Corrected Genesis snapshot publication in Production.
-3. MCP/package and skill `0.4.0` release.
+3. MCP/package and skill `0.5.0` release.
 4. Codex registration refresh and live-answer verification.
 
 No Production deployment, tag, package publication, merge, or Codex registration mutation is implied by this audit.
