@@ -4,20 +4,24 @@ Audit date: August 9, 2026. Target: MCP/skill `0.5.0`, MCP contract `4.0.0`. Sco
 
 ## Verdict
 
-The implementation and Preview-validation phases are complete. Every requirement and edge case explicitly named in the approved plan is implemented and covered by automated or live acceptance evidence. No known implementation gap remains.
+The implementation is code-complete and the automated, isolated-package, and live mainnet-read gates pass. Every code requirement and edge case explicitly named in the approved plan is implemented and covered by executable evidence. No known code gap remains.
 
 The audit found and fixed five material gaps before reaching this verdict: the initial seeded snapshot was not automatically recoverable on first publish; rollback depended on an eventually consistent draft reread; root CI did not run the console suite/build; the package tarball omitted the shared contract workspace; and the public API did not independently verify the stored content hash. The final rollback design performs one atomic Global Config mutation and has been proven against the real Vercel service.
+
+A follow-up audit found and fixed three more regression risks: blank and whitespace-only prompt requests were not classified explicitly; only part of the public tool contract rejected unknown legacy inputs; and release-version/test evidence could drift across public surfaces. The MCP now emits a deterministic welcome/direct-workflow mode, all fifteen tools fail closed on unknown inputs, and tests pin package, server, skill, contract, and public install-version alignment.
 
 Merge, Production deployment, corrected Production publication, the `0.5.0` release, and Codex registration refresh remain separate rollout gates.
 
 Release blocker: the current Production registry still contains a legacy demo record that contract `4.0.0` rejects. The re-attested bundled snapshot remains a valid fallback through `2026-08-16T00:00:00.000Z`, but the cleaned snapshot must be published to Production before releasing `0.5.0`; the fallback window is not a substitute for that publication.
+
+Current Preview blocker: a read-only recheck on August 9 returned fail-closed `503 Published registry is invalid` from both `/api/v1/health` and `/api/v1/registry`. The console page itself rendered and reached the Vercel sign-in boundary. The earlier real Preview publish/retrieve/rollback proof remains valid historical workflow evidence, but it is not evidence that the current published Preview snapshot is healthy. A corrected Preview snapshot must be published and the anonymous API revalidated before merge.
 
 ## Plan traceability
 
 | Plan area | Status | Evidence |
 | --- | --- | --- |
 | Next.js registry console | Complete | `apps/registry-console` contains the editor, authenticated admin routes, anonymous public routes, and production build configuration. |
-| Vercel storage | Complete | Global Config stores the shared draft, published snapshot, publication metadata, and complete revision index. Private Blob stores immutable snapshots without overwrite. First publish archives the preexisting seed. |
+| Vercel storage | Code complete; environment configuration must be reverified | Global Config stores the shared draft, published snapshot, publication metadata, and complete revision index. Private Blob stores immutable snapshots without overwrite. First publish archives the preexisting seed. Preview and Production require different writable stores so a Preview acceptance run cannot change Production data. |
 | Sign in with Vercel | Complete | OAuth authorization-code flow uses PKCE, `openid email profile`, signed HTTP-only sessions, publisher allowlist enforcement, origin checks, and CSRF tokens. Real Preview OAuth succeeded for an allowlisted Stacks Labs publisher. Anonymous and non-allowlisted users cannot read private state or mutate data. |
 | Editor workflow | Complete | Separate Bonds, Projects, Products, Notices, Partners & integrations, Custody, Sources, and Revision History sections support Save, Validate, Preview Diff, Publish, Discard, and Roll Back. Structurally valid incomplete work may be saved privately; publication always validates the complete contract. |
 | Publication and rollback | Complete | Publish validates, hashes, archives, and atomically updates the public snapshot. Rollback reads an immutable Blob revision and creates a new revision in one Global Config write; it never deletes or overwrites history and does not rely on read-after-write consistency. |
@@ -44,16 +48,19 @@ The automated suites cover:
 - unified registry loading, the 60-second ETag boundary, malformed/upstream fallback, stale/future fallback refusal, aliases, catalog search, status/category/limit filters, and active-notice/product highlights;
 - schedule mapping period 0 to Cycle 141, period 1 to Cycle 143, and period 2 to Cycle 145, with no Cycle 142 bond;
 - publication of a new integration, public revision/hash change, Scout retrieval without an MCP deployment, rollback to a new revision, and removal from current Scout results.
+- onboarding classification for absent, empty, whitespace-only, broad participation, timing, amount-bearing, security, and handoff-shaped requests; every non-empty request is explicitly placed in direct-workflow mode;
+- rejection of unknown or removed inputs across all fifteen public tools, so no stale client request is silently reinterpreted as a mainnet request;
+- package/server/skill `0.5.0`, contract `4.0.0`, and public `#v0.5.0` install-pin alignment.
 
 ## Verification record
 
-- `npm run check`: passed after the final implementation and PR3 integration changes. The root suite discovers 102 tests: 100 pass and the two opt-in live tests skip as designed. The console suite passes 14/14. Across both suites, 116 tests are discovered, 114 pass, and two intentionally skip. TypeScript, schema validation, builds, and the Next.js production build pass.
-- Real Preview OAuth/editor acceptance: passed with an allowlisted Stacks Labs publisher. A temporary integration was saved, validated, diffed, published, retrieved through the anonymous API and `RegistryStore`, then removed through rollback. Each publication produced a new immutable revision. The editor finished with the corrected seed, an empty integration list, and no saved draft.
+- `npm run check`: passed on the follow-up audit tree. The root suite discovers 109 tests: 108 pass and the one opt-in live test skips as designed. The console suite passes 16/16. Across both suites, 125 tests are discovered, 124 pass, and one intentionally skips. TypeScript, schema validation, builds, and the Next.js production build pass.
+- Historical real Preview OAuth/editor acceptance: passed with an allowlisted Stacks Labs publisher. A temporary integration was saved, validated, diffed, published, retrieved through the anonymous API and `RegistryStore`, then removed through rollback. Each publication produced a new immutable revision. The editor finished with the corrected seed, an empty integration list, and no saved draft at the time of that acceptance run.
 - Real Vercel consistency regression: the audit reproduced an eventually consistent rollback failure, changed rollback to a single atomic mutation, deployed the fix, rolled from the seed to the temporary integration revision, and rolled back to the seed again. Both fixed rollbacks completed, produced new revision IDs, and retained all earlier revisions.
-- Public API acceptance: `200` registry, matching weak ETag, `304` revalidation, current health metadata, canonical content hash, no temporary integration after restoration, and no private draft fields.
-- Live registry validation: passed for the snapshot and its evidence URLs.
-- Live PoX test: mainnet smoke test passed. Time-specific observations are not stored as static eligibility dates.
-- Isolated package install: passed; the tarball loaded with 15 tools after installation outside the monorepo.
+- Historical public API acceptance: `200` registry, matching weak ETag, `304` revalidation, current health metadata, canonical content hash, no temporary integration after restoration, and no private draft fields. The current Preview API recheck is blocked as described above and must pass again before merge.
+- Bundled registry validation and all evidence URL checks passed. Production registry validation correctly fails on the legacy demo record and remains a release blocker.
+- Live PoX test: the opt-in mainnet smoke test passed on the follow-up audit tree. Time-specific observations are not stored as static eligibility dates.
+- Isolated package install: passed on the follow-up audit tree; the `0.5.0` tarball installed outside the monorepo, loaded exactly 15 tools, exposed the expected versioned capabilities resource, and routed empty and supplied prompts to welcome and direct-workflow modes respectively.
 - `npm audit --audit-level=high`: zero known high-severity vulnerabilities in the locked dependency graph at audit time.
 - `git diff --check` and stale-copy search: passed.
 
@@ -64,12 +71,14 @@ Completed:
 1. Implementation and offline tests.
 2. Vercel Preview deployment, seeded-data validation, real OAuth, publish/retrieve/rollback acceptance, and corrected-seed restoration.
 3. PR #3 merge, integration into this branch, conflict resolution, and combined policy/runtime-fixture validation.
+4. PR retarget to `main`.
 
 Required before merging this stacked PR:
 
-1. Retarget this PR to `main` and verify the exact resulting head.
-2. Obtain human review/approval and mark the PR ready for review.
-3. Require green GitHub CI and Vercel checks on that exact head.
+1. Obtain human review/approval and mark the PR ready for review.
+2. Require green GitHub CI and Vercel checks on the final exact head.
+3. Verify Preview and Production use different writable registry stores.
+4. Publish the corrected snapshot to Preview and require `200` from both anonymous public endpoints on that exact deployment.
 
 Post-merge gates, requiring separate authorization:
 

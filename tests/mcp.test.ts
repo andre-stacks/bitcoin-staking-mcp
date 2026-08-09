@@ -44,16 +44,25 @@ test("catalog search rejects unknown status filters before querying the registry
   assert.match(JSON.stringify(result.content), /status|invalid/i);
 });
 
-test("mainnet-only tools reject removed legacy inputs instead of silently changing their meaning", async (context) => {
+test("every tool rejects unknown inputs instead of silently changing their meaning", async (context) => {
   const { client, server } = await connectedClient(offlineService());
   context.after(async () => { await client.close(); await server.close(); });
   const staleCalls = [
     { name: "get_market_snapshot", arguments: { network: "testnet" } },
     { name: "get_protocol_status", arguments: { network: "testnet" } },
     { name: "list_protocol_bonds", arguments: { network: "testnet" } },
+    { name: "get_security_guidance", arguments: { network: "testnet" } },
     { name: "list_bonds", arguments: { includeDemo: true } },
     { name: "build_diligence_report", arguments: { network: "testnet", profile } },
+    { name: "list_custody_paths", arguments: { network: "testnet" } },
+    { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond", network: "testnet" } },
+    { name: "get_bond", arguments: { bondId: "genesis-bond", network: "testnet" } },
     { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78", network: "testnet" } },
+    { name: "check_compatibility", arguments: { bondId: "genesis-bond", provider: "Leather", network: "testnet" } },
+    { name: "simulate_yield", arguments: { bondId: "genesis-bond", principalSats: "100000000", network: "testnet" } },
+    { name: "compare_staking_paths", arguments: { ...profile, network: "testnet" } },
+    { name: "build_participation_plan", arguments: { bondId: "genesis-bond", profile, network: "testnet" } },
+    { name: "search_current_facts", arguments: { network: "testnet" } },
   ];
   for (const call of staleCalls) {
     const result = await client.callTool(call);
@@ -396,20 +405,39 @@ test("alternate schedule and economics flow from runtime evidence rather than pr
   }
 });
 
-test("concierge prompt preserves broad, timing, and amount-bearing first-message intent", async (context) => {
+test("concierge prompt routes blank invocations to welcome and every supplied intent directly", async (context) => {
   const { client, server } = await connectedClient(offlineService());
   context.after(async () => { await client.close(); await server.close(); });
+  for (const argumentsValue of [{}, { request: "" }, { request: "   \n\t  " }]) {
+    const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: argumentsValue });
+    const content = prompt.messages[0]?.content;
+    assert.equal(content?.type, "text");
+    if (content?.type === "text") {
+      assert.match(content.text, /^Onboarding mode: welcome\./);
+      assert.match(content.text, /This is an empty first-run invocation/);
+      assert.doesNotMatch(content.text, /Current user request:/);
+    }
+  }
+  await assert.rejects(
+    client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request: "How can I get started staking?", network: "testnet" } }),
+    /unrecognized|unknown|invalid/i,
+  );
   const requests = [
     "I'd like to get started with Bitcoin staking",
+    "How can I get started staking?",
     "When is the next bond launching?",
     "How can I stake 0.25 BTC?",
     "How will I know my Bitcoin is safe?",
+    "The direct native-L1 path sounds right. Where do I get started?",
   ];
   for (const request of requests) {
     const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request } });
     const content = prompt.messages[0]?.content;
     assert.equal(content?.type, "text");
     if (content?.type === "text") {
+      assert.match(content.text, /^Onboarding mode: direct workflow\./);
+      assert.match(content.text, /do not emit the general welcome/i);
+      assert.doesNotMatch(content.text, /This is an empty first-run invocation/);
       assert.match(content.text, new RegExp(`Current user request: ${request.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
       assert.match(content.text, /Classify the newest request before responding/i);
       assert.match(content.text, /Any non-empty request skips the general welcome/i);

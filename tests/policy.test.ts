@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { SKILL_VERSION } from "../src/mcp/server.js";
+import { CONTRACT_VERSION, SERVER_VERSION, SKILL_VERSION } from "../src/mcp/server.js";
 
 test("repo concierge skill enforces guided discovery and evidence boundaries", async () => {
   const skill = await readFile(
@@ -283,6 +283,34 @@ test("static Scout policy surfaces do not retain current schedule or economics",
   const documentedSkillVersions = [...audit.matchAll(/skill `?(\d+\.\d+\.\d+)`?/gi)].map((match) => match[1]);
   assert.ok(documentedSkillVersions.length >= 2);
   assert.deepEqual([...new Set(documentedSkillVersions)], [SKILL_VERSION]);
+});
+
+test("release metadata and public install pins stay aligned", async () => {
+  const packagePaths = [
+    "package.json",
+    "packages/registry-contract/package.json",
+    "apps/registry-console/package.json",
+  ];
+  for (const path of packagePaths) {
+    const metadata = JSON.parse(await readFile(resolve(path), "utf8")) as { version?: string };
+    assert.equal(metadata.version, SERVER_VERSION, `${path} version drifted from the server`);
+  }
+  assert.equal(SKILL_VERSION, SERVER_VERSION);
+  assert.equal(CONTRACT_VERSION, "4.0.0");
+
+  const publicInstallSurfaces = ["README.md", "docs/INSTALLATION.md", "docs/TECHNICAL_SPEC.md"];
+  for (const path of publicInstallSurfaces) {
+    const surface = await readFile(resolve(path), "utf8");
+    assert.match(surface, new RegExp(`#v${SERVER_VERSION.replace(/\./g, "\\.")}`), `${path} omits the current release pin`);
+    assert.doesNotMatch(surface, /#v0\.4\.0/, `${path} retains the previous release pin`);
+  }
+});
+
+test("registry rollout keeps Preview writes isolated from Production", async () => {
+  const runbook = await readFile(resolve("docs/REGISTRY_CONSOLE.md"), "utf8");
+  assert.match(runbook, /separate Global Config stores.*private Blob stores for Preview and Production/i);
+  assert.match(runbook, /must never receive the Production Global Config ID, API token, or Blob token/i);
+  assert.match(runbook, /Preview and Production config IDs differ before publishing a test revision/i);
 });
 
 test("nightly registry validation preserves pipeline failures", async () => {

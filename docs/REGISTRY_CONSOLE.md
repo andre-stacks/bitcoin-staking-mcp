@@ -4,9 +4,9 @@ The registry console is implemented in `apps/registry-console`. Deployment, prod
 
 ## Vercel setup
 
-Create one project under the Stacks Labs Vercel team with Root Directory `apps/registry-console`. Connect one Global Config store (formerly Edge Config) and one private Blob store. Register a Sign in with Vercel application whose callback is `/api/auth/callback` and enable `openid`, `email`, and `profile`.
+Create one project under the Stacks Labs Vercel team with Root Directory `apps/registry-console`. Provision separate Global Config stores (formerly Edge Config) and private Blob stores for Preview and Production. Register a Sign in with Vercel application whose callback is `/api/auth/callback` and enable `openid`, `email`, and `profile`.
 
-Connect Global Config to all environments and the private Blob store to Production and Preview. This lets branch previews exercise the real persistence path while production deployment remains a separate approval gate.
+Connect each store only to its matching Vercel environment. Preview deployments may share the dedicated Preview stores, but they must never receive the Production Global Config ID, API token, or Blob token. Verify that the resolved Preview and Production config IDs differ before publishing a test revision. This lets branch previews exercise the real persistence path without making a Preview publish or rollback a Production data mutation.
 
 Configure the variables listed in `apps/registry-console/.env.example`. `VERCEL_API_TOKEN` should be limited to the team and permissions needed to update the selected Global Config. `PUBLISHER_EMAILS` is a comma-separated allowlist. Users with a valid Vercel account but an email outside that list receive read-only denial. `EDGE_CONFIG` and `EDGE_CONFIG_ID` remain supported as deprecated compatibility names for one release.
 
@@ -35,7 +35,7 @@ The public API never returns the draft, revision Blob locations, allowlist, OAut
 ## Rollout gates
 
 1. Review the implementation PR and offline evidence.
-2. Create a Vercel preview and publish a test revision.
+2. Verify Preview and Production resolve different Global Config and Blob stores, then create a Vercel preview and publish a test revision.
 3. Obtain explicit approval before merge.
 4. Deploy the production Vercel project.
 5. Publish the corrected Genesis snapshot before releasing MCP contract 4.0.0; the legacy Production snapshot contains a demo record that the narrowed schema rejects, and the bundled fallback is deliberately time-limited.
