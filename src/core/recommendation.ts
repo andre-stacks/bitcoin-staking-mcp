@@ -151,7 +151,9 @@ export function assessRoute(
       missingEvidence.push("A viable wallet or custodian has not been selected.");
       if (fit === "strong") fit = "conditional";
     }
-    tradeoffs.push("BTC is timelocked on L1 and paired STX may be required.");
+    tradeoffs.push(route.pairedStx.required
+      ? "BTC is timelocked on L1 and paired STX is required."
+      : "BTC is timelocked on L1.");
   } else {
     if (profile.bitcoinPathPreference === "bitcoin_l1_only") {
       unsupportedRequirements.push("This route requires sBTC exposure on Stacks.");

@@ -1,6 +1,6 @@
 # Bitcoin Staking Concierge — User Experience Review
 
-Status: implemented for the v0.5.0 production beta.
+Status: implemented for the v0.5.1 production beta.
 
 ## Finding
 

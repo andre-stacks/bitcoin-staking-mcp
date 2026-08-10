@@ -1,6 +1,6 @@
 {
   "name": "@bitcoin-staking/registry-contract",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "type": "module",
   "exports": { ".": { "types": "./index.d.ts", "default": "./index.js" } },

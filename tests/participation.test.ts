@@ -64,6 +64,8 @@ test("large allowlisted BTC holder with approved custody is routed to direct L1"
   assert.equal(result.assessments[0]?.routeType, "native_l1_direct");
   assert.equal(result.assessments[0]?.fit, "conditional");
   assert.ok(result.assessments[0]?.reasons.some((reason) => /Fordefi/i.test(reason)));
+  assert.deepEqual(result.assessments[0]?.tradeoffs, ["BTC is timelocked on L1."]);
+  assert.ok(result.assessments[0]?.tradeoffs.every((tradeoff) => !/paired STX/i.test(tradeoff)));
 });
 
 test("unknown whitelist and stale custody evidence cannot be recommended as current", async () => {

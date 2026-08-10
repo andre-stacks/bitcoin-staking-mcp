@@ -48,7 +48,7 @@ The same journey works for a short question or a detailed profile. A user can st
 Scout requires Node 22. Install it for Codex and Claude Code from any directory:
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 setup
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.1 setup
 ```
 
 The installer starts the packaged server, performs an MCP handshake, registers the server in the available hosts, and installs the Codex concierge skill. Restart Codex and Claude Code after setup so they reload the MCP and skill metadata.
@@ -78,7 +78,7 @@ Any non-empty request goes directly to that workflow. An empty invocation introd
 Verify the installation at any time:
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 check
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.1 check
 ```
 
 Use `--hosts codex` or `--hosts claude` to install only one host. See the [installation guide](docs/INSTALLATION.md) for local-checkout, pinned-source, JSON, update, and uninstall options.
