@@ -180,6 +180,8 @@ test("direct-route fit enforces paired STX, amount boundaries, and a current cus
   assert.equal(noStx.fit, "no_match");
   const exactMax = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "200", stxAvailable: "yes" }), paths, new Date("2026-08-09T12:00:00.000Z"));
   assert.notEqual(exactMax.fit, "no_match");
+  assert.ok(exactMax.tradeoffs.includes("BTC is timelocked on L1 and paired STX is required."));
+  assert.ok(exactMax.tradeoffs.every((tradeoff) => !/may be required/i.test(tradeoff)));
   const above = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "201", stxAvailable: "yes" }), paths, new Date("2026-08-09T12:00:00.000Z"));
   assert.equal(above.fit, "no_match");
   const noCustody = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "150", stxAvailable: "yes" }), [], new Date("2026-08-09T12:00:00.000Z"));

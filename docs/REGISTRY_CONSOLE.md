@@ -39,5 +39,5 @@ The public API never returns the draft, revision Blob locations, allowlist, OAut
 3. Obtain explicit approval before merge.
 4. Deploy the production Vercel project.
 5. Publish the corrected Genesis snapshot before releasing MCP contract 4.0.0; the legacy Production snapshot contains a demo record that the narrowed schema rejects, and the bundled fallback is deliberately time-limited.
-6. Release MCP and skill 0.5.0, then refresh Codex registration.
+6. Release MCP and skill 0.5.1, then refresh Codex registration.
 7. Verify Scout retrieves a publication and rollback within two minutes without another MCP release.

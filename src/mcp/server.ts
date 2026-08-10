@@ -13,9 +13,9 @@ import {
   CatalogSearchOutputSchema, SecurityOutputSchema, YieldOutputSchema,
 } from "./output-schemas.js";
 
-export const SERVER_VERSION = "0.5.0";
+export const SERVER_VERSION = "0.5.1";
 export const CONTRACT_VERSION = "4.0.0";
-export const SKILL_VERSION = "0.5.0";
+export const SKILL_VERSION = "0.5.1";
 export const EXPECTED_TOOL_NAMES = [
   "get_market_snapshot", "get_protocol_status", "list_protocol_bonds", "get_security_guidance", "build_diligence_report",
   "list_bonds", "list_custody_paths", "list_bond_participation_routes", "get_bond", "check_participant_status",

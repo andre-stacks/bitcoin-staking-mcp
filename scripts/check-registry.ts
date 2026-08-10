@@ -14,7 +14,7 @@ let snapshot = ConciergeRegistrySnapshotSchema.parse(JSON.parse(bundledRaw));
 if (live) {
   const url = process.env.BITCOIN_STAKING_REGISTRY_URL || "https://bitcoin-staking-registry.vercel.app/api/v1/registry";
   try {
-    const response = await fetch(url, { headers: { "User-Agent": "bitcoin-staking-mcp-registry-review/0.5.0" }, signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(url, { headers: { "User-Agent": "bitcoin-staking-mcp-registry-review/0.5.1" }, signal: AbortSignal.timeout(15_000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     snapshot = ConciergeRegistrySnapshotSchema.parse(await response.json());
   } catch (error) {
@@ -60,8 +60,8 @@ if (live) {
   errors.push(...freshnessIssues);
   for (const source of sources.filter((item) => item.url)) {
     try {
-      let response = await fetch(source.url!, { method: "HEAD", headers: { "User-Agent": "bitcoin-staking-mcp-registry-review/0.5.0" }, signal: AbortSignal.timeout(15_000) });
-      if (response.status === 405) response = await fetch(source.url!, { method: "GET", headers: { "User-Agent": "bitcoin-staking-mcp-registry-review/0.5.0" }, signal: AbortSignal.timeout(15_000) });
+      let response = await fetch(source.url!, { method: "HEAD", headers: { "User-Agent": "bitcoin-staking-mcp-registry-review/0.5.1" }, signal: AbortSignal.timeout(15_000) });
+      if (response.status === 405) response = await fetch(source.url!, { method: "GET", headers: { "User-Agent": "bitcoin-staking-mcp-registry-review/0.5.1" }, signal: AbortSignal.timeout(15_000) });
       if (response.status < 200 || response.status >= 400) errors.push(`${source.id} returned HTTP ${response.status}.`);
     } catch (error) { errors.push(`${source.id} is unreachable: ${error instanceof Error ? error.message : String(error)}`); }
   }

@@ -1,6 +1,6 @@
 # Bitcoin Staking MCP — Product Requirements
 
-Status: v0.5.0 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
+Status: v0.5.1 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
 
 ## Outcome
 
