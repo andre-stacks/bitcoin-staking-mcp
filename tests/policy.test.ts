@@ -308,9 +308,12 @@ test("release metadata and public install pins stay aligned", async () => {
 
 test("registry rollout keeps Preview writes isolated from Production", async () => {
   const runbook = await readFile(resolve("docs/REGISTRY_CONSOLE.md"), "utf8");
-  assert.match(runbook, /separate Global Config stores.*private Blob stores for Preview and Production/i);
-  assert.match(runbook, /must never receive the Production Global Config ID, API token, or Blob token/i);
-  assert.match(runbook, /Preview and Production config IDs differ before publishing a test revision/i);
+  const store = await readFile(resolve("apps/registry-console/lib/store.ts"), "utf8");
+  assert.match(runbook, /separate environment-scoped Global Config and private Blob stores, or with the built-in environment namespace/i);
+  assert.match(runbook, /Preview and Production resolve different stores or different keys and revision pathnames/i);
+  assert.match(store, /vercelEnvironment !== "production"/);
+  assert.match(store, /registryConfigKey\(REGISTRY_EDGE_CONFIG_KEYS\.published\)/);
+  assert.match(store, /registryRevisionPath\(snapshot\.revision\)/);
 });
 
 test("nightly registry validation preserves pipeline failures", async () => {

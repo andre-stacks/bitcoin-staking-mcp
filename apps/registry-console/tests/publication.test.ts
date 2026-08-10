@@ -3,7 +3,7 @@ import test from "node:test";
 import { ConciergeRegistryContentSchema } from "bitcoin-staking-mcp";
 import { diffSummary, discardDraft, publishDraft, rollbackToRevision, saveDraft, validatePublishableContent } from "../lib/publication";
 import { seedSnapshot } from "../lib/seed";
-import type { RegistryBackend, RegistryState } from "../lib/store";
+import { registryConfigKey, registryRevisionPath, registryStorageNamespace, type RegistryBackend, type RegistryState } from "../lib/store";
 
 class MemoryBackend implements RegistryBackend {
   state: RegistryState = { publishedSnapshot: seedSnapshot, draft: null, revisions: [] };
@@ -24,6 +24,33 @@ class MemoryBackend implements RegistryBackend {
   async archive(snapshot: typeof seedSnapshot) { const path = `revisions/${snapshot.revision}.json`; if (this.blobs.has(path)) throw new Error("immutable collision"); this.blobs.set(path, snapshot); return path; }
   async readRevision(pathname: string) { const value = this.blobs.get(pathname); if (!value) throw new Error("missing"); return value; }
 }
+
+test("Preview and Development storage namespaces cannot mutate Production keys or revision paths", () => {
+  const production = { VERCEL_ENV: "production" };
+  const preview = { VERCEL_ENV: "preview" };
+  const development = { VERCEL_ENV: "development" };
+
+  assert.equal(registryStorageNamespace(production), "");
+  assert.equal(registryConfigKey("publishedSnapshot", production), "publishedSnapshot");
+  assert.equal(registryRevisionPath("rev-production", production), "revisions/rev-production.json");
+
+  assert.equal(registryStorageNamespace(preview), "preview");
+  assert.equal(registryConfigKey("publishedSnapshot", preview), "preview_publishedSnapshot");
+  assert.equal(registryConfigKey("draft", preview), "preview_draft");
+  assert.equal(registryRevisionPath("rev-preview", preview), "preview/revisions/rev-preview.json");
+
+  assert.equal(registryStorageNamespace(development), "development");
+  assert.equal(registryConfigKey("publishedSnapshot", development), "development_publishedSnapshot");
+  assert.equal(registryRevisionPath("rev-development", development), "development/revisions/rev-development.json");
+  assert.notEqual(registryConfigKey("publishedSnapshot", preview), registryConfigKey("publishedSnapshot", production));
+  assert.notEqual(registryRevisionPath("same-revision", preview), registryRevisionPath("same-revision", production));
+});
+
+test("explicit storage namespaces are validated and override Vercel environment inference", () => {
+  assert.equal(registryStorageNamespace({ VERCEL_ENV: "production", REGISTRY_STORAGE_NAMESPACE: "release_candidate" }), "release_candidate");
+  assert.throws(() => registryStorageNamespace({ REGISTRY_STORAGE_NAMESPACE: "Preview/unsafe" }), /must use 1-63 lowercase/);
+  assert.throws(() => registryStorageNamespace({ REGISTRY_STORAGE_NAMESPACE: "UPPERCASE" }), /must use 1-63 lowercase/);
+});
 
 test("registry contract rejects malformed, duplicate, and missing-source records", () => {
   assert.equal(ConciergeRegistryContentSchema.safeParse({}).success, false);

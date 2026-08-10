@@ -5,7 +5,7 @@ import {
   type ConciergeRegistryContent,
   type ConciergeRegistrySnapshot,
 } from "bitcoin-staking-mcp";
-import type { RegistryBackend, RegistryDraft, RevisionEntry } from "./store";
+import { registryRevisionPath, type RegistryBackend, type RegistryDraft, type RevisionEntry } from "./store";
 
 export const PUBLIC_PUBLISHER_IDENTITY = "Stacks Labs registry team";
 
@@ -76,7 +76,7 @@ async function archiveIdempotently(backend: RegistryBackend, snapshot: Concierge
   try {
     return await backend.archive(snapshot);
   } catch (archiveError) {
-    const pathname = `revisions/${snapshot.revision}.json`;
+    const pathname = registryRevisionPath(snapshot.revision);
     try {
       const existing = ConciergeRegistrySnapshotSchema.parse(await backend.readRevision(pathname));
       if (JSON.stringify(existing) === JSON.stringify(snapshot)) return pathname;
