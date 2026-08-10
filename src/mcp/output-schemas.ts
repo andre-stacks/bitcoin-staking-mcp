@@ -61,7 +61,7 @@ const ProtocolBondSchema = z.object({
   contractId: z.string(), protocolStatus: z.string(), registrationStatus: z.enum(["open", "closed", "temporarily_blocked_prepare_phase"]),
   currentBurnchainBlockHeight: z.number(), startBurnHeight: z.number(), blocksUntilStart: z.number(), startRewardCycle: z.number(),
   phases: z.array(BondPhaseSchema), targetRateBps: z.number(), stxValueRatio: z.union([z.string(), z.number()]), minUstxRatioBps: z.number(), earlyUnlockBytes: z.string(),
-  availability: z.enum(["live_testnet_demo", "mainnet_on_chain"]), ...metadata,
+  availability: z.literal("mainnet_on_chain"), ...metadata,
 }).strict();
 
 export const ProtocolBondsOutputSchema = output({
@@ -122,7 +122,6 @@ const CatalogPayloadSchema = output({
 export const MarketSnapshotOutputSchema = output({
   network: StacksNetworkSchema, bondCount: z.number().int().nonnegative(), bonds: z.array(BondSummarySchema), routes: z.array(RouteSummarySchema),
   protocol: z.union([ProtocolStatusOutputSchema, UnavailableSchema]), onChainBonds: z.union([ProtocolBondsOutputSchema, UnavailableSchema]),
-  testnetEvidence: z.object({ protocol: z.union([ProtocolStatusOutputSchema, UnavailableSchema]), bonds: z.union([ProtocolBondsOutputSchema, UnavailableSchema]), investable: z.literal(false) }).strict(),
   custody: z.union([SnapshotCustodySchema, UnavailableSchema]), prices: z.union([CurrentPricesSchema, UnavailableSchema]), registry: RegistryMetadataSchema, precedence: z.string(),
   catalog: z.union([z.object({ status: z.literal("available"), value: CatalogPayloadSchema }).strict(), UnavailableSchema]),
   activeNotices: z.array(CatalogResultSchema), productHighlights: z.array(CatalogResultSchema),
@@ -167,14 +166,14 @@ export const YieldOutputSchema = output({
     bondingPeriodCycles: z.number().int(), daysPerCycle: z.number(), bondingPeriodDays: z.number().int(), initialCapacityBtc: z.number(), targetCoverageRatio: z.number(),
     calculationMethod: z.literal("simple_non_compounding"), sourceStatus: z.literal("reference_not_final_bond_terms"), grossRewardFormula: z.string(),
   }).strict().nullable(),
-  availability: z.enum(["demo_only_not_investable", "published_reference_model_scenario", "published_terms_scenario"]), inputDataStatus: z.enum(["published", "demo"]), priceSnapshot: PriceSnapshotSchema,
+  availability: z.enum(["published_reference_model_scenario", "published_terms_scenario"]), inputDataStatus: z.literal("published"), priceSnapshot: PriceSnapshotSchema,
 });
 
 export const DiligenceOutputSchema = output({
-  assessmentStatus: z.enum(["upcoming_bond_scheduled", "published_bond_assessed", "network_protocol_preview"]), bottomLine: z.string(),
+  assessmentStatus: z.enum(["upcoming_bond_scheduled", "published_bond_assessed"]), bottomLine: z.string(),
   bondAvailability: z.object({ scheduled: z.iso.date().nullable(), protocolSchedule: BondScheduleSchema, lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]), productStatus: ProductStatusSchema, enrollmentStatus: EnrollmentStatusSchema, registration: z.array(z.object({ routeId: z.string(), enrollmentStatus: EnrollmentStatusSchema }).strict()), onChainConfigured: z.boolean(), onChainReconciliation: z.array(z.object({ routeId: z.string(), status: z.enum(["conflict", "configured", "unavailable", "not_configured"]) }).strict()), coverageBoundary: z.string() }).strict(),
   commonProtocolEconomics: EconomicsSchema.extend({ signerAndAdministrationControls: z.string(), audits: z.array(z.string()), unresolvedTerms: z.array(z.string()), coverageBoundary: z.string() }).strict(),
-  economics: z.object({ status: z.enum(["reference_model_projection", "bond_specific_projection", "incomplete_economics", "amount_required", "not_available"]), scenario: YieldOutputSchema.nullable() }).strict(),
+  economics: z.object({ status: z.enum(["reference_model_projection", "bond_specific_projection", "incomplete_economics", "amount_required"]), scenario: YieldOutputSchema.nullable() }).strict(),
   routeEconomicScenarios: z.array(z.union([z.object({ routeId: z.string(), status: z.literal("calculated"), scenario: YieldOutputSchema }).strict(), z.object({ routeId: z.string(), status: z.literal("incomplete_economics"), scenario: z.null(), reason: z.string() }).strict()])),
   routeAssessments: z.array(z.object({ assessment: RouteAssessmentSchema, details: z.union([NativeL1DirectRouteSchema, SbtcPoolRouteSchema]) }).strict()),
   riskSections: z.array(z.discriminatedUnion("routeType", [
@@ -196,8 +195,8 @@ export const DiligenceOutputSchema = output({
   ])), operationalFit: OperationalFitSchema, missingEvidence: z.array(z.string()), nextDiligenceAction: z.string(), nextDiligenceSteps: z.array(z.string()), profile: ParticipantProfileSchema,
 });
 
-const ListedBondSchema = z.object({ id: z.string(), title: z.string(), network: StacksNetworkSchema, lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]), productStatus: ProductStatusSchema, enrollmentStatus: EnrollmentStatusSchema, scheduledLaunchDate: z.iso.date().nullable(), protocolSchedule: BondScheduleSchema, dataStatus: z.enum(["published", "demo"]), timing: TimingSchema, economics: EconomicsSchema, notes: z.array(z.string()), routes: z.array(z.object({ id: z.string(), name: z.string(), routeType: z.enum(["native_l1_direct", "sbtc_pool"]), effectiveAvailability: EffectiveAvailabilitySchema }).strict()) }).strict();
-export const BondsOutputSchema = output({ bonds: z.array(ListedBondSchema), demoBonds: z.array(ListedBondSchema), counts: z.object({ published: z.number(), demo: z.number() }).strict(), demoIncluded: z.boolean(), registry: RegistryMetadataSchema });
+const ListedBondSchema = z.object({ id: z.string(), title: z.string(), network: StacksNetworkSchema, lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]), productStatus: ProductStatusSchema, enrollmentStatus: EnrollmentStatusSchema, scheduledLaunchDate: z.iso.date().nullable(), protocolSchedule: BondScheduleSchema, dataStatus: z.literal("published"), timing: TimingSchema, economics: EconomicsSchema, notes: z.array(z.string()), routes: z.array(z.object({ id: z.string(), name: z.string(), routeType: z.enum(["native_l1_direct", "sbtc_pool"]), effectiveAvailability: EffectiveAvailabilitySchema }).strict()) }).strict();
+export const BondsOutputSchema = output({ bonds: z.array(ListedBondSchema), count: z.number().int().nonnegative(), registry: RegistryMetadataSchema });
 export const CustodyOutputSchema = output({ scope: z.literal("native_l1_bitcoin_staking"), paths: z.array(CustodyPathSchema.extend({ effectiveStatus: z.enum(["available", "not_currently_supported", "in_integration", "unknown", "needs_review"]) })), registry: RegistryMetadataSchema, reviewStatus: z.enum(["current", "review_due"]), reviewCadenceDays: z.literal(7), reviewedAt: z.iso.datetime(), reviewDueAt: z.iso.datetime(), verificationMethod: z.literal("product_owner_confirmed"), counts: z.object({ total: z.number(), available: z.number(), notCurrentlySupported: z.number(), unknown: z.number() }).strict() });
 export const RoutesOutputSchema = output({ bondId: z.string(), routes: z.array(EffectiveRouteSchema), routeModel: z.object({ topLevelRoutes: z.tuple([z.literal("native_l1_direct"), z.literal("sbtc_pool")]), lstTreatment: z.string() }).strict() });
 
@@ -215,7 +214,7 @@ const StakerInfoSchema = z.discriminatedUnion("staked", [
   z.object({ staked: z.literal(true), details: z.object({ amountUstx: z.string(), firstRewardCycle: z.number().int(), numCycles: z.number().int(), signer: z.string() }).strict() }).strict(),
 ]);
 const BondMembershipSchema = z.object({ bondIndex: z.number().int(), amountUstx: z.string(), signer: z.string(), isL1Lock: z.boolean(), amountSats: z.string() }).strict();
-export const ParticipantOutputSchema = output({ address: z.string(), network: StacksNetworkSchema, accountStatus: AccountStatusSchema.nullable(), stakerInfo: StakerInfoSchema.nullable(), bondMembership: BondMembershipSchema.nullable(), bondAllowanceSats: z.string().nullable(), requestedBondId: z.string().nullable(), requestedBondDataStatus: z.enum(["published", "demo"]).nullable(), networkResolution: z.object({ network: StacksNetworkSchema, selectedBy: z.enum(["bond", "request", "address", "default"]), inferredFromAddress: StacksNetworkSchema.nullable() }).strict(), componentProvenance: z.array(z.union([ProvenanceSchema, SourceRefSchema])) });
+export const ParticipantOutputSchema = output({ address: z.string(), network: StacksNetworkSchema, accountStatus: AccountStatusSchema.nullable(), stakerInfo: StakerInfoSchema.nullable(), bondMembership: BondMembershipSchema.nullable(), bondAllowanceSats: z.string().nullable(), requestedBondId: z.string().nullable(), requestedBondDataStatus: z.literal("published").nullable(), networkResolution: z.object({ network: StacksNetworkSchema, selectedBy: z.enum(["bond", "address", "default"]), inferredFromAddress: StacksNetworkSchema.nullable() }).strict(), componentProvenance: z.array(z.union([ProvenanceSchema, SourceRefSchema])) });
 export const CompatibilityOutputSchema = output({ bondId: z.string(), routeId: z.string(), provider: z.string(), status: z.enum(["supported", "unsupported", "unknown"]), keyControlPreference: z.enum(["self_controlled", "custodian", "either", "unknown"]), evidence: z.string() });
 export const ComparisonOutputSchema = output({ bondId: z.string(), recommendedRouteId: z.string().nullable(), closestRouteId: z.string().nullable(), assessments: z.array(RouteAssessmentSchema), profile: ParticipantProfileSchema, conclusion: z.string() });
 export const PlanOutputSchema = output({ bondId: z.string(), routeId: z.string().nullable(), selectedRouteId: z.string().nullable(), assessments: z.array(RouteAssessmentSchema) });

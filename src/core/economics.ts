@@ -191,9 +191,6 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
       `The ${durationDays}-day period is the public model's ${bond.economics.referenceModel?.bondingPeriodCycles}-cycle reference period; ${bond.title}'s final configured duration remains pending.`,
     );
   }
-  if (bond.dataStatus === "demo") {
-    assumptions.push("The calculation uses illustrative demo data and is not an investable offer.");
-  }
   if (routeFeeBps === undefined || (input.includeLst && lstFeeBps === undefined)) {
     assumptions.push("Gross reward is projected from the sourced rate and duration; net reward remains unknown until every applicable fee is published.");
   }
@@ -245,13 +242,11 @@ function calculateYield(bond: BondManifest, route: ParticipationRoute, input: Yi
         }
       : null,
     availability:
-      bond.dataStatus === "demo"
-        ? ("demo_only_not_investable" as const)
-        : bond.economics.termsStatus === "reference_program_model"
-          ? ("published_reference_model_scenario" as const)
-          : ("published_terms_scenario" as const),
+      bond.economics.termsStatus === "reference_program_model"
+        ? ("published_reference_model_scenario" as const)
+        : ("published_terms_scenario" as const),
     inputDataStatus: bond.dataStatus,
-    dataStatus: bond.dataStatus === "demo" ? ("demo" as const) : ("derived" as const),
+    dataStatus: "derived" as const,
     sources: bond.sources.filter((source) =>
       route.sourceIds.includes(source.id) ||
       bond.economics.referenceModel?.sourceIds.includes(source.id),

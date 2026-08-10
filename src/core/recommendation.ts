@@ -221,7 +221,7 @@ export function assessRoute(
     missingEvidence,
     unsupportedRequirements,
     nextDiligenceAction: route.routeType === "native_l1_direct"
-      ? "Confirm allowlist eligibility and execute a custody-specific testnet lock and maturity-recovery rehearsal."
+      ? "Confirm allowlist eligibility and complete a custody-specific pre-production lock and maturity-recovery rehearsal."
       : "Obtain the final pool fee, deployed contracts, accounting method, and verified withdrawal terms before depositing.",
   };
 }

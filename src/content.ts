@@ -7,7 +7,6 @@ export const GLOSSARY = `# Bitcoin Staking glossary
 - Bond: A configured Bitcoin Staking opportunity with defined timing, economics, requirements, and an optional on-chain PoX-5 bond index.
 - Participant key control: The participant or its custodian retains the key material required by the bond's Bitcoin script and recovery path.
 - Early exit: A bond-specific path to spend locked BTC before maturity. Availability, signers, costs, and forfeited rewards must be verified.
-- Demo manifest: An illustrative record for testing agent behavior. It is never evidence that a live opportunity exists.
 `;
 
 export const CAPABILITIES = `# Bitcoin Staking Concierge capabilities
@@ -29,7 +28,7 @@ The concierge is one conversational entry point backed by fifteen read-only MCP 
 | Reviewed market and route snapshot | \`get_market_snapshot\` |
 | Protocol status | \`get_protocol_status\` |
 | Live on-chain bond discovery | \`list_protocol_bonds\` |
-| Public and demo manifest discovery | \`list_bonds\` |
+| Reviewed mainnet bond discovery | \`list_bonds\` |
 | One bond's direct and pooled routes, including optional LST capability | \`list_bond_participation_routes\` |
 | Current product-level custody paths | \`list_custody_paths\` |
 | One bond's normalized terms | \`get_bond\` |

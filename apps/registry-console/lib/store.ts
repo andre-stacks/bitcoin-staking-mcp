@@ -14,6 +14,32 @@ export interface RegistryBackend {
   readRevision(pathname: string): Promise<ConciergeRegistrySnapshot>;
 }
 
+const STORAGE_NAMESPACE_PATTERN = /^[a-z0-9][a-z0-9_-]{0,62}$/;
+type StorageEnvironment = Readonly<Record<string, string | undefined>>;
+
+export function registryStorageNamespace(env: StorageEnvironment = process.env): string {
+  const configured = env.REGISTRY_STORAGE_NAMESPACE?.trim();
+  if (configured) {
+    if (!STORAGE_NAMESPACE_PATTERN.test(configured)) {
+      throw new Error("REGISTRY_STORAGE_NAMESPACE must use 1-63 lowercase letters, numbers, underscores, or hyphens.");
+    }
+    return configured;
+  }
+
+  const vercelEnvironment = env.VERCEL_ENV?.trim();
+  return vercelEnvironment && vercelEnvironment !== "production" ? vercelEnvironment : "";
+}
+
+export function registryConfigKey(key: string, env: StorageEnvironment = process.env): string {
+  const namespace = registryStorageNamespace(env);
+  return namespace ? `${namespace}_${key}` : key;
+}
+
+export function registryRevisionPath(revision: string, env: StorageEnvironment = process.env): string {
+  const namespace = registryStorageNamespace(env);
+  return `${namespace ? `${namespace}/` : ""}revisions/${revision}.json`;
+}
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required.`);
@@ -32,9 +58,9 @@ export class VercelRegistryBackend implements RegistryBackend {
   async readState(): Promise<RegistryState> {
     const client = this.client();
     const [publishedSnapshot, draft, revisions] = await Promise.all([
-      client.get<ConciergeRegistrySnapshot>(REGISTRY_EDGE_CONFIG_KEYS.published),
-      client.get<RegistryDraft>(REGISTRY_EDGE_CONFIG_KEYS.draft),
-      client.get<RevisionEntry[]>(REGISTRY_EDGE_CONFIG_KEYS.revisions),
+      client.get<ConciergeRegistrySnapshot>(registryConfigKey(REGISTRY_EDGE_CONFIG_KEYS.published)),
+      client.get<RegistryDraft>(registryConfigKey(REGISTRY_EDGE_CONFIG_KEYS.draft)),
+      client.get<RevisionEntry[]>(registryConfigKey(REGISTRY_EDGE_CONFIG_KEYS.revisions)),
     ]);
     return { publishedSnapshot: publishedSnapshot ?? null, draft: draft ?? null, revisions: revisions ?? [] };
   }
@@ -46,14 +72,14 @@ export class VercelRegistryBackend implements RegistryBackend {
     const response = await fetch(endpoint, {
       method: "PATCH",
       headers: { authorization: `Bearer ${required("VERCEL_API_TOKEN")}`, "content-type": "application/json" },
-      body: JSON.stringify({ items: Object.entries(items).map(([key, value]) => ({ operation: "upsert", key, value })) }),
+      body: JSON.stringify({ items: Object.entries(items).map(([key, value]) => ({ operation: "upsert", key: registryConfigKey(key), value })) }),
       cache: "no-store",
     });
     if (!response.ok) throw new Error(`Global Config update failed (${response.status}): ${await response.text()}`);
   }
 
   async archive(snapshot: ConciergeRegistrySnapshot): Promise<string> {
-    const pathname = `revisions/${snapshot.revision}.json`;
+    const pathname = registryRevisionPath(snapshot.revision);
     await put(pathname, JSON.stringify(snapshot), { access: "private", addRandomSuffix: false, allowOverwrite: false, contentType: "application/json" });
     return pathname;
   }

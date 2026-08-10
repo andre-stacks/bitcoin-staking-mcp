@@ -54,13 +54,13 @@ class SnapshotProvider extends RecordingProvider {
   override async getBondSchedule(bondIndex: number): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { network: this.networkName, bondIndex, startRewardCycle: 141 + bondIndex * 2, startBurnHeight: 100, durationRewardCycles: 12, durationBurnBlocks: 25200, approximateDurationDays: 175, l1LockDurationBurnBlocks: 24150, approximateL1LockDurationDays: 167.7, endRewardCycle: 153 + bondIndex * 2, endBurnHeight: 25300, l1UnlockBurnHeight: 24250, currentBurnchainBlockHeight: 1, remainingBurnBlocks: 99, estimatedStartAt: "2026-08-07T11:30:00.000Z", estimatedEndAt: "2027-01-29T11:30:00.000Z", estimatedL1UnlockAt: "2027-01-22T04:30:00.000Z", estimateStatus: "approximate", estimateBasis: "Fixture.", durationEstimateBasis: "Fixture.", dataStatus: "derived", sources: [this.sourceRef(verifiedAt)], assumptions: ["Fixture."], verifiedAt }; }
 }
 
-function publishedTestnetManifest() {
+function publishedMainnetManifest() {
   return {
     schemaVersion: 1,
-    id: "published-testnet-bond",
-    title: "Published testnet bond",
-    description: "Test fixture for network routing.",
-    network: "testnet",
+    id: "published-mainnet-bond",
+    title: "Published mainnet bond",
+    description: "Test fixture for mainnet routing.",
+    network: "mainnet",
     onChainBondIndex: 3,
     lifecycleStatus: "upcoming",
     participationPath: "native_l1_btc",
@@ -86,9 +86,9 @@ function publishedTestnetManifest() {
     notes: ["Published test fixture."],
     sources: [
       {
-        id: "published-testnet-manifest",
-        title: "Published testnet manifest",
-        url: "https://example.com/published-testnet-manifest.json",
+        id: "published-mainnet-manifest",
+        title: "Published mainnet manifest",
+        url: "https://example.com/published-mainnet-manifest.json",
         sourceType: "public_manifest",
         dataStatus: "published",
       },
@@ -97,43 +97,39 @@ function publishedTestnetManifest() {
   };
 }
 
-test("manifest-backed reads route to the manifest network and include live verification provenance", async (context) => {
+test("manifest-backed reads use mainnet and include live verification provenance", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "bitcoin-staking-manifests-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeFile(
-    join(directory, "published-testnet-bond.json"),
-    JSON.stringify(publishedTestnetManifest()),
+    join(directory, "published-mainnet-bond.json"),
+    JSON.stringify(publishedMainnetManifest()),
     "utf8",
   );
 
   const mainnet = new RecordingProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
-  const testnet = new RecordingProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
   const service = new BitcoinStakingService({
     manifests: new ManifestStore(directory),
     stacks: mainnet,
-    testnetStacks: testnet,
     now: () => new Date("2026-08-06T19:00:00.000Z"),
   });
 
-  const result = await service.getBond("published-testnet-bond");
-  assert.deepEqual(mainnet.bondReads, []);
-  assert.deepEqual(testnet.bondReads, [3]);
+  const result = await service.getBond("published-mainnet-bond");
+  assert.deepEqual(mainnet.bondReads, [3]);
   assert.equal(result.onChainVerification.status, "found");
-  assert.equal(result.onChainVerification.network, "testnet");
+  assert.equal(result.onChainVerification.network, "mainnet");
   assert.equal(result.onChainVerification.dataStatus, "live");
-  assert.ok(result.sources.some((source) => source.id === "hiro-testnet-pox-api"));
+  assert.ok(result.sources.some((source) => source.id === "hiro-mainnet-pox-api"));
 
   const participant = await service.checkParticipantStatus(
-    "ST000000000000000000002AMW42H",
-    "published-testnet-bond",
+    "SP000000000000000000002Q6VF78",
+    "published-mainnet-bond",
   );
-  assert.equal(participant.network, "testnet");
-  assert.equal(mainnet.participantReads.length, 0);
-  assert.equal(testnet.participantReads[0]?.bondId, "published-testnet-bond");
+  assert.equal(participant.network, "mainnet");
+  assert.equal(mainnet.participantReads[0]?.bondId, "published-mainnet-bond");
 
   const defaultParticipant = await service.checkParticipantStatus("SP000000000000000000002Q6VF78");
   assert.equal(defaultParticipant.network, "mainnet");
-  assert.equal(mainnet.participantReads.length, 1);
+  assert.equal(mainnet.participantReads.length, 2);
 });
 
 test("upstream HTTP failures return a typed retryable error", async (context) => {
@@ -148,7 +144,7 @@ test("upstream HTTP failures return a typed retryable error", async (context) =>
   assert.ok(address && typeof address !== "string");
 
   const provider = new StacksProvider({
-    network: "testnet",
+    network: "mainnet",
     apiBaseUrl: `http://127.0.0.1:${address.port}`,
     timeoutMs: 1_000,
   });
@@ -159,19 +155,19 @@ test("upstream HTTP failures return a typed retryable error", async (context) =>
   );
 });
 
-test("participant network resolution rejects bond, request, and address conflicts plus invalid principals", async (context) => {
-  const directory = await mkdtemp(join(tmpdir(), "bitcoin-staking-network-conflicts-"));
-  context.after(() => rm(directory, { recursive: true, force: true }));
-  await writeFile(join(directory, "published-testnet-bond.json"), JSON.stringify(publishedTestnetManifest()), "utf8");
+test("Stacks provider rejects non-mainnet configuration", () => {
+  assert.throws(
+    () => new StacksProvider({ network: "testnet" as never }),
+    (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /mainnet only/i.test(error.message),
+  );
+});
+
+test("participant status accepts mainnet addresses and rejects non-mainnet or invalid principals", async () => {
   const mainnet = new RecordingProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
-  const testnet = new RecordingProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
-  const service = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: mainnet, testnetStacks: testnet, now: () => new Date("2026-08-06T19:00:00.000Z") });
-
-  await assert.rejects(service.checkParticipantStatus("SP000000000000000000002Q6VF78", "published-testnet-bond"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /address-implied/.test(error.message));
-  await assert.rejects(service.checkParticipantStatus("SP000000000000000000002Q6VF78", undefined, "testnet"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /conflicts/.test(error.message));
-  await assert.rejects(service.checkParticipantStatus("ST000000000000000000002AMW42H", "published-testnet-bond", "mainnet"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /Bond network/.test(error.message));
-
-  const validating = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: new StacksProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: testnet, now: () => new Date("2026-08-06T19:00:00.000Z") });
+  const service = new BitcoinStakingService({ stacks: mainnet, now: () => new Date("2026-08-09T19:00:00.000Z") });
+  await service.checkParticipantStatus("SP000000000000000000002Q6VF78");
+  await assert.rejects(service.checkParticipantStatus("ST000000000000000000002AMW42H"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT" && /mainnet/i.test(error.message));
+  const validating = new BitcoinStakingService({ stacks: new StacksProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), now: () => new Date("2026-08-09T19:00:00.000Z") });
   await assert.rejects(validating.checkParticipantStatus("not-a-stacks-address"), (error: unknown) => error instanceof ServiceError && error.code === "INVALID_INPUT");
 });
 
@@ -184,8 +180,7 @@ test("runtime conflict overrides a fresh owner claim in snapshot, bond detail, r
   bond.participationRoutes[0].enrollment.url = "https://example.com/enroll";
   await writeFile(join(directory, "bond.json"), JSON.stringify(bond), "utf8");
   const mainnet = new SnapshotProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
-  const testnet = new SnapshotProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
-  const service = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: mainnet, testnetStacks: testnet, now: () => new Date("2026-08-06T19:00:00.000Z") });
+  const service = new BitcoinStakingService({ manifests: new ManifestStore(directory), stacks: mainnet, now: () => new Date("2026-08-09T19:00:00.000Z") });
   const profile = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000", stxAvailable: "yes" } as const;
 
   const snapshot = await service.getMarketSnapshot();

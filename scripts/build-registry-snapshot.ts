@@ -4,7 +4,7 @@ import { BondManifestV2Schema, ConciergeRegistryContentSchema, ConciergeRegistry
 import { registryContentHash } from "../src/providers/registry-store.js";
 
 const root = resolve(import.meta.dirname, "..");
-const reviewedAt = process.env.REGISTRY_REVIEWED_AT ?? "2026-08-06T00:00:00.000Z";
+const reviewedAt = process.env.REGISTRY_REVIEWED_AT ?? "2026-08-09T00:00:00.000Z";
 const publishedAt = process.env.REGISTRY_PUBLISHED_AT ?? reviewedAt;
 
 async function json(path: string): Promise<unknown> {
@@ -13,7 +13,6 @@ async function json(path: string): Promise<unknown> {
 
 const bonds = await Promise.all([
   "data/bonds/genesis-bond.json",
-  "data/bonds/demo-native-bitcoin-bond.json",
 ].map(async (path) => BondManifestV2Schema.parse(await json(path))));
 const custody = CustodyRegistrySchema.parse(await json("data/custody-paths.json"));
 const source = {

@@ -3,7 +3,7 @@ import test from "node:test";
 import { ConciergeRegistryContentSchema } from "bitcoin-staking-mcp";
 import { diffSummary, discardDraft, publishDraft, rollbackToRevision, saveDraft, validatePublishableContent } from "../lib/publication";
 import { seedSnapshot } from "../lib/seed";
-import type { RegistryBackend, RegistryState } from "../lib/store";
+import { registryConfigKey, registryRevisionPath, registryStorageNamespace, type RegistryBackend, type RegistryState } from "../lib/store";
 
 class MemoryBackend implements RegistryBackend {
   state: RegistryState = { publishedSnapshot: seedSnapshot, draft: null, revisions: [] };
@@ -24,6 +24,33 @@ class MemoryBackend implements RegistryBackend {
   async archive(snapshot: typeof seedSnapshot) { const path = `revisions/${snapshot.revision}.json`; if (this.blobs.has(path)) throw new Error("immutable collision"); this.blobs.set(path, snapshot); return path; }
   async readRevision(pathname: string) { const value = this.blobs.get(pathname); if (!value) throw new Error("missing"); return value; }
 }
+
+test("Preview and Development storage namespaces cannot mutate Production keys or revision paths", () => {
+  const production = { VERCEL_ENV: "production" };
+  const preview = { VERCEL_ENV: "preview" };
+  const development = { VERCEL_ENV: "development" };
+
+  assert.equal(registryStorageNamespace(production), "");
+  assert.equal(registryConfigKey("publishedSnapshot", production), "publishedSnapshot");
+  assert.equal(registryRevisionPath("rev-production", production), "revisions/rev-production.json");
+
+  assert.equal(registryStorageNamespace(preview), "preview");
+  assert.equal(registryConfigKey("publishedSnapshot", preview), "preview_publishedSnapshot");
+  assert.equal(registryConfigKey("draft", preview), "preview_draft");
+  assert.equal(registryRevisionPath("rev-preview", preview), "preview/revisions/rev-preview.json");
+
+  assert.equal(registryStorageNamespace(development), "development");
+  assert.equal(registryConfigKey("publishedSnapshot", development), "development_publishedSnapshot");
+  assert.equal(registryRevisionPath("rev-development", development), "development/revisions/rev-development.json");
+  assert.notEqual(registryConfigKey("publishedSnapshot", preview), registryConfigKey("publishedSnapshot", production));
+  assert.notEqual(registryRevisionPath("same-revision", preview), registryRevisionPath("same-revision", production));
+});
+
+test("explicit storage namespaces are validated and override Vercel environment inference", () => {
+  assert.equal(registryStorageNamespace({ VERCEL_ENV: "production", REGISTRY_STORAGE_NAMESPACE: "release_candidate" }), "release_candidate");
+  assert.throws(() => registryStorageNamespace({ REGISTRY_STORAGE_NAMESPACE: "Preview/unsafe" }), /must use 1-63 lowercase/);
+  assert.throws(() => registryStorageNamespace({ REGISTRY_STORAGE_NAMESPACE: "UPPERCASE" }), /must use 1-63 lowercase/);
+});
 
 test("registry contract rejects malformed, duplicate, and missing-source records", () => {
   assert.equal(ConciergeRegistryContentSchema.safeParse({}).success, false);
@@ -53,11 +80,11 @@ test("partner product roles are independently addressable and future attestation
   content.integrations.push({ ...base, id: "partner-product-custody-duplicate" });
   assert.equal(ConciergeRegistryContentSchema.safeParse(content).success, false);
   content.integrations.pop();
-  content.integrations[0]!.attestation.reviewedAt = "2026-08-08T00:00:00.000Z";
-  assert.throws(() => validatePublishableContent(content, new Date("2026-08-07T00:00:00.000Z")), /Future owner attestation/);
-  content.integrations[0]!.attestation.reviewedAt = "2026-08-07T00:00:00.000Z";
-  content.reviewedAt = "2026-08-08T00:00:00.000Z";
-  assert.throws(() => validatePublishableContent(content, new Date("2026-08-07T00:00:00.000Z")), /Future registry review timestamp/);
+  content.integrations[0]!.attestation.reviewedAt = "2026-08-10T00:00:00.000Z";
+  assert.throws(() => validatePublishableContent(content, new Date("2026-08-09T00:00:00.000Z")), /Future owner attestation/);
+  content.integrations[0]!.attestation.reviewedAt = "2026-08-09T00:00:00.000Z";
+  content.reviewedAt = "2026-08-10T00:00:00.000Z";
+  assert.throws(() => validatePublishableContent(content, new Date("2026-08-09T00:00:00.000Z")), /Future registry review timestamp/);
 });
 
 test("registry-wide IDs and related record references are unique and resolvable", () => {
@@ -73,9 +100,9 @@ test("draft, validation, publish, diff, discard, and rollback preserve immutable
   const backend = new MemoryBackend();
   const changed = structuredClone(seedSnapshot.content);
   changed.facts[0]!.summary = "Updated without an MCP release.";
-  await saveDraft(backend, changed, "publisher@stackslabs.com", new Date("2026-08-07T10:00:00.000Z"));
+  await saveDraft(backend, changed, "publisher@stackslabs.com", new Date("2026-08-09T10:00:00.000Z"));
   assert.equal(diffSummary(seedSnapshot, backend.state.draft).changed, true);
-  const first = await publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-07T10:01:00.000Z"));
+  const first = await publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-09T10:01:00.000Z"));
   assert.equal(backend.state.draft, null);
   assert.equal(backend.state.publishedSnapshot?.content.facts[0]?.summary, "Updated without an MCP release.");
   assert.equal(backend.state.publishedSnapshot?.publishedBy, "Stacks Labs registry team");
@@ -83,7 +110,7 @@ test("draft, validation, publish, diff, discard, and rollback preserve immutable
   assert.equal(backend.blobs.size, 2);
   assert.deepEqual(backend.state.revisions.map((entry) => entry.revision), [first.snapshot.revision, seedSnapshot.revision]);
   backend.writes = [];
-  const rolled = await rollbackToRevision(backend, seedSnapshot.revision, "publisher@stackslabs.com", new Date("2026-08-07T10:02:00.000Z"));
+  const rolled = await rollbackToRevision(backend, seedSnapshot.revision, "publisher@stackslabs.com", new Date("2026-08-09T10:02:00.000Z"));
   assert.notEqual(rolled.snapshot.revision, seedSnapshot.revision);
   assert.notEqual(rolled.snapshot.revision, first.snapshot.revision);
   assert.equal(backend.state.publishedSnapshot?.content.facts[0]?.summary, seedSnapshot.content.facts[0]?.summary);
@@ -97,7 +124,7 @@ test("publish retries reuse identical immutable archives after a partial config-
   const backend = new MemoryBackend();
   const changed = structuredClone(seedSnapshot.content);
   changed.facts[0]!.summary = "Retry the same deterministic publication.";
-  const now = new Date("2026-08-07T10:10:00.000Z");
+  const now = new Date("2026-08-09T10:10:00.000Z");
   await saveDraft(backend, changed, "publisher@stackslabs.com", now);
   backend.failWrites = 1;
   await assert.rejects(publishDraft(backend, "publisher@stackslabs.com", now), /simulated config write failure/);
@@ -112,12 +139,12 @@ test("invalid work can be saved privately but cannot validate or publish", async
   const backend = new MemoryBackend();
   const invalid = structuredClone(seedSnapshot.content);
   invalid.facts[0]!.sourceIds = ["source-still-being-added"];
-  await saveDraft(backend, invalid, "publisher@stackslabs.com", new Date("2026-08-07T11:00:00.000Z"));
+  await saveDraft(backend, invalid, "publisher@stackslabs.com", new Date("2026-08-09T11:00:00.000Z"));
   assert.equal(backend.state.draft?.content && typeof backend.state.draft.content === "object", true);
   const diff = diffSummary(seedSnapshot, backend.state.draft);
   assert.equal(diff.sections.facts?.after, seedSnapshot.content.facts.length);
-  assert.throws(() => validatePublishableContent(invalid, new Date("2026-08-07T11:01:00.000Z")));
-  await assert.rejects(publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-07T11:02:00.000Z")));
+  assert.throws(() => validatePublishableContent(invalid, new Date("2026-08-09T11:01:00.000Z")));
+  await assert.rejects(publishDraft(backend, "publisher@stackslabs.com", new Date("2026-08-09T11:02:00.000Z")));
   assert.equal(backend.state.publishedSnapshot?.revision, seedSnapshot.revision);
   assert.notEqual(backend.state.draft, null);
   assert.equal(backend.blobs.size, 0);

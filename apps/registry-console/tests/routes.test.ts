@@ -144,7 +144,7 @@ test("a published integration reaches Scout after ETag revalidation and rollback
   const backend = new MemoryBackend();
   setRegistryBackendForTests(backend);
   const { headers } = await publisherHeaders();
-  let now = new Date("2026-08-07T12:00:00.000Z");
+  let now = new Date("2026-08-09T12:00:00.000Z");
   const store = new RegistryStore({
     path: "unused-in-this-test.json",
     remoteUrl: "https://registry.example/api/v1/registry",
@@ -161,9 +161,9 @@ test("a published integration reaches Scout after ETag revalidation and rollback
     title: "Partner A custody integration",
     summary: "Partner A provides a reviewed Genesis custody integration.",
     aliases: [], tags: ["partner-a", "custody"], relatedIds: ["genesis-bond"],
-    effectiveAt: "2026-08-07T00:00:00.000Z",
+    effectiveAt: "2026-08-09T00:00:00.000Z",
     sourceIds: ["genesis-bond-owner-attestation"],
-    attestation: { scope: "Partner A Genesis custody integration", ownerOrganization: "Stacks Labs", reviewedAt: "2026-08-07T00:00:00.000Z", reviewCadenceDays: 7, sourceIds: ["genesis-bond-owner-attestation"] },
+    attestation: { scope: "Partner A Genesis custody integration", ownerOrganization: "Stacks Labs", reviewedAt: "2026-08-09T00:00:00.000Z", reviewCadenceDays: 7, sourceIds: ["genesis-bond-owner-attestation"] },
     partnerId: "partner-a", productId: "genesis-bond", role: "custody", network: "mainnet", status: "available",
   });
   assert.equal((await saveDraftRoute(request("/api/admin/draft", { method: "PUT", headers, body: JSON.stringify({ content: changed }) }))).status, 200);

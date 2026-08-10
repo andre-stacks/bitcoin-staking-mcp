@@ -24,9 +24,9 @@ class OfflineProvider extends StacksProvider {
   override async getParticipantStatus(address: string): Promise<any> { const verifiedAt = "2026-08-06T19:00:00.000Z"; return { address, network: this.networkName, accountStatus: null, stakerInfo: null, bondMembership: null, bondAllowanceSats: null, requestedBondId: null, requestedBondDataStatus: null, dataStatus: "live", sources: [this.sourceRef(verifiedAt)], assumptions: ["Offline fixture."], verifiedAt }; }
 }
 class FailingProvider extends OfflineProvider { override async getProtocolStatus(): Promise<any> { throw new ServiceError("UPSTREAM_ERROR", "Live network unavailable.", true); } }
-const offlineNow = () => new Date("2026-08-06T19:00:00.000Z");
+const offlineNow = () => new Date("2026-08-09T19:00:00.000Z");
 function offlinePrices() { return new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200, headers: { "content-type": "application/json" } }) }); }
-function offlineService(provider: StacksProvider = new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" })) { return new BitcoinStakingService({ stacks: provider, testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices: offlinePrices(), now: offlineNow }); }
+function offlineService(provider: StacksProvider = new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" })) { return new BitcoinStakingService({ stacks: provider, prices: offlinePrices(), now: offlineNow }); }
 const profile = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "100000000" } as const;
 
 test("MCP exposes the complete 15-tool read-only production contract", async (context) => {
@@ -44,9 +44,36 @@ test("catalog search rejects unknown status filters before querying the registry
   assert.match(JSON.stringify(result.content), /status|invalid/i);
 });
 
+test("every tool rejects unknown inputs instead of silently changing their meaning", async (context) => {
+  const { client, server } = await connectedClient(offlineService());
+  context.after(async () => { await client.close(); await server.close(); });
+  const staleCalls = [
+    { name: "get_market_snapshot", arguments: { network: "testnet" } },
+    { name: "get_protocol_status", arguments: { network: "testnet" } },
+    { name: "list_protocol_bonds", arguments: { network: "testnet" } },
+    { name: "get_security_guidance", arguments: { network: "testnet" } },
+    { name: "list_bonds", arguments: { includeDemo: true } },
+    { name: "build_diligence_report", arguments: { network: "testnet", profile } },
+    { name: "list_custody_paths", arguments: { network: "testnet" } },
+    { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond", network: "testnet" } },
+    { name: "get_bond", arguments: { bondId: "genesis-bond", network: "testnet" } },
+    { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78", network: "testnet" } },
+    { name: "check_compatibility", arguments: { bondId: "genesis-bond", provider: "Leather", network: "testnet" } },
+    { name: "simulate_yield", arguments: { bondId: "genesis-bond", principalSats: "100000000", network: "testnet" } },
+    { name: "compare_staking_paths", arguments: { ...profile, network: "testnet" } },
+    { name: "build_participation_plan", arguments: { bondId: "genesis-bond", profile, network: "testnet" } },
+    { name: "search_current_facts", arguments: { network: "testnet" } },
+  ];
+  for (const call of staleCalls) {
+    const result = await client.callTool(call);
+    assert.equal(result.isError, true, `${call.name} accepted removed input: ${JSON.stringify(result.content)}`);
+    assert.match(JSON.stringify(result.content), /unrecognized|unknown|invalid/i);
+  }
+});
+
 test("market snapshot grounds the first turn in two routes", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "get_market_snapshot", arguments: { network: "mainnet" } });
+  const result = await client.callTool({ name: "get_market_snapshot", arguments: {} });
   assert.equal(result.isError, undefined); const content = result.structuredContent as any;
   assert.deepEqual(content.routes.map((route: any) => route.routeType), ["native_l1_direct", "sbtc_pool"]);
   assert.equal(content.bonds[0].protocolSchedule.startRewardCycle, 143);
@@ -56,33 +83,12 @@ test("market snapshot grounds the first turn in two routes", async (context) => 
   assert.ok(content.sources.some((source: any) => source.id === "custody-registry"));
 });
 
-test("testnet diligence returns a protocol-only preview through MCP without duplicate chain reads", async (context) => {
-  const testnet = new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
-  const service = new BitcoinStakingService({
-    stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
-    testnetStacks: testnet,
-    prices: offlinePrices(),
-    now: offlineNow,
-  });
-  const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "build_diligence_report", arguments: { network: "testnet", profile } });
-  assert.equal(result.isError, undefined, JSON.stringify(result.content));
-  const content = SuccessfulToolOutputSchemas.build_diligence_report.parse(result.structuredContent);
-  assert.equal(content.assessmentStatus, "network_protocol_preview");
-  assert.equal(content.economics.status, "not_available");
-  assert.equal(content.operationalFit, "not_assessable");
-  assert.deepEqual(content.routeAssessments, []);
-  assert.match(content.bondAvailability.coverageBoundary, /does not establish product availability/i);
-  assert.equal(testnet.statusReads, 1);
-  assert.equal(testnet.bondScanReads, 1);
-});
-
 test("every tool validates structured output and exposes no transaction fields", async (context) => {
   const { client, server } = await connectedClient(offlineService()); context.after(async () => { await client.close(); await server.close(); });
   const calls = [
-    { name: "get_market_snapshot", arguments: { network: "mainnet" } }, { name: "get_protocol_status", arguments: { network: "mainnet" } }, { name: "list_protocol_bonds", arguments: { network: "testnet" } },
+    { name: "get_market_snapshot", arguments: {} }, { name: "get_protocol_status", arguments: {} }, { name: "list_protocol_bonds", arguments: {} },
     { name: "get_security_guidance", arguments: { topic: "audit_status" } }, { name: "build_diligence_report", arguments: { bondId: "genesis-bond", profile } },
-    { name: "list_bonds", arguments: { includeDemo: true } }, { name: "list_custody_paths", arguments: {} }, { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond" } },
+    { name: "list_bonds", arguments: {} }, { name: "list_custody_paths", arguments: {} }, { name: "list_bond_participation_routes", arguments: { bondId: "genesis-bond" } },
     { name: "get_bond", arguments: { bondId: "genesis-bond" } }, { name: "check_participant_status", arguments: { address: "SP000000000000000000002Q6VF78" } },
     { name: "check_compatibility", arguments: { bondId: "genesis-bond", provider: "Leather", keyControlPreference: "custodian" } },
     { name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalSats: "100000000", durationDays: 365, annualRateBps: 300, feeBps: 0 } },
@@ -112,7 +118,7 @@ test("yield uses live CoinGecko prices and three-decimal quantity displays", asy
 test("yield returns gross economics when fees and optional price enrichment are unavailable", async (context) => {
   let priceRequests = 0;
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { priceRequests += 1; throw new Error("prices offline"); } });
-  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
+  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
   const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-sbtc-pool", principalBtc: "1 sBTC", durationDays: 365, annualRateBps: 300 } });
   assert.equal(result.isError, undefined);
@@ -125,7 +131,7 @@ test("yield returns gross economics when fees and optional price enrichment are 
 
 test("optional price failure does not invalidate a complete deterministic sats calculation", async (context) => {
   const prices = new CoinGeckoPriceProvider({ now: offlineNow, fetchFn: async () => { throw new Error("prices offline"); } });
-  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices, now: offlineNow });
+  const service = new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), prices, now: offlineNow });
   const { client, server } = await connectedClient(service); context.after(async () => { await client.close(); await server.close(); });
   const result = await client.callTool({ name: "simulate_yield", arguments: { bondId: "genesis-bond", routeId: "genesis-native-l1-direct", principalBtc: "1 BTC", durationDays: 365, annualRateBps: 300, feeBps: 0 } });
   assert.equal(result.isError, undefined);
@@ -146,7 +152,7 @@ test("MCP schemas contain no passthrough or unknown output shortcuts", async () 
 
 test("runtime failures stay explicit inside deterministic market snapshot", async (context) => {
   const { client, server } = await connectedClient(offlineService(new FailingProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }))); context.after(async () => { await client.close(); await server.close(); });
-  const result = await client.callTool({ name: "get_market_snapshot", arguments: { network: "mainnet" } });
+  const result = await client.callTool({ name: "get_market_snapshot", arguments: {} });
   assert.equal(result.isError, undefined); const content = result.structuredContent as any; assert.equal(content.protocol.status, "unavailable"); assert.equal(content.protocol.error.code, "UPSTREAM_ERROR");
 });
 
@@ -213,9 +219,10 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /How can I get started staking/i);
     assert.match(content.text, /Which participation option is right for me/i);
     assert.match(content.text, /Do not lead this general welcome with an upcoming bond/i);
-    assert.match(content.text, /specific question, skip the general welcome/i);
+    assert.match(content.text, /Any non-empty request skips the general welcome/i);
+    assert.match(content.text, /welcome must never repeat after Scout has already shown it/i);
     assert.match(content.text, /For opportunity or timing, call get_market_snapshot/i);
-    assert.match(content.text, /direct how-to-participate question/i);
+    assert.match(content.text, /Broad requests such as 'I'd like to get started with Bitcoin staking'.*are participation intent/i);
     assert.match(content.text, /Where do I sign up.*handoff intent/i);
     assert.match(content.text, /direct native-L1 Bitcoin Staking path.*do not use an internal bond name/i);
     assert.match(content.text, /primary CTA labeled 'Register your interest here'/i);
@@ -231,6 +238,12 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /fully enrolled based only on a Bitcoin funding or lock transaction/i);
     assert.match(content.text, /required Stacks registration is complete/i);
     assert.match(content.text, /provider-specific setup requirements only when the user names that provider/i);
+    assert.match(content.text, /do not enumerate providers before the user chooses the direct route or names one/i);
+    assert.match(content.text, /preserve explicit route-changing constraints such as L1 custody, key control, liquidity, and early-exit requirements/i);
+    assert.match(content.text, /Treat the asset path and custody model as separate decisions/i);
+    assert.match(content.text, /current compatibility evidence supports the user's institutional custodian.*requirement is to keep BTC native under the existing custody arrangement/i);
+    assert.match(content.text, /Ask about sole-key control or governance only when the user explicitly requires that control model/i);
+    assert.match(content.text, /product compatibility does not prove unilateral early exit/i);
     assert.match(content.text, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
     assert.match(content.text, /How will I know my Bitcoin is safe/i);
     assert.match(content.text, /security-foundation, independent-verification, bounded-residual-risk sequence/i);
@@ -239,11 +252,11 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /Like any financial software, risk is not zero/i);
     assert.match(content.text, /Do not open with 'your Bitcoin cannot be guaranteed completely safe'/i);
     assert.match(content.text, /Never apply native-L1 Bitcoin-script protections to a pool-based route/i);
-    assert.match(content.text, /keeping Bitcoin on L1 in self-custody versus using the staked position to borrow, lend, or unlock additional yield opportunities/i);
-    assert.match(content.text, /do not imply that this route supports only self-custody/i);
+    assert.match(content.text, /keeping BTC on Bitcoin L1 in self-custody or with a supported custodian versus using sBTC to borrow, lend, or unlock additional yield opportunities/i);
+    assert.match(content.text, /Describe the direct route as keeping BTC native on Bitcoin L1 through the user's preferred supported self-custody or custody arrangement/i);
     assert.match(content.text, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from list_custody_paths rather than a fixed provider list/i);
     assert.match(content.text, /Describe the pooled route first as 'Join a pool'/i);
-    assert.match(content.text, /Which matters more to you: keeping your Bitcoin on L1 in self-custody, or using your staked position to borrow, lend, or unlock additional yield opportunities/i);
+    assert.match(content.text, /Which matters more to you: keeping your BTC on Bitcoin L1 in self-custody or with a supported custodian, or using sBTC to borrow, lend, or unlock additional yield opportunities/i);
     assert.match(content.text, /two stable route types when route detail is relevant/i);
     assert.match(content.text, /multiple pools with different input assets, operators, and LST designs/i);
     assert.match(content.text, /current pool names, requirements, token designs, products, terms, and integrations from the live registry/i);
@@ -257,6 +270,8 @@ test("capabilities expose versions and concierge prompt enforces intent-aware on
     assert.match(content.text, /State only the economics returned by the current MCP read/i);
     assert.match(content.text, /lead with the user-facing answer rather than protocol state/i);
     assert.match(content.text, /mention only caveats and unknowns that change the answer/i);
+    assert.match(content.text, /close with one short provenance note naming the primary returned source or sources and the returned verification time/i);
+    assert.match(content.text, /applications are not open yet/i);
     assert.match(content.text, /State a supported capability first and explain how it works/i);
     assert.match(content.text, /Do not manufacture a negative contrast around it/i);
     assert.match(content.text, /Explain user actions and outcomes before infrastructure terminology/i);
@@ -333,7 +348,6 @@ test("alternate schedule and economics flow from runtime evidence rather than pr
   const service = new BitcoinStakingService({
     manifests: new ManifestStore(directory, { now: offlineNow }),
     stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
-    testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }),
     prices: offlinePrices(),
     now: offlineNow,
   });
@@ -391,23 +405,42 @@ test("alternate schedule and economics flow from runtime evidence rather than pr
   }
 });
 
-test("concierge prompt preserves broad, timing, and amount-bearing first-message intent", async (context) => {
+test("concierge prompt routes blank invocations to welcome and every supplied intent directly", async (context) => {
   const { client, server } = await connectedClient(offlineService());
   context.after(async () => { await client.close(); await server.close(); });
+  for (const argumentsValue of [{}, { request: "" }, { request: "   \n\t  " }]) {
+    const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: argumentsValue });
+    const content = prompt.messages[0]?.content;
+    assert.equal(content?.type, "text");
+    if (content?.type === "text") {
+      assert.match(content.text, /^Onboarding mode: welcome\./);
+      assert.match(content.text, /This is an empty first-run invocation/);
+      assert.doesNotMatch(content.text, /Current user request:/);
+    }
+  }
+  await assert.rejects(
+    client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request: "How can I get started staking?", network: "testnet" } }),
+    /unrecognized|unknown|invalid/i,
+  );
   const requests = [
     "I'd like to get started with Bitcoin staking",
+    "How can I get started staking?",
     "When is the next bond launching?",
     "How can I stake 0.25 BTC?",
     "How will I know my Bitcoin is safe?",
+    "The direct native-L1 path sounds right. Where do I get started?",
   ];
   for (const request of requests) {
     const prompt = await client.getPrompt({ name: "bitcoin-staking-concierge", arguments: { request } });
     const content = prompt.messages[0]?.content;
     assert.equal(content?.type, "text");
     if (content?.type === "text") {
+      assert.match(content.text, /^Onboarding mode: direct workflow\./);
+      assert.match(content.text, /do not emit the general welcome/i);
+      assert.doesNotMatch(content.text, /This is an empty first-run invocation/);
       assert.match(content.text, new RegExp(`Current user request: ${request.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
       assert.match(content.text, /Classify the newest request before responding/i);
-      assert.match(content.text, /If the request asks a specific question, skip the general welcome/i);
+      assert.match(content.text, /Any non-empty request skips the general welcome/i);
     }
   }
 });

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { SKILL_VERSION } from "../src/mcp/server.js";
+import { CONTRACT_VERSION, SERVER_VERSION, SKILL_VERSION } from "../src/mcp/server.js";
 
 test("repo concierge skill enforces guided discovery and evidence boundaries", async () => {
   const skill = await readFile(
@@ -16,11 +16,11 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /list_bond_participation_routes/);
   assert.match(skill, /two stable route types/i);
   assert.match(skill, /multiple pools with different inputs and LST designs/i);
-  assert.match(skill, /keeping Bitcoin on L1 in self-custody versus using the staked position to borrow, lend, or unlock additional yield opportunities/i);
+  assert.match(skill, /keeping BTC on Bitcoin L1 in self-custody or with a supported custodian versus using sBTC to borrow, lend, or unlock additional yield opportunities/i);
   assert.match(skill, /Do not imply that the route supports only self-custody/i);
   assert.match(skill, /Resolve current software, hardware, multisig, institutional-wallet, and custody options from `list_custody_paths`/i);
   assert.match(skill, /Describe the pooled route first as “Join a pool”/i);
-  assert.match(skill, /Which matters more to you: keeping your Bitcoin on L1 in self-custody, or using your staked position to borrow, lend, or unlock additional yield opportunities/i);
+  assert.match(skill, /Which matters more to you: keeping your BTC on Bitcoin L1 in self-custody or with a supported custodian, or using sBTC to borrow, lend, or unlock additional yield opportunities/i);
   assert.match(skill, /current named integration and sourced terms/i);
   assert.match(skill, /names a planned integration, name it as the planned destination/i);
   assert.match(skill, /general intention to support other DeFi protocols into a named integration/i);
@@ -31,7 +31,7 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /require a current named live integration/i);
   assert.match(skill, /Do not fill missing terms from memory/i);
   assert.match(skill, /Never construct, sign, or broadcast a transaction/);
-  assert.match(skill, /Never present it as an investable fallback/i);
+  assert.match(skill, /Use mainnet runtime and reviewed mainnet product evidence only/i);
   assert.match(skill, /list_custody_paths/);
   assert.match(skill, /tool menu/i);
   assert.match(skill, /Onboarding follows the user's intent/i);
@@ -48,7 +48,8 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /How can I get started staking/i);
   assert.match(skill, /Which participation option is right for me/i);
   assert.match(skill, /Do not lead this general welcome with an upcoming bond/i);
-  assert.match(skill, /If the user asks a specific question, skip the general welcome/i);
+  assert.match(skill, /Any non-empty request skips the general welcome/i);
+  assert.match(skill, /never replay the welcome after Scout has already shown it/i);
   assert.match(skill, /For opportunity or timing, call `get_market_snapshot`/i);
   assert.match(skill, /capability-only welcome does not need market data/i);
   assert.match(skill, /Where do I sign up.*handoff intent/i);
@@ -61,12 +62,18 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /primary CTA labeled “Start enrollment/i);
   assert.match(skill, /Do not restart route discovery/i);
   assert.match(skill, /newest user request as the controlling scope/i);
+  assert.match(skill, /preserve explicit route-changing constraints such as L1 custody, key control, liquidity, and early-exit requirements/i);
   assert.match(skill, /allocation and enrollment mechanics as silent background context, not an investor-facing checklist/i);
   assert.match(skill, /Do not proactively mention address binding, allocation immutability, partial enrollment or top-ups, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs/i);
   assert.match(skill, /only when the user asks about it, it materially changes the selected route or immediate next step, or it is needed to correct a false assumption/i);
   assert.match(skill, /fully enrolled based only on a Bitcoin funding or lock transaction/i);
   assert.match(skill, /required Stacks registration is complete/i);
   assert.match(skill, /provider-specific setup requirements only when the user names that provider/i);
+  assert.match(skill, /Do not enumerate wallet or custody providers before the user chooses the direct route or names a provider/i);
+  assert.match(skill, /Treat the asset path and custody model as separate decisions/i);
+  assert.match(skill, /current compatibility evidence supports the user's institutional custodian.*requirement is to keep BTC native under the existing custody arrangement/i);
+  assert.match(skill, /Ask about sole-key control or governance only when the user explicitly requires that control model/i);
+  assert.match(skill, /product compatibility does not prove unilateral early exit/i);
   assert.match(skill, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(skill, /Has the protocol been audited/i);
   assert.match(skill, /Security confidence sequence/i);
@@ -100,6 +107,7 @@ test("repo concierge skill enforces guided discovery and evidence boundaries", a
   assert.match(skill, /native-L1 unlock height.*one-half reward cycle before the bond ends/i);
   assert.match(skill, /contract-fixed 12-cycle term is a stable protocol invariant/i);
   assert.match(skill, /Avoid stacked qualifiers, status jargon/i);
+  assert.match(skill, /close with one short provenance note naming the primary returned source or sources and the returned verification time/i);
 });
 
 test("Codex skill metadata presents Scout as the Bitcoin Staking Concierge", async () => {
@@ -113,25 +121,25 @@ test("Codex skill metadata presents Scout as the Bitcoin Staking Concierge", asy
   assert.match(metadata, /introduce Scout/);
 });
 
-test("hackathon and user-facing names remain distinct", async () => {
-  const [plan, uxReview] = await Promise.all([
-    readFile(resolve("docs/HACKATHON_PLAN.md"), "utf8"),
+test("Scout uses one durable product identity", async () => {
+  const [readme, requirements, uxReview] = await Promise.all([
+    readFile(resolve("README.md"), "utf8"),
+    readFile(resolve("docs/PRODUCT_REQUIREMENTS.md"), "utf8"),
     readFile(resolve("docs/UX_REVIEW.md"), "utf8"),
   ]);
 
-  assert.match(plan, /Submission name: \*\*Scout AI\*\*/);
-  assert.match(plan, /Scout — the Bitcoin Staking Concierge/);
-  assert.match(uxReview, /Scout AI.*internal hackathon submission/i);
-  assert.match(uxReview, /not used as the concierge's name in onboarding/i);
+  for (const surface of [readme, requirements, uxReview]) {
+    assert.match(surface, /Scout — the Bitcoin Staking Concierge/);
+    assert.doesNotMatch(surface, /Scout AI|hackathon/i);
+  }
 });
 
-test("README examples stay network-agnostic", async () => {
+test("README positions Scout as a mainnet product", async () => {
   const readme = await readFile(resolve("README.md"), "utf8");
 
-  assert.match(readme, /Users do not need to choose a network/);
+  assert.match(readme, /Scout is built for mainnet/);
   assert.match(readme, /best currently available data/);
-  assert.doesNotMatch(readme, /On the configured testnet, which protocol bonds/);
-  assert.doesNotMatch(readme, /Build an institutional diligence report for the PoX-5 testnet/);
+  assert.doesNotMatch(readme, /testnet|hackathon|synthetic demo/i);
   assert.match(readme, /direct native-L1.*current pool-based routes/i);
   assert.match(readme, /Fifteen read-only MCP tools/i);
 });
@@ -164,13 +172,19 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /Never infer wallet support from protocol compatibility/);
   assert.match(standard, /Never default to “wait”/i);
   assert.match(standard, /One useful next-step question/i);
+  assert.match(standard, /close with one short provenance note naming the primary returned source or sources and the returned verification time/i);
   assert.match(standard, /newest user request controls the response scope/i);
+  assert.match(standard, /preserve explicit route-changing constraints such as L1 custody, key control, liquidity, and early-exit requirements/i);
   assert.match(standard, /Allocation and enrollment mechanics are silent background context, not an investor-facing checklist/i);
   assert.match(standard, /Do not proactively mention address binding, allocation immutability, partial enrollment or top-ups, overlapping-address rules, UTXO mechanics, rollover windows, reserve operations, or split-wallet handoffs/i);
   assert.match(standard, /only when the user asks about it, it materially changes the selected route or immediate next step, or it is needed to correct a false assumption/i);
   assert.match(standard, /fully enrolled based only on a Bitcoin funding or lock transaction/i);
   assert.match(standard, /required Stacks registration is complete/i);
   assert.match(standard, /provider-specific setup requirements only when the user names that provider/i);
+  assert.match(standard, /Do not enumerate providers before the user selects the direct route or names one/i);
+  assert.match(standard, /Treat the asset path and custody model as separate decisions/i);
+  assert.match(standard, /current compatibility evidence supports the user's institutional custodian.*requirement is to keep BTC native under the existing custody arrangement/i);
+  assert.match(standard, /Ask about sole-key control or governance only when the user explicitly requires that control model/i);
   assert.match(standard, /single next operational question needed to proceed; do not launch a readiness questionnaire/i);
   assert.match(standard, /Where do I sign up.*handoff intent/i);
   assert.match(standard, /direct native-L1 Bitcoin Staking path.*do not use an internal bond name/i);
@@ -205,7 +219,7 @@ test("public response standard matches the guided, evidence-bound contract", asy
   assert.match(standard, /wallet- or custody-only question/i);
   assert.match(standard, /Do not append a generic caveat that wallet support does not establish bond enrollment or availability/i);
   assert.match(standard, /Describe the pooled option first as “Join a pool”/i);
-  assert.match(standard, /Which matters more to you: keeping your Bitcoin on L1 in self-custody, or using your staked position to borrow, lend, or unlock additional yield opportunities/i);
+  assert.match(standard, /Which matters more to you: keeping your BTC on Bitcoin L1 in self-custody or with a supported custodian, or using sBTC to borrow, lend, or unlock additional yield opportunities/i);
   assert.match(standard, /software, hardware, multisig, institutional-wallet, and custody options from current MCP evidence rather than a fixed provider list/i);
   assert.match(standard, /Do not narrate that the amount did not trigger a rejection/i);
   assert.match(standard, /multiple pools with different input assets and LST designs/i);
@@ -223,7 +237,6 @@ test("static Scout policy surfaces do not retain current schedule or economics",
   const paths = [
     ".agents/skills/bitcoin-staking-concierge/SKILL.md",
     "README.md",
-    "docs/DEMO_RUNBOOK.md",
     "docs/INSTITUTIONAL_RESPONSE_STANDARD.md",
     "docs/PRODUCT_REQUIREMENTS.md",
     "docs/SECURITY_QUESTION_CATALOG.md",
@@ -270,6 +283,37 @@ test("static Scout policy surfaces do not retain current schedule or economics",
   const documentedSkillVersions = [...audit.matchAll(/skill `?(\d+\.\d+\.\d+)`?/gi)].map((match) => match[1]);
   assert.ok(documentedSkillVersions.length >= 2);
   assert.deepEqual([...new Set(documentedSkillVersions)], [SKILL_VERSION]);
+});
+
+test("release metadata and public install pins stay aligned", async () => {
+  const packagePaths = [
+    "package.json",
+    "packages/registry-contract/package.json",
+    "apps/registry-console/package.json",
+  ];
+  for (const path of packagePaths) {
+    const metadata = JSON.parse(await readFile(resolve(path), "utf8")) as { version?: string };
+    assert.equal(metadata.version, SERVER_VERSION, `${path} version drifted from the server`);
+  }
+  assert.equal(SKILL_VERSION, SERVER_VERSION);
+  assert.equal(CONTRACT_VERSION, "4.0.0");
+
+  const publicInstallSurfaces = ["README.md", "docs/INSTALLATION.md", "docs/TECHNICAL_SPEC.md"];
+  for (const path of publicInstallSurfaces) {
+    const surface = await readFile(resolve(path), "utf8");
+    assert.match(surface, new RegExp(`#v${SERVER_VERSION.replace(/\./g, "\\.")}`), `${path} omits the current release pin`);
+    assert.doesNotMatch(surface, /#v0\.4\.0/, `${path} retains the previous release pin`);
+  }
+});
+
+test("registry rollout keeps Preview writes isolated from Production", async () => {
+  const runbook = await readFile(resolve("docs/REGISTRY_CONSOLE.md"), "utf8");
+  const store = await readFile(resolve("apps/registry-console/lib/store.ts"), "utf8");
+  assert.match(runbook, /separate environment-scoped Global Config and private Blob stores, or with the built-in environment namespace/i);
+  assert.match(runbook, /Preview and Production resolve different stores or different keys and revision pathnames/i);
+  assert.match(store, /vercelEnvironment !== "production"/);
+  assert.match(store, /registryConfigKey\(REGISTRY_EDGE_CONFIG_KEYS\.published\)/);
+  assert.match(store, /registryRevisionPath\(snapshot\.revision\)/);
 });
 
 test("nightly registry validation preserves pipeline failures", async () => {

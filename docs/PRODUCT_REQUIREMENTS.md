@@ -1,10 +1,10 @@
 # Bitcoin Staking MCP — Product Requirements
 
-Status: v0.4.0 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
+Status: v0.5.0 production beta. The product is read-only and does not authorize transaction construction, signing, broadcasting, or use of capital.
 
 ## Outcome
 
-Make native Bitcoin staking discoverable, understandable, and agent-readable. An agent should be able to distinguish current protocol state, published product metadata, deterministic calculations, and illustrative demo data without inventing availability or compatibility.
+Make native Bitcoin staking discoverable, understandable, and agent-readable. An agent should distinguish current mainnet protocol state, published product metadata, and deterministic calculations without inventing availability or compatibility.
 
 ## Users and jobs
 
@@ -35,11 +35,11 @@ The concierge is not a second backend. A future web app should consume the same 
 
 ### Discover a bond
 
-The agent reads live protocol status, scans the active on-chain PoX-5 bond window, and lists public manifests without requiring the user to select a network. It checks mainnet and published opportunities first. When neither is available, it inspects the configured testnet automatically as the live demo/prototype environment for the intended mainnet journey. Testnet uses test assets and remains separate from mainnet opportunities. Demo manifests remain opt-in and separately grouped. The agent can retrieve terms and on-chain verification for one manifest-backed bond.
+The agent reads live mainnet protocol status, scans the active on-chain PoX-5 bond window, and lists reviewed mainnet manifests. The user does not select a network. When no current opportunity is supported, the agent reports the missing evidence and the closest useful preparation step. It can retrieve terms and on-chain verification for one manifest-backed bond.
 
 ### Choose a participation route
 
-The user-facing identity is **Scout — the Bitcoin Staking Concierge**; **Scout AI** is the internal hackathon submission name only. An empty invocation or broad orientation request receives concise capability-first onboarding from Scout: a personable introduction, four user-facing capabilities, and three starter questions. It does not automatically lead with an upcoming bond or route taxonomy. A specific request about opportunity timing, participation, economics, risk, custody, or liquidity bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow. For a general participation request, the first choice is framed around keeping Bitcoin on L1 in self-custody versus using the staked position to borrow, lend, or unlock additional yield opportunities. The direct route may also support institutional or third-party custody; current software, hardware, multisig, institutional-wallet, and custody options remain evidence-driven. The pooled option begins with “Join a pool,” while its operator, required asset, LST design, and integrations remain evidence-driven. The concierge returns the closest route, freshness, current status, the principal tradeoff, and one useful next action when the user asks for route guidance.
+The user-facing identity is **Scout — the Bitcoin Staking Concierge**. An empty invocation receives concise capability-first onboarding from Scout: a personable introduction, four user-facing capabilities, and three starter questions. Every non-empty request, including a broad getting-started request, bypasses general onboarding and proceeds directly to the relevant evidence-backed workflow. The welcome never repeats within a conversation. For a general participation request, the first choice is framed around keeping BTC on Bitcoin L1 in self-custody or with a supported custodian versus using sBTC to borrow, lend, or unlock additional yield opportunities. The direct route keeps BTC native and may support software, hardware, multisig, institutional-wallet, or third-party custody arrangements; those options remain evidence-driven and are not enumerated before the user chooses that route. Explicit L1, custody, liquidity, and early-exit constraints remain active throughout route selection until the user changes them. A supported institutional custodian is treated as a direct-path fit when current compatibility evidence supports it and the user's requirement is to keep BTC native under the existing custody arrangement. Sole-key control and early-exit availability remain separate questions. The pooled option begins with “Join a pool,” while its operator, required asset, LST design, and integrations remain evidence-driven. The concierge returns the closest route, freshness, current status, the principal tradeoff, one concise provenance note for time-sensitive opportunity, security, and custody answers, and one useful next action when the user asks for route guidance.
 
 When a user clearly accepts a route and asks where to sign up or apply, Scout enters a conclusive handoff instead of restarting discovery. For the scheduled direct native-L1 Bitcoin Staking path, it surfaces the current Stacks institutional access form as **Register your interest here** and says: “Submitting the form connects you with the Stacks team. They’ll follow up to guide you through onboarding and the next allocation steps.” It closes with: “If you’re interested in accessing the Bitcoin Staking application, you’ll be able to visit `staking.stacks.co`.” Once current evidence verifies open enrollment and an approved URL, the primary CTA becomes **Start enrollment**.
 
@@ -65,12 +65,11 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Attach `dataStatus`, sources, assumptions, and verification time to every successful result.
 - Ground protocol answers on live state, release-pinned contracts/reference implementations, accepted SIP-045, pinned SDK/tests, then official documentation in that order.
 - Lead with decision-relevant conclusions while preserving primary-source traceability and explicit unknowns.
-- Use only current MCP outputs and resources as factual support; never fill a missing answer from model memory, plausibility, roadmap intent, private chat, demo data, or a preferred conclusion.
+- Use only current MCP outputs and resources as factual support; never fill a missing answer from model memory, plausibility, roadmap intent, private chat, or a preferred conclusion.
 - Use the explicit abstention “This MCP does not currently verify that” when the available evidence cannot answer a material question, followed by the evidence needed to resolve it.
 - Treat `unknown`, `not_verified`, `not_assessable`, `context_only`, and empty results as final evidence states rather than prompts to guess.
 - Serialize unsafe numeric blockchain values as decimal strings.
-- Keep demo manifests separate from published/live records and exclude them by default.
-- Route generic opportunity questions by evidence precedence: mainnet and published bonds first, then a labeled testnet preview; never require a network-specific user prompt.
+- Route generic opportunity questions through mainnet runtime state and reviewed mainnet product records; never require a network-specific user prompt.
 - Keep native L1 BTC distinct from sBTC.
 - Keep BTC location distinct from self-custody or custodial key control.
 - Return unknown compatibility when evidence is missing.
@@ -93,16 +92,12 @@ The concierge classifies audit, timelock, Leather, pre-funding, recovery, and ea
 - Connect through stdio in Codex and Claude Code.
 - Initialize and call every tool through MCP Inspector.
 - Read current PoX status from the live Stacks API.
-- Show scheduled PoX-5 activation on the dedicated testnet and discover configured bonds automatically once they exist, without conflating either state with mainnet availability.
-- Replace the pre-production preview automatically when verified mainnet or published opportunity data becomes available, without changing the user-facing questions.
-- Keep demo opportunities impossible to mistake for live bonds.
 - Reproduce yield outputs from automated tests.
-- Preserve `demo` provenance through every calculation based on synthetic terms.
 - Invoke and metadata-validate every tool through an in-process MCP client without live-network dependencies.
-- Demonstrate that a failed live read returns an explicit error and never falls back to demo or remembered state.
+- Demonstrate that a failed live read returns an explicit error and never falls back to stale or remembered state.
 - Keep the prompt, skill, and response-standard resource aligned on guided discovery and evidence boundaries.
 - Produce an initial concierge assessment after at most four goal-oriented questions.
-- Demonstrate one direct native-yield journey and one liquidity/borrowing journey that routes to the closest planned stBTC path without presenting a live lending market.
+- Cover one direct native-yield journey and one liquidity/borrowing journey that routes to the closest supported stBTC path without presenting an unverified lending market as live.
 
 ## Exclusions
 
@@ -110,8 +105,7 @@ Transactions, PSBTs, signatures, wallet connection, private partner data, indivi
 
 ## Risks and guardrails
 
-- Public APIs may be unavailable: return a typed, retryable upstream error without substituting stale demo data.
-- The dedicated PoX-5 testnet may still be before its scheduled activation height: report the schedule and countdown, and return no protocol bonds rather than treating a future contract version as active.
+- Public APIs may be unavailable: return a typed, retryable upstream error without substituting stale data.
 - A public product document may lag chain state: label it published, not live.
 - Wallet support may change: require cited product evidence and preserve unknown as unknown.
 - A target APY may support a labeled gross scenario without defining actual payout mechanics; never infer fees or present an unknown net payout.

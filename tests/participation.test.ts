@@ -28,8 +28,8 @@ class CountingProvider extends OfflineProvider {
   override async listProtocolBonds(): Promise<any> { this.bondCalls += 1; return super.listProtocolBonds(); }
 }
 
-const now = () => new Date("2026-08-06T12:00:00.000Z");
-function service(date = now) { return new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }), prices: new CoinGeckoPriceProvider({ now: date, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200, headers: { "content-type": "application/json" } }) }), now: date }); }
+const now = () => new Date("2026-08-09T12:00:00.000Z");
+function service(date = now) { return new BitcoinStakingService({ stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }), prices: new CoinGeckoPriceProvider({ now: date, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200, headers: { "content-type": "application/json" } }) }), now: date }); }
 
 test("Genesis exposes the two stable route types with the current planned pool evidence", async () => {
   const routes = await service().listBondParticipationRoutes({ bondId: "genesis-bond" });
@@ -44,23 +44,19 @@ test("Genesis exposes the two stable route types with the current planned pool e
   assert.match(direct?.routeType === "native_l1_direct" ? direct.enrollment.method : "", /connects you with the Stacks team.*follow up to guide you through onboarding and the next allocation steps/i);
 });
 
-test("testnet snapshot reuses its live reads and route-only flows avoid a full snapshot", async () => {
+test("mainnet snapshot reuses its live reads and route-only flows avoid a full snapshot", async () => {
   const mainnet = new CountingProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" });
-  const testnet = new CountingProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" });
   const svc = new BitcoinStakingService({
     stacks: mainnet,
-    testnetStacks: testnet,
     prices: new CoinGeckoPriceProvider({ now, fetchFn: async () => new Response(JSON.stringify({ bitcoin: { usd: 64_415, last_updated_at: 1_786_048_080 }, blockstack: { usd: 0.129774, last_updated_at: 1_786_048_080 } }), { status: 200 }) }),
     now,
   });
-  await svc.getMarketSnapshot({ network: "testnet" });
-  assert.equal(testnet.statusCalls, 1);
-  assert.equal(testnet.bondCalls, 1);
-  assert.equal(mainnet.statusCalls, 0);
-  assert.equal(mainnet.bondCalls, 0);
-  await svc.compareStakingPaths({ goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000" });
-  assert.equal(mainnet.statusCalls, 0);
+  await svc.getMarketSnapshot();
+  assert.equal(mainnet.statusCalls, 1);
   assert.equal(mainnet.bondCalls, 1);
+  await svc.compareStakingPaths({ goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000" });
+  assert.equal(mainnet.statusCalls, 1);
+  assert.equal(mainnet.bondCalls, 2);
 });
 
 test("large allowlisted BTC holder with approved custody is routed to direct L1", async () => {
@@ -73,14 +69,14 @@ test("large allowlisted BTC holder with approved custody is routed to direct L1"
 test("unknown whitelist and stale custody evidence cannot be recommended as current", async () => {
   const svc = service(); const bond = await svc.manifests.get("genesis-bond"); const direct = bond.participationRoutes.find((route) => route.routeType === "native_l1_direct")!; const custody = (await svc.custody.list()).paths;
   const profile = ParticipantProfileSchema.parse({ goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "unknown", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather", amountSats: "2500000000" });
-  const assessment = assessRoute(bond, direct, profile, custody, new Date("2026-08-15T00:00:00.000Z"));
+  const assessment = assessRoute(bond, direct, profile, custody, new Date("2026-08-17T00:00:00.000Z"));
   assert.equal(assessment.effectiveAvailability, "needs_review");
   assert.equal(assessment.fit, "not_assessable");
   assert.ok(assessment.missingEvidence.some((item) => /Allowlist/i.test(item)));
 });
 
 test("overdue bundled registries fail closed when no current remote registry is available", async () => {
-  const staleService = service(() => new Date("2026-08-15T00:00:00.000Z"));
+  const staleService = service(() => new Date("2026-08-17T00:00:00.000Z"));
   await assert.rejects(staleService.listCustodyPaths(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE");
   await assert.rejects(staleService.listBonds(), (error: unknown) => error instanceof ServiceError && error.code === "REGISTRY_UNAVAILABLE");
 });
@@ -96,7 +92,6 @@ test("pool diligence survives custody-registry failure while direct fit remains 
   const svc = new BitcoinStakingService({
     custody: new FailingCustodyStore(),
     stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
-    testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }),
     prices: new CoinGeckoPriceProvider({ now, fetchFn: async () => { throw new Error("prices offline"); } }),
     now,
   });
@@ -145,7 +140,7 @@ test("confirmed BitGo non-support is a no-match rather than missing evidence", a
 
 test("diligence never substitutes a different bond for an explicit identifier", async () => {
   const profile = { goal: "earn_yield" as const, assetHeld: "btc_l1" as const, participantType: "institution" as const, whitelistStatus: "approved" as const, liquidityNeed: "lock_until_maturity" as const, bitcoinPathPreference: "bitcoin_l1_only" as const, keyControlPreference: "custodian" as const };
-  await assert.rejects(service().buildDiligenceReport({ bondId: "demo-native-bitcoin-bond", profile }), (error: unknown) => error instanceof Error && "code" in error && error.code === "NOT_FOUND");
+  await assert.rejects(service().buildDiligenceReport({ bondId: "unknown-bond", profile }), (error: unknown) => error instanceof Error && "code" in error && error.code === "NOT_FOUND");
   await assert.rejects(service().buildDiligenceReport({ bondIndex: 99, profile }), (error: unknown) => error instanceof Error && "code" in error && error.code === "NOT_FOUND");
 });
 
@@ -177,7 +172,6 @@ test("service defaults to the native route and labels bond-specific economics fr
   const svc = new BitcoinStakingService({
     manifests: new ManifestStore(directory, { now }),
     stacks: new OfflineProvider({ network: "mainnet", apiBaseUrl: "http://mainnet.invalid" }),
-    testnetStacks: new OfflineProvider({ network: "testnet", apiBaseUrl: "http://testnet.invalid" }),
     prices: new CoinGeckoPriceProvider({ now, fetchFn: async () => { throw new Error("prices should not be fetched"); } }),
     now,
   });

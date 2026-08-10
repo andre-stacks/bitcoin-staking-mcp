@@ -2,9 +2,9 @@ import { selectDefaultRoute, simulateYield, type YieldSimulationInput } from "./
 import { ServiceError } from "./core/errors.js";
 import { assessRoute, compareBondRoutes } from "./core/recommendation.js";
 import {
-  CustodyPathStatusSchema, LifecycleFilterSchema, ParticipantProfileSchema, StacksNetworkSchema,
+  CustodyPathStatusSchema, LifecycleFilterSchema, ParticipantProfileSchema,
   isReviewCurrent, normalizeParticipantProfileAmount, reviewDueAt, routeEffectiveAvailability,
-  type BondManifest, type ParticipantProfile, type ParticipationRoute, type SourceRef, type StacksNetworkName,
+  type BondManifest, type ParticipantProfile, type ParticipationRoute, type SourceRef,
 } from "./core/schemas.js";
 import { CoinGeckoPriceProvider } from "./providers/coingecko.js";
 import { ManifestStore } from "./providers/manifest-store.js";
@@ -19,7 +19,6 @@ export interface ServiceDependencies {
   custody?: CustodyStore;
   registry?: RegistryStore;
   stacks?: StacksProvider;
-  testnetStacks?: StacksProvider;
   prices?: CoinGeckoPriceProvider;
   now?: () => Date;
 }
@@ -40,7 +39,6 @@ export class BitcoinStakingService {
   readonly custody: CustodyStore;
   readonly registry: RegistryStore;
   readonly stacks: StacksProvider;
-  readonly testnetStacks: StacksProvider;
   readonly prices: CoinGeckoPriceProvider;
   private readonly now: () => Date;
 
@@ -56,12 +54,11 @@ export class BitcoinStakingService {
     this.manifests = dependencies.manifests ?? new ManifestStore(undefined, { now: this.now, ...(useDeprecatedRegistries ? {} : { registryStore: this.registry }) });
     this.custody = dependencies.custody ?? new CustodyStore(undefined, { now: this.now, ...(useDeprecatedRegistries ? {} : { registryStore: this.registry }) });
     this.stacks = dependencies.stacks ?? new StacksProvider();
-    this.testnetStacks = dependencies.testnetStacks ?? new StacksProvider({ network: "testnet" });
     this.prices = dependencies.prices ?? new CoinGeckoPriceProvider({ now: this.now });
   }
 
-  getProtocolStatus(network: StacksNetworkName = "mainnet") { return this.provider(network).getProtocolStatus(); }
-  listProtocolBonds(network: StacksNetworkName = "mainnet", options: { lookbackPeriods?: number; lookaheadPeriods?: number } = {}) { return this.provider(network).listProtocolBonds(options); }
+  getProtocolStatus() { return this.stacks.getProtocolStatus(); }
+  listProtocolBonds(options: { lookbackPeriods?: number; lookaheadPeriods?: number } = {}) { return this.stacks.listProtocolBonds(options); }
   getSecurityGuidance(topic: SecurityTopic | "all" = "all") { return getSecurityGuidance(topic); }
   searchCurrentFacts(input: { query?: string | undefined; category?: "project" | "product" | "announcement" | undefined; status?: string | undefined; limit?: number | undefined } = {}) {
     return this.registry.search({
@@ -73,19 +70,16 @@ export class BitcoinStakingService {
   }
 
   async getMarketSnapshot(
-    input: { network?: StacksNetworkName } = {},
+    _input: Record<string, never> = {},
     preloaded: { registry?: ManifestRegistryRead; custody?: CustodyRegistryRead } = {},
   ) {
-    const network = StacksNetworkSchema.parse(input.network ?? "mainnet");
-    const statusPromise = this.getProtocolStatus(network);
-    const scanPromise = this.listProtocolBonds(network);
-    const testnetStatusPromise = network === "testnet" ? statusPromise : this.getProtocolStatus("testnet");
-    const testnetScanPromise = network === "testnet" ? scanPromise : this.listProtocolBonds("testnet");
-    const [registryResult, custodyResult, statusResult, scanResult, testnetStatusResult, testnetScanResult, priceResult] = await Promise.allSettled([
+    const network = "mainnet" as const;
+    const statusPromise = this.getProtocolStatus();
+    const scanPromise = this.listProtocolBonds();
+    const [registryResult, custodyResult, statusResult, scanResult, priceResult] = await Promise.allSettled([
       preloaded.registry ? Promise.resolve(preloaded.registry) : this.manifests.listWithMetadata(),
       preloaded.custody ? Promise.resolve(preloaded.custody) : this.custody.readWithMetadata(),
       statusPromise, scanPromise,
-      testnetStatusPromise, testnetScanPromise,
       this.prices.getCurrentUsdPrices(),
     ]);
     if (registryResult.status === "rejected") throw registryResult.reason;
@@ -94,7 +88,7 @@ export class BitcoinStakingService {
     type BondScheduleValue = Awaited<ReturnType<StacksProvider["getBondSchedule"]>> | ReturnType<typeof errorSummary> | null;
     const scheduleResults: Array<readonly [string, BondScheduleValue]> = await Promise.all(published.map(async (bond): Promise<readonly [string, BondScheduleValue]> => {
       if (bond.onChainBondIndex === undefined) return [bond.id, null] as const;
-      try { return [bond.id, await this.provider(network).getBondSchedule(bond.onChainBondIndex)] as const; }
+      try { return [bond.id, await this.stacks.getBondSchedule(bond.onChainBondIndex)] as const; }
       catch (error) { return [bond.id, errorSummary(error)] as const; }
     }));
     const schedules = new Map(scheduleResults);
@@ -102,11 +96,6 @@ export class BitcoinStakingService {
     const routeSummaries = this.summarizeRoutes(published, scanResult, now);
     const chain = statusResult.status === "fulfilled" ? statusResult.value : errorSummary(statusResult.reason);
     const onChainBonds = scanResult.status === "fulfilled" ? scanResult.value : errorSummary(scanResult.reason);
-    const testnetEvidence = {
-      protocol: testnetStatusResult.status === "fulfilled" ? testnetStatusResult.value : errorSummary(testnetStatusResult.reason),
-      bonds: testnetScanResult.status === "fulfilled" ? testnetScanResult.value : errorSummary(testnetScanResult.reason),
-      investable: false,
-    };
     const custody = custodyResult.status === "fulfilled" ? {
       status: "available" as const, current: custodyResult.value.metadata.reviewStatus === "current",
       registry: custodyResult.value.metadata,
@@ -119,7 +108,7 @@ export class BitcoinStakingService {
     const prices = priceResult.status === "fulfilled" ? priceResult.value : errorSummary(priceResult.reason);
     return {
       network, bondCount: published.length, bonds: published.map((bond) => ({ id: bond.id, title: bond.title, lifecycleStatus: bond.lifecycleStatus, protocolSchedule: schedules.get(bond.id) ?? null })),
-      routes: routeSummaries, protocol: chain, onChainBonds, testnetEvidence, custody, prices, registry: registryResult.value.metadata,
+      routes: routeSummaries, protocol: chain, onChainBonds, custody, prices, registry: registryResult.value.metadata,
       catalog: catalogResult,
       activeNotices: catalogResult.status === "available" ? catalogResult.value.results.filter((item) => item.kind === "fact" && "category" in item && item.category === "announcement") : [],
       productHighlights: catalogResult.status === "available" ? catalogResult.value.results.filter((item) => item.kind === "fact" && "category" in item && item.category === "product") : [],
@@ -129,30 +118,26 @@ export class BitcoinStakingService {
         ...(custodyResult.status === "fulfilled" ? custodyResult.value.registry.sources : []),
         ...(statusResult.status === "fulfilled" ? statusResult.value.sources : []),
         ...(scanResult.status === "fulfilled" ? scanResult.value.sources : []),
-        ...(testnetStatusResult.status === "fulfilled" ? testnetStatusResult.value.sources : []),
-        ...(testnetScanResult.status === "fulfilled" ? testnetScanResult.value.sources : []),
         ...(priceResult.status === "fulfilled" ? priceResult.value.sources : []),
       ]),
       assumptions: ["The snapshot is deterministic and applies status, enrollment, verification, and freshness independently."], verifiedAt: now.toISOString(),
     };
   }
 
-  async listBonds(input: { lifecycleStatus?: string | undefined; includeDemo?: boolean | undefined } = {}) {
+  async listBonds(input: { lifecycleStatus?: string | undefined } = {}) {
     const lifecycle = input.lifecycleStatus ? LifecycleFilterSchema.parse(input.lifecycleStatus) : undefined;
     const { bonds, metadata } = await this.manifests.listWithMetadata();
     const filtered = bonds.filter((bond) => !lifecycle || bond.lifecycleStatus === lifecycle);
     const summarize = async (bond: typeof filtered[number]) => ({
       id: bond.id, title: bond.title, network: bond.network, lifecycleStatus: bond.lifecycleStatus,
       productStatus: bond.productStatus, enrollmentStatus: bond.enrollmentStatus, scheduledLaunchDate: bond.timing.scheduledLaunchDate ?? null,
-      protocolSchedule: bond.onChainBondIndex === undefined ? null : await this.provider(bond.network).getBondSchedule(bond.onChainBondIndex).catch(errorSummary),
+      protocolSchedule: bond.onChainBondIndex === undefined ? null : await this.stacks.getBondSchedule(bond.onChainBondIndex).catch(errorSummary),
       dataStatus: bond.dataStatus, timing: bond.timing, economics: bond.economics, notes: bond.notes,
       routes: bond.participationRoutes.map((route) => ({ id: route.id, name: route.name, routeType: route.routeType, effectiveAvailability: routeEffectiveAvailability(route, this.now()) })),
     });
-    const published = filtered.filter((bond) => bond.dataStatus === "published");
-    const demos = input.includeDemo ? filtered.filter((bond) => bond.dataStatus === "demo") : [];
-    return { bonds: await Promise.all(published.map(summarize)), demoBonds: await Promise.all(demos.map(summarize)), counts: { published: published.length, demo: demos.length }, demoIncluded: input.includeDemo ?? false, registry: metadata,
-      dataStatus: published.length ? "published" as const : demos.length ? "demo" as const : "derived" as const,
-      sources: this.uniqueSources([...published, ...demos].flatMap((bond) => bond.sources)), assumptions: ["Demo records are excluded unless explicitly requested."], verifiedAt: this.now().toISOString() };
+    return { bonds: await Promise.all(filtered.map(summarize)), count: filtered.length, registry: metadata,
+      dataStatus: filtered.length ? "published" as const : "derived" as const,
+      sources: this.uniqueSources(filtered.flatMap((bond) => bond.sources)), assumptions: ["Only current mainnet product manifests are included."], verifiedAt: this.now().toISOString() };
   }
 
   async listBondParticipationRoutes(input: { bondId: string }) {
@@ -190,7 +175,7 @@ export class BitcoinStakingService {
   }
 
   async getBond(bondId: string) {
-    const bond = await this.manifests.get(bondId); const provider = this.provider(bond.network); const now = this.now();
+    const bond = await this.manifests.get(bondId); const provider = this.stacks; const now = this.now();
     let onChainVerification: Record<string, unknown>;
     if (bond.onChainBondIndex === undefined) onChainVerification = { status: "not_attempted", reason: "No on-chain bond index is declared." };
     else {
@@ -217,7 +202,7 @@ export class BitcoinStakingService {
       dataStatus: bond.dataStatus, sources: this.uniqueSources([...bond.sources, ...runtimeSource]), assumptions: [conflict ? "Owner and runtime state conflict; no route is currently usable." : "Published product state remains distinct from runtime configuration."], verifiedAt: now.toISOString() };
   }
 
-  async buildDiligenceReport(input: { network?: StacksNetworkName | undefined; bondIndex?: number | undefined; bondId?: string | undefined; routeId?: string | undefined; profile: ParticipantProfile }) {
+  async buildDiligenceReport(input: { bondIndex?: number | undefined; bondId?: string | undefined; routeId?: string | undefined; profile: ParticipantProfile }) {
     const profile = normalizeParticipantProfileAmount(ParticipantProfileSchema.parse(input.profile)); const now = this.now();
     const manifestRead = await this.manifests.listWithMetadata();
     let custodyRead: CustodyRegistryRead | undefined;
@@ -233,14 +218,12 @@ export class BitcoinStakingService {
         throw new ServiceError("INVALID_INPUT", `Bond ${input.bondId} does not match bond index ${input.bondIndex}.`);
       }
     } else if (input.bondIndex !== undefined) {
-      bond = bonds.find((item) => item.onChainBondIndex === input.bondIndex && (!input.network || item.network === input.network));
+      bond = bonds.find((item) => item.onChainBondIndex === input.bondIndex);
       if (!bond) throw new ServiceError("NOT_FOUND", `No published bond manifest matches on-chain index ${input.bondIndex}.`);
     } else {
-      bond = bonds.find((item) => item.network === (input.network ?? "mainnet"));
+      bond = bonds[0];
     }
-    if (!bond && input.network) return this.buildNetworkDiligencePreview(input.network, profile, now, { registry: manifestRead, ...(custodyRead ? { custody: custodyRead } : {}) });
     if (!bond) throw new ServiceError("NOT_FOUND", "No published bond matches the request.");
-    if (input.network && bond.network !== input.network) throw new ServiceError("INVALID_INPUT", `Bond ${bond.id} is on ${bond.network}, not ${input.network}.`);
     const custody = custodyRead ? await this.listCustodyPaths({}, custodyRead) : { paths: [], sources: [] };
     const selectedRoutes = input.routeId ? bond.participationRoutes.filter((route) => route.id === input.routeId) : bond.participationRoutes;
     if (!selectedRoutes.length) throw new ServiceError("NOT_FOUND", `Route not found on ${bond.id}: ${input.routeId}`);
@@ -263,7 +246,7 @@ export class BitcoinStakingService {
       selectedRoutes.find((route) => route.id === item.routeId)?.routeType === "native_l1_direct"
     );
     const primaryScenario = input.routeId ? economicScenarios[0] : directScenario ?? economicScenarios[0];
-    const protocolSchedule = bond.onChainBondIndex === undefined ? null : await this.provider(bond.network).getBondSchedule(bond.onChainBondIndex).catch(errorSummary);
+    const protocolSchedule = bond.onChainBondIndex === undefined ? null : await this.stacks.getBondSchedule(bond.onChainBondIndex).catch(errorSummary);
     const scheduledDate = bond.timing.scheduledLaunchDate
       ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${bond.timing.scheduledLaunchDate}T00:00:00.000Z`))
       : null;
@@ -357,84 +340,21 @@ export class BitcoinStakingService {
         ...bond.sources,
         ...custody.sources,
         ...economicScenarios.flatMap((item) => item.scenario?.sources ?? []),
-        this.provider(bond.network).sourceRef(now.toISOString()),
+        this.stacks.sourceRef(now.toISOString()),
       ]),
       assumptions: ["Claim-level sources are identified by each route and custody sourceIds field.", "This is diligence support, not individualized advice."],
       verifiedAt: now.toISOString(),
     };
   }
 
-  private async buildNetworkDiligencePreview(
-    network: StacksNetworkName,
-    profile: ParticipantProfile,
-    now: Date,
-    preloaded: { registry: ManifestRegistryRead; custody?: CustodyRegistryRead },
-  ) {
-    const snapshot = await this.getMarketSnapshot({ network }, preloaded);
-    const protocol = "error" in snapshot.protocol ? null : snapshot.protocol;
-    const onChainBonds = "error" in snapshot.onChainBonds ? null : snapshot.onChainBonds;
-    const configuredBonds = onChainBonds?.bonds ?? [];
-    const scheduled = protocol?.pox5Scheduled === true && !protocol.pox5Active;
-    const state = scheduled
-      ? "PoX-5 is scheduled on this network, but no published product bond manifest exists for route or investor-fit diligence."
-      : configuredBonds.length
-        ? `PoX-5 is active and ${configuredBonds.length} on-chain bond configuration${configuredBonds.length === 1 ? " was" : "s were"} observed, but no published product bond manifest exists for investable route diligence.`
-        : protocol?.pox5Active
-          ? "PoX-5 is active, but no configured bond and no published product bond manifest were verified."
-          : "Protocol state is unavailable and no published product bond manifest exists for this network.";
-    const coverageBoundary = `${network} protocol evidence only. On-chain configuration does not establish product availability, enrollment, custody compatibility, route economics, or investability.`;
-    return {
-      assessmentStatus: "network_protocol_preview" as const,
-      bottomLine: state,
-      bondAvailability: {
-        scheduled: null,
-        protocolSchedule: null,
-        lifecycleStatus: "unknown" as const,
-        productStatus: "unconfirmed" as const,
-        enrollmentStatus: "unknown" as const,
-        registration: [],
-        onChainConfigured: configuredBonds.length > 0,
-        onChainReconciliation: configuredBonds.map((record) => ({ routeId: `protocol-bond-${record.onChainBondIndex}`, status: "configured" as const })),
-        coverageBoundary,
-      },
-      commonProtocolEconomics: {
-        rewardAsset: "unknown" as const,
-        rewardModel: "unknown" as const,
-        signerAndAdministrationControls: "No published product manifest exists; inspect the exact on-chain contract provenance in the market snapshot.",
-        audits: [],
-        unresolvedTerms: ["Product routes, eligibility, custody support, fees, reward accounting, enrollment, and withdrawal terms are not published for this network."],
-        coverageBoundary,
-      },
-      economics: { status: "not_available" as const, scenario: null },
-      routeEconomicScenarios: [],
-      routeAssessments: [],
-      riskSections: [],
-      operationalFit: "not_assessable" as const,
-      missingEvidence: ["A current owner-reviewed bond manifest with participation routes is not published for this network."],
-      nextDiligenceAction: "Publish and validate an owner-reviewed bond manifest before assessing route availability, economics, or operational fit.",
-      nextDiligenceSteps: [
-        "Review the reported protocol activation and configured-bond evidence.",
-        "Obtain a current owner-reviewed product manifest for the intended bond.",
-        "Re-run route diligence only after product and protocol evidence can be reconciled.",
-      ],
-      profile,
-      dataStatus: "derived" as const,
-      sources: snapshot.sources,
-      assumptions: ["Testnet assets are non-investable.", "On-chain protocol evidence is not substituted for missing product claims."],
-      verifiedAt: now.toISOString(),
-    };
-  }
-
-  async checkParticipantStatus(address: string, bondId?: string | undefined, networkInput?: StacksNetworkName | undefined) {
-    const inferred = address.startsWith("ST") || address.startsWith("SN") ? "testnet" : address.startsWith("SP") || address.startsWith("SM") ? "mainnet" : undefined;
+  async checkParticipantStatus(address: string, bondId?: string | undefined) {
+    if (address.startsWith("ST") || address.startsWith("SN")) {
+      throw new ServiceError("INVALID_INPUT", "Scout checks mainnet participant addresses only.");
+    }
+    const inferred = address.startsWith("SP") || address.startsWith("SM") ? "mainnet" as const : undefined;
     const bond = bondId ? await this.manifests.get(bondId) : undefined;
-    const requested = networkInput ? StacksNetworkSchema.parse(networkInput) : undefined;
-    const network = bond?.network ?? requested ?? inferred ?? "mainnet";
-    if (bond && requested && bond.network !== requested) throw new ServiceError("INVALID_INPUT", `Bond network ${bond.network} conflicts with requested network ${requested}.`);
-    if (bond && inferred && bond.network !== inferred) throw new ServiceError("INVALID_INPUT", `Bond network ${bond.network} conflicts with address-implied network ${inferred}.`);
-    if (!bond && requested && inferred && requested !== inferred) throw new ServiceError("INVALID_INPUT", `Address implies ${inferred}, which conflicts with requested network ${requested}.`);
-    const result = await this.provider(network).getParticipantStatus(address, bond);
-    return { ...result, networkResolution: { network, selectedBy: bond ? "bond" : requested ? "request" : inferred ? "address" : "default", inferredFromAddress: inferred ?? null }, componentProvenance: result.componentProvenance ?? result.sources };
+    const result = await this.stacks.getParticipantStatus(address, bond);
+    return { ...result, networkResolution: { network: "mainnet" as const, selectedBy: bond ? "bond" as const : inferred ? "address" as const : "default" as const, inferredFromAddress: inferred ?? null }, componentProvenance: result.componentProvenance ?? result.sources };
   }
 
   async checkCompatibility(input: { bondId: string; provider: string; keyControlPreference: ParticipantProfile["keyControlPreference"] }) {
@@ -570,9 +490,8 @@ export class BitcoinStakingService {
     });
   }
   private async getBondRuntimeRoutes(bond: BondManifest) {
-    const [scanResult] = await Promise.allSettled([this.listProtocolBonds(bond.network)]);
+    const [scanResult] = await Promise.allSettled([this.listProtocolBonds()]);
     return this.summarizeRoutes([bond], scanResult!, this.now());
   }
   private uniqueSources(sources: SourceRef[]) { return [...new Map(sources.map((source) => [source.id, source])).values()]; }
-  private provider(network: StacksNetworkName) { return network === "testnet" ? this.testnetStacks : this.stacks; }
 }

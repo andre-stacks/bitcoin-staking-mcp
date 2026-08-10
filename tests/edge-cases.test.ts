@@ -79,7 +79,7 @@ test("bond schema rejects invalid limits, paired-STX terms, reward fields, and c
   assert.equal(BondManifestSchema.safeParse(mismatchedRewardAsset).success, false);
 
   const contract = await genesis();
-  contract.participationRoutes[1].contracts = [{ role: "pool", contractId: "ST000000000000000000002AMW42H.pool", network: "testnet" }];
+  contract.participationRoutes[1].contracts = [{ role: "pool", contractId: "ST000000000000000000002AMW42H.pool", network: "devnet" }];
   assert.equal(BondManifestSchema.safeParse(contract).success, false);
 });
 
@@ -113,7 +113,7 @@ test("bundled Genesis distinguishes planned stBTC use from live borrowing integr
 test("availability dimensions handle exact freshness boundary and every terminal state", async () => {
   const bond = await genesis();
   const route = bond.participationRoutes[0];
-  const due = new Date("2026-08-13T00:00:00.000Z");
+  const due = new Date("2026-08-16T00:00:00.000Z");
   assert.equal(routeEffectiveAvailability(route, due), "scheduled");
   assert.equal(routeEffectiveAvailability(route, new Date(due.getTime() + 1)), "needs_review");
   assert.equal(routeEffectiveAvailability(route, due, true), "conflict");
@@ -176,15 +176,15 @@ test("direct-route fit enforces paired STX, amount boundaries, and a current cus
   const route = { ...bond.participationRoutes[0], productStatus: "production", enrollmentStatus: "open", minimumSats: "100", maximumSats: "200", pairedStx: { required: true, minimumValueRatioBps: 500 } };
   const paths = await custody();
   const base = { goal: "earn_yield", assetHeld: "btc_l1", participantType: "institution", whitelistStatus: "approved", liquidityNeed: "lock_until_maturity", bitcoinPathPreference: "bitcoin_l1_only", keyControlPreference: "custodian", walletOrCustodian: "Leather" } as const;
-  const noStx = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "100", stxAvailable: "no" }), paths, new Date("2026-08-06T12:00:00.000Z"));
+  const noStx = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "100", stxAvailable: "no" }), paths, new Date("2026-08-09T12:00:00.000Z"));
   assert.equal(noStx.fit, "no_match");
-  const exactMax = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "200", stxAvailable: "yes" }), paths, new Date("2026-08-06T12:00:00.000Z"));
+  const exactMax = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "200", stxAvailable: "yes" }), paths, new Date("2026-08-09T12:00:00.000Z"));
   assert.notEqual(exactMax.fit, "no_match");
-  const above = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "201", stxAvailable: "yes" }), paths, new Date("2026-08-06T12:00:00.000Z"));
+  const above = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "201", stxAvailable: "yes" }), paths, new Date("2026-08-09T12:00:00.000Z"));
   assert.equal(above.fit, "no_match");
-  const noCustody = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "150", stxAvailable: "yes" }), [], new Date("2026-08-06T12:00:00.000Z"));
+  const noCustody = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, amountSats: "150", stxAvailable: "yes" }), [], new Date("2026-08-09T12:00:00.000Z"));
   assert.equal(noCustody.fit, "not_assessable");
-  const sbtcOnly = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, assetHeld: "sbtc", amountSats: "150", stxAvailable: "yes" }), paths, new Date("2026-08-06T12:00:00.000Z"));
+  const sbtcOnly = assessRoute(bond, route, ParticipantProfileSchema.parse({ ...base, assetHeld: "sbtc", amountSats: "150", stxAvailable: "yes" }), paths, new Date("2026-08-09T12:00:00.000Z"));
   assert.equal(sbtcOnly.fit, "no_match");
   assert.ok(sbtcOnly.unsupportedRequirements.some((item) => /native BTC/.test(item)));
   assert.ok(sbtcOnly.reasons.every((item) => !/preserves/.test(item)));
@@ -195,7 +195,7 @@ test("sBTC+STX pools distinguish yes, no, and unknown STX availability", async (
   const pool = { ...bond.participationRoutes[1], productStatus: "production", enrollmentStatus: "open", investorInputs: "sbtc_and_stx", feeBps: 0, contracts: [{ role: "pool", contractId: "SP000000000000000000002Q6VF78.pool", network: "mainnet" }], rewardAccounting: { ...bond.participationRoutes[1].rewardAccounting, status: "verified" }, withdrawalTerms: { ...bond.participationRoutes[1].withdrawalTerms, status: "verified" }, enrollmentUrl: "https://example.com/enroll" };
   const base = { goal: "earn_yield", assetHeld: "sbtc", participantType: "individual", whitelistStatus: "not_approved", liquidityNeed: "unknown", bitcoinPathPreference: "open_to_sbtc", keyControlPreference: "self_controlled", amountSats: "1000" } as const;
   const paths = await custody();
-  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "no" }), paths, new Date("2026-08-06T12:00:00.000Z")).fit, "no_match");
-  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "unknown" }), paths, new Date("2026-08-06T12:00:00.000Z")).fit, "conditional");
-  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "yes" }), paths, new Date("2026-08-06T12:00:00.000Z")).fit, "strong");
+  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "no" }), paths, new Date("2026-08-09T12:00:00.000Z")).fit, "no_match");
+  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "unknown" }), paths, new Date("2026-08-09T12:00:00.000Z")).fit, "conditional");
+  assert.equal(assessRoute(bond, pool, ParticipantProfileSchema.parse({ ...base, stxAvailable: "yes" }), paths, new Date("2026-08-09T12:00:00.000Z")).fit, "strong");
 });

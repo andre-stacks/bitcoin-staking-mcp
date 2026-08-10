@@ -11,7 +11,6 @@ The concierge is grounded on a versioned source corpus at runtime. It should not
 5. Current official operator and developer documentation.
 6. Official public audit and product statements.
 7. Versioned public bond or product manifests.
-8. Clearly labeled demo data.
 
 When sources conflict, the answer reports the conflict. Runtime and contract evidence determine behavior; lower-precedence documentation can explain intent but cannot override it.
 
@@ -20,7 +19,6 @@ When sources conflict, the answer reports the conflict. Runtime and contract evi
 | Source | Role |
 | --- | --- |
 | [Mainnet PoX API](https://api.mainnet.hiro.so/v2/pox) | Current contract, burn height, cycles, and network state. |
-| [Dedicated PoX-5 testnet API](https://api.testnet-pox5.hiro.so/v2/pox) | Scheduled/active testnet PoX-5 state and test evidence. |
 | [SIP-045](https://github.com/stacksgov/sips/blob/0b7cecaecdb6060a6fc19510f2e7dd8dde1d2fa1/sips/sip-045/sip-045-pox-5-bitcoin-staking.md) | Accepted protocol specification and intended mechanics. |
 | [PoX-5 in stacks-core 4.0.1](https://github.com/stacks-network/stacks-core/blob/4.0.1/stackslib/src/chainstate/stacks/boot/pox-5.clar) | Release-pinned protocol contract source. |
 
@@ -49,7 +47,6 @@ When sources conflict, the answer reports the conflict. Runtime and contract evi
 | Source | Role |
 | --- | --- |
 | [PoX-5 hardfork and audit statement](https://www.stacks.co/blog/the-pox-5-hardfork-what-to-expect-this-week) | Official statement naming Trail of Bits, Clarity Alliance, and Asymmetric Research. |
-| [Public PoX-5 testnet guide](https://www.stacks.co/blog/the-public-pox-5-testnet-is-live-test-bitcoin-staking-before-mainnet) | Official network and testnet positioning. |
 
 ## Evidence gaps to check at runtime
 
@@ -58,6 +55,6 @@ When sources conflict, the answer reports the conflict. Runtime and contract evi
 - Public compatibility evidence for every supported wallet and custody provider.
 - A canonical public product manifest for every upcoming bond.
 
-These gaps must appear as unknown or not verified. They must not be filled from private chat, roadmap intent, or demo data.
+These gaps must appear as unknown or not verified. They must not be filled from private chat or roadmap intent.
 
 When the current corpus and tool output do not support a requested claim, the concierge must say “This MCP does not currently verify that,” name the missing evidence, and stop. Model memory, plausibility, and user prompting are not fallback sources.

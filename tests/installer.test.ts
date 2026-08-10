@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -20,7 +20,7 @@ test("installer options default to both hosts and support aliases", () => {
   const defaults = parseInstallerOptions("setup", []);
   assert.deepEqual(defaults.hosts, ["codex", "claude"]);
   assert.equal(defaults.packageSpec, DEFAULT_PACKAGE_SPEC);
-  assert.match(defaults.packageSpec, /#v0\.4\.0$/);
+  assert.match(defaults.packageSpec, /#v0\.5\.0$/);
 
   const selected = parseInstallerOptions("setup", [
     "--hosts=both",
@@ -82,7 +82,7 @@ test("setup registers both hosts, installs the global skill, and verifies regist
   await access(join(fakeHome, ".agents", "skills", "bitcoin-staking-concierge", "SKILL.md"));
   assert.ok(result.nextSteps.some((step) => step.includes("$bitcoin-staking-concierge")));
   assert.ok(result.nextSteps.some((step) => step.includes("Scout")));
-  assert.ok(result.nextSteps.some((step) => step.includes("I'd like to get started with Bitcoin staking")));
+  assert.ok(result.nextSteps.some((step) => step.includes("How can I get started staking?")));
   assert.ok(result.nextSteps.some((step) => step.includes("next bond launching")));
   assert.ok(result.nextSteps.some((step) => step.includes("security evidence")));
   assert.ok(result.nextSteps.some((step) => step.includes("guided overview of what it can help with")));
@@ -198,6 +198,35 @@ test("update repeats verified replacement and a tampered concierge skill fails c
   const checked = await runInstaller(parseInstallerOptions("check", ["--hosts", "codex", "--local"]), { runCommand, packageRoot: resolve("."), homeDirectory: fakeHome, verifyServer: async () => completeVerification });
   assert.equal(checked.ok, false);
   assert.equal(checked.steps.find((step) => step.target === "codex-skill")?.status, "failed");
+});
+
+test("check rejects a stale installed skill that still matches its old integrity file", async (context) => {
+  const fakeHome = await mkdtemp(join(tmpdir(), "bitcoin-staking-installer-stale-home-"));
+  const fakePackage = await mkdtemp(join(tmpdir(), "bitcoin-staking-installer-stale-package-"));
+  context.after(() => Promise.all([
+    rm(fakeHome, { recursive: true, force: true }),
+    rm(fakePackage, { recursive: true, force: true }),
+  ]));
+  const packagedSkillPath = join(fakePackage, ".agents", "skills", "bitcoin-staking-concierge", "SKILL.md");
+  await mkdir(join(fakePackage, ".agents", "skills", "bitcoin-staking-concierge"), { recursive: true });
+  await writeFile(packagedSkillPath, "packaged skill v1\n", "utf8");
+
+  const runCommand: CommandRunner = async (command, args) => {
+    if (args.join(" ") === "--version") return { code: 0, stdout: "1.0.0", stderr: "" };
+    if (command === "codex" && args.includes("get")) {
+      return { code: 0, stdout: JSON.stringify({ command: process.execPath, args: [join(fakePackage, "dist", "cli.js"), "serve"] }), stderr: "" };
+    }
+    return { code: 0, stdout: "ok", stderr: "" };
+  };
+  const options = parseInstallerOptions("setup", ["--hosts", "codex", "--local"]);
+  const installed = await runInstaller(options, { runCommand, packageRoot: fakePackage, homeDirectory: fakeHome, verifyServer: async () => completeVerification });
+  assert.equal(installed.ok, true);
+
+  await writeFile(packagedSkillPath, "packaged skill v2\n", "utf8");
+  const checked = await runInstaller(parseInstallerOptions("check", ["--hosts", "codex", "--local"]), { runCommand, packageRoot: fakePackage, homeDirectory: fakeHome, verifyServer: async () => completeVerification });
+  assert.equal(checked.ok, false);
+  assert.equal(checked.steps.find((step) => step.target === "codex-skill")?.status, "failed");
+  assert.match(checked.steps.find((step) => step.target === "codex-skill")?.message ?? "", /does not match the packaged skill/i);
 });
 
 test("setup refuses version or exact tool-contract mismatches before host mutation", async () => {

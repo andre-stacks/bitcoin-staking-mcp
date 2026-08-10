@@ -5,7 +5,7 @@
 Requires Node 22 plus the Codex and/or Claude Code CLI for the selected hosts.
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 setup
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 setup
 ```
 
 The pinned tag is the production-beta install. Use the unpinned `github:andre-stacks/bitcoin-staking-mcp` spec only when intentionally testing the current development branch.
@@ -39,7 +39,7 @@ Claude Code:
 Scout, the Bitcoin Staking Concierge, can help with opportunity discovery, participation fit, yield modeling, security diligence, compatibility and public-status checks, and native-L1 versus sBTC comparison. Ask naturally, for example:
 
 ```text
-I'd like to get started with Bitcoin staking.
+How can I get started staking?
 ```
 
 ```text
@@ -53,8 +53,8 @@ What security evidence should I review before participating through Leather?
 ## Host selection
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 setup --hosts codex
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 setup --hosts claude
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 setup --hosts codex
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 setup --hosts claude
 ```
 
 `--hosts all` and `--hosts both` are aliases for the default.
@@ -62,19 +62,19 @@ npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 setup --hosts claude
 ## Verification
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 check
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 check
 ```
 
 Re-run setup safely or use the explicit update command to refresh the registered package and concierge skill:
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 update
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 update
 ```
 
 For harness automation:
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 check --json
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 check --json
 ```
 
 A successful result requires:
@@ -93,7 +93,7 @@ Rerun `setup`. It replaces only the registration named `bitcoin-staking` and ref
 To pin a release, tag, or commit:
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 setup \
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 setup \
   --package-spec github:andre-stacks/bitcoin-staking-mcp#COMMIT_OR_TAG
 ```
 
@@ -139,7 +139,7 @@ For a CoinGecko Demo or Pro key, set `COINGECKO_API_PLAN=demo` or `pro` and prov
 ## Uninstall
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 uninstall
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 uninstall
 ```
 
 This removes the user registrations named `bitcoin-staking` from both hosts and the global Codex skill directory named `bitcoin-staking-concierge`. It does not modify other MCP servers, skills, repositories, credentials, or host settings.
@@ -147,5 +147,5 @@ This removes the user registrations named `bitcoin-staking` from both hosts and 
 Keep the Codex skill while removing MCP registrations:
 
 ```bash
-npx -y github:andre-stacks/bitcoin-staking-mcp#v0.4.0 uninstall --keep-skill
+npx -y github:andre-stacks/bitcoin-staking-mcp#v0.5.0 uninstall --keep-skill
 ```

@@ -15,16 +15,16 @@ export function btcAmountToSats(value: string): string {
   return (BigInt(whole) * 100_000_000n + BigInt(fraction.padEnd(8, "0"))).toString();
 }
 
-export const DataStatusSchema = z.enum(["live", "published", "derived", "demo"]);
+export const DataStatusSchema = z.enum(["live", "published", "derived"]);
 export type DataStatus = z.infer<typeof DataStatusSchema>;
-export const StacksNetworkSchema = z.enum(["mainnet", "testnet"]);
+export const StacksNetworkSchema = z.literal("mainnet");
 export type StacksNetworkName = z.infer<typeof StacksNetworkSchema>;
 export const ProductStatusSchema = z.enum([
   "production", "tested", "in_progress", "blocked", "not_supported", "unconfirmed",
 ]);
 export const EnrollmentStatusSchema = z.enum(["open", "scheduled", "paused", "closed", "unknown"]);
 export const VerificationLevelSchema = z.enum([
-  "product_owner_confirmed", "testnet_verified", "mainnet_verified",
+  "product_owner_confirmed", "mainnet_verified",
 ]);
 export const EffectiveAvailabilitySchema = z.enum([
   "available", "scheduled", "unavailable", "needs_review", "conflict", "unknown",
@@ -38,7 +38,7 @@ export const SourceRefSchema = z.object({
   title: z.string().min(1),
   url: z.url().optional(),
   sourceType: z.enum([
-    "chain_api", "market_data_api", "official_docs", "source_code", "security_statement", "public_manifest", "demo_manifest", "economic_model", "owner_attestation",
+    "chain_api", "market_data_api", "official_docs", "source_code", "security_statement", "public_manifest", "economic_model", "owner_attestation",
   ]),
   dataStatus: DataStatusSchema,
   retrievedAt: z.iso.datetime().optional(),
@@ -207,7 +207,7 @@ export const EconomicsSchema = z.object({
   rewardAssetOptions: z.array(z.enum(["BTC", "sBTC", "STX"])).min(1).optional(),
   rewardModel: z.enum(["target_principal_rate", "fixed_reward_units", "unknown"]),
   rewardSource: z.string().min(1).optional(),
-  termsStatus: z.enum(["bond_specific", "reference_program_model", "demo"]).optional(),
+  termsStatus: z.enum(["bond_specific", "reference_program_model"]).optional(),
   fixedRewardUnits: z.string().regex(/^\d+(\.\d+)?$/).optional(),
   referenceModel: z.object({
     id: IdSchema,
@@ -228,7 +228,7 @@ export const BondManifestV2Schema = z.object({
   schemaVersion: z.literal(2), id: IdSchema, title: z.string().min(1), description: z.string().min(1),
   aliases: z.array(IdSchema).default([]),
   network: StacksNetworkSchema, onChainBondIndex: z.number().int().nonnegative().optional(),
-  lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]), dataStatus: z.enum(["published", "demo"]),
+  lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]), dataStatus: z.literal("published"),
   productStatus: ProductStatusSchema, enrollmentStatus: EnrollmentStatusSchema,
   verification: z.array(VerificationLevelSchema), attestation: OwnerAttestationSchema,
   timing: TimingSchema, economics: EconomicsSchema,
@@ -239,16 +239,10 @@ export const BondManifestV2Schema = z.object({
   participationRoutes: z.array(ParticipationRouteSchema).min(1), notes: z.array(z.string().min(1)),
   sources: z.array(SourceRefSchema).min(1), verifiedAt: z.iso.datetime(),
 }).strict().superRefine((value, context) => {
-  if (value.dataStatus === "demo" && !value.sources.some((source) => source.dataStatus === "demo")) {
-    context.addIssue({ code: "custom", path: ["sources"], message: "Demo manifests must include a demo source." });
-  }
   validateReferences(value.participationRoutes, value.sources, context, "participationRoutes");
   const sourceIds = new Set(value.sources.map((source) => source.id));
   validateUniqueSourceIds(value.sources, context);
-  const attestationSourceTypes: SourceRef["sourceType"][] =
-    value.dataStatus === "demo"
-      ? ["demo_manifest", "public_manifest"]
-      : ["public_manifest", "owner_attestation"];
+  const attestationSourceTypes: SourceRef["sourceType"][] = ["public_manifest", "owner_attestation"];
   const allowedAttestationTypes = (status: z.infer<typeof ProductStatusSchema>, verification: Array<z.infer<typeof VerificationLevelSchema>>) =>
     status === "unconfirmed" && !verification.includes("product_owner_confirmed")
       ? SourceRefSchema.shape.sourceType.options
@@ -306,7 +300,7 @@ export type BondManifestV2 = z.infer<typeof BondManifestV2Schema>;
 export const BondManifestV1Schema = z.object({
   schemaVersion: z.literal(1), id: IdSchema, title: z.string().min(1), description: z.string().min(1), network: StacksNetworkSchema,
   onChainBondIndex: z.number().int().nonnegative().optional(), lifecycleStatus: z.enum(["upcoming", "open", "closed", "unknown"]),
-  participationPath: z.literal("native_l1_btc"), dataStatus: z.enum(["published", "demo"]), timing: TimingSchema, economics: EconomicsSchema,
+  participationPath: z.literal("native_l1_btc"), dataStatus: z.literal("published"), timing: TimingSchema, economics: EconomicsSchema,
   capacity: z.object({ totalSats: SatsSchema.optional(), minSats: SatsSchema.optional(), maxSats: SatsSchema.optional() }).strict(),
   requirements: z.object({ allowlistRequired: z.boolean(), pairedStxRequired: z.boolean(), pairedStxMinimumValueRatioBps: z.number().int().min(0).max(10_000).optional(), btcLocation: z.literal("bitcoin_l1"), keyControl: z.enum(["participant", "custodian_or_participant", "unknown"]), borrowingAgainstPosition: z.enum(["supported", "unsupported", "unknown"]), earlyExit: z.enum(["supported", "unsupported", "unknown"]) }).strict(),
   compatibility: z.array(CompatibilityClaimSchema), notes: z.array(z.string().min(1)), sources: z.array(SourceRefSchema).min(1), verifiedAt: z.iso.datetime(),
